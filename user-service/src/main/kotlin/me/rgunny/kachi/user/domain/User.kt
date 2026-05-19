@@ -1,10 +1,9 @@
 package me.rgunny.kachi.user.domain
 
 import java.time.Instant
-import java.util.UUID
 
 class User private constructor(
-    val id: UUID,
+    val id: UserId,
     val email: Email,
     val nickname: Nickname,
     val status: UserStatus = UserStatus.ACTIVE,
@@ -23,7 +22,7 @@ class User private constructor(
             registeredAt: Instant
         ): User {
             return User(
-                id = UUID.randomUUID(),
+                id = UserId.newId(),
                 email = email,
                 nickname = nickname,
                 status = UserStatus.ACTIVE,
@@ -36,7 +35,7 @@ class User private constructor(
         }
 
         fun restore(
-            id: UUID,
+            id: UserId,
             email: Email,
             nickname: Nickname,
             status: UserStatus,

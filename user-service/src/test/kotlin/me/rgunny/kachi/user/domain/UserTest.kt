@@ -31,7 +31,7 @@ class UserTest {
                 registeredAt = registeredAt
             )
 
-            assertNotNull(user.id)
+            assertNotNull(user.id.value)
             assertEquals(email, user.email)
             assertEquals(nickname, user.nickname)
             assertEquals(UserStatus.ACTIVE, user.status)
@@ -50,7 +50,7 @@ class UserTest {
         @Test
         @DisplayName("사용자를 복원하면 저장된 상태를 그대로 가진다")
         fun restoreRebuildsUserFromPersistedState() {
-            val id = UUID.randomUUID()
+            val id = UserId.of(UUID.randomUUID())
             val lastLoginAt = Instant.parse("2026-05-20T01:00:00Z")
             val deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
 
@@ -84,7 +84,7 @@ class UserTest {
         @DisplayName("휴면 사용자를 활성화하면 활성 상태가 되고 탈퇴 시간이 제거된다")
         fun activateInactiveUser() {
             val inactiveUser = User.restore(
-                id = UUID.randomUUID(),
+                id = UserId.of(UUID.randomUUID()),
                 email = email,
                 nickname = nickname,
                 status = UserStatus.INACTIVE,
@@ -133,7 +133,7 @@ class UserTest {
         @DisplayName("활성 상태가 아닌 사용자는 로그인 시각을 기록할 수 없다")
         fun rejectLoginTimeRecordOfNonActiveUser() {
             val inactiveUser = User.restore(
-                id = UUID.randomUUID(),
+                id = UserId.of(UUID.randomUUID()),
                 email = email,
                 nickname = nickname,
                 status = UserStatus.INACTIVE,
@@ -189,7 +189,7 @@ class UserTest {
 
     private fun deletedUser(): User {
         return User.restore(
-            id = UUID.randomUUID(),
+            id = UserId.of(UUID.randomUUID()),
             email = email,
             nickname = nickname,
             status = UserStatus.DELETED,
