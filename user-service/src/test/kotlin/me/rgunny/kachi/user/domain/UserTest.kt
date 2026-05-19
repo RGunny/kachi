@@ -13,7 +13,7 @@ import kotlin.test.assertNull
 @DisplayName("User")
 class UserTest {
 
-    private val email = Email.of("user@example.com")
+    private val email = Email.of("rgunny@kachi.com")
     private val nickname = Nickname.of("rgunny")
     private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
 

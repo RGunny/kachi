@@ -16,9 +16,9 @@ class EmailTest {
         @Test
         @DisplayName("이메일은 앞뒤 공백을 제거하고 소문자로 정규화한다")
         fun normalizeEmail() {
-            val email = Email.of("  USER@Example.COM  ")
+            val email = Email.of("  RGUNNY@Kachi.COM  ")
 
-            assertEquals("user@example.com", email.value)
+            assertEquals("rgunny@kachi.com", email.value)
         }
 
         @Test
@@ -41,7 +41,7 @@ class EmailTest {
         @DisplayName("이메일은 255자를 초과할 수 없다")
         fun rejectTooLongEmail() {
             assertFailsWith<IllegalArgumentException> {
-                Email.of("${"a".repeat(246)}@example.com")
+                Email.of("${"a".repeat(247)}@kachi.com")
             }
         }
     }
