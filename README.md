@@ -100,7 +100,7 @@ user-service
 | --- | --- |
 | [용어사전](./docs/용어사전.md) | Kachi 도메인 용어 정의 |
 | [도메인 모델](./docs/도메인모델.md) | bounded context, aggregate, value object, 도메인 규칙 |
-| [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, ArchUnit 검증 방침 |
+| [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
 | [001. user-service에 Keyword 포함](./docs/decisions/001-user-service에-keyword-포함.md) | Keyword 경계 결정 |
 | [002. ArchUnit으로 아키텍처 검증](./docs/decisions/002-archunit으로-아키텍처-검증.md) | 아키텍처 규칙 자동 검증 결정 |
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |
