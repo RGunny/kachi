@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 class UserController(
     private val registerUserUseCase: RegisterUserUseCase
 ) {
 
-    @PostMapping
+    @PostMapping(version = ApiVersions.V1)
     fun register(@Valid @RequestBody request: RegisterUserRequest): ResponseEntity<UserResponse> {
         val result = registerUserUseCase.register(
             RegisterUserCommand(
