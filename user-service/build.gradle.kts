@@ -30,6 +30,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
+    // UUID v7
+    implementation("com.github.f4b6a3:uuid-creator:5.3.7")
+
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
