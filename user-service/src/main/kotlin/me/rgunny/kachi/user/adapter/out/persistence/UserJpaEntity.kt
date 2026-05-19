@@ -5,7 +5,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
-import jakarta.persistence.Index
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import me.rgunny.kachi.user.domain.AuthProvider
@@ -23,9 +22,6 @@ import java.util.UUID
     name = "users",
     uniqueConstraints = [
         UniqueConstraint(name = "uk_users_email", columnNames = ["email"])
-    ],
-    indexes = [
-        Index(name = "idx_users_status", columnList = "status")
     ]
 )
 class UserJpaEntity(
