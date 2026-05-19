@@ -1,0 +1,127 @@
+package me.rgunny.kachi.user.architecture
+
+import com.tngtech.archunit.core.importer.ImportOption
+import com.tngtech.archunit.junit.AnalyzeClasses
+import com.tngtech.archunit.junit.ArchTest
+import com.tngtech.archunit.lang.ArchRule
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.Architectures.layeredArchitecture
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
+
+@AnalyzeClasses(
+    packages = ["me.rgunny.kachi.user"],
+    importOptions = [ImportOption.DoNotIncludeTests::class]
+)
+class ArchitectureTest {
+
+    companion object {
+
+        @ArchTest
+        @JvmField
+        val layered_architecture: ArchRule = layeredArchitecture()
+            .consideringOnlyDependenciesInLayers()
+            .layer("Domain").definedBy("..domain..")
+            .layer("Application").definedBy("..application..")
+            .layer("Adapter").definedBy("..adapter..")
+            .optionalLayer("Config").definedBy("..config..")
+            .whereLayer("Adapter").mayOnlyBeAccessedByLayers("Config")
+            .whereLayer("Application").mayOnlyBeAccessedByLayers("Adapter", "Config")
+            .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Adapter", "Config")
+
+        @ArchTest
+        @JvmField
+        val domain_does_not_depend_on_outer_layers: ArchRule = noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("..application..", "..adapter..", "..config..")
+
+        @ArchTest
+        @JvmField
+        val application_service_depends_only_on_ports_not_adapters: ArchRule = noClasses()
+            .that().resideInAPackage("..application.service..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..adapter..")
+
+        @ArchTest
+        @JvmField
+        val application_ports_are_independent: ArchRule = noClasses()
+            .that().resideInAPackage("..application.port..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("..application.service..", "..adapter..")
+
+        @ArchTest
+        @JvmField
+        val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()
+            .that().resideInAPackage("..adapter.in..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..adapter.out..")
+
+        @ArchTest
+        @JvmField
+        val outbound_adapters_do_not_depend_on_each_other: ArchRule = slices()
+            .matching("..adapter.out.(*)..")
+            .should().notDependOnEachOther()
+
+        @ArchTest
+        @JvmField
+        val no_package_cycles: ArchRule = slices()
+            .matching("me.rgunny.kachi.user.(*)..")
+            .should().beFreeOfCycles()
+
+        @ArchTest
+        @JvmField
+        val domain_is_free_of_spring_stereotypes: ArchRule = noClasses()
+            .that().resideInAPackage("..domain..")
+            .should().beAnnotatedWith("org.springframework.stereotype.Component")
+            .orShould().beAnnotatedWith("org.springframework.stereotype.Service")
+            .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")
+            .orShould().beAnnotatedWith("org.springframework.stereotype.Controller")
+            .orShould().beAnnotatedWith("org.springframework.web.bind.annotation.RestController")
+
+        @ArchTest
+        @JvmField
+        val outbound_ports_are_interfaces: ArchRule = classes()
+            .that().resideInAPackage("..application.port.out..")
+            .and().areNotEnums()
+            .should().beInterfaces()
+
+        @ArchTest
+        @JvmField
+        val inbound_use_case_ports_are_interfaces: ArchRule = classes()
+            .that().resideInAPackage("..application.port.in..")
+            .and().haveSimpleNameEndingWith("UseCase")
+            .should().beInterfaces()
+
+        @ArchTest
+        @JvmField
+        val rest_controllers_only_in_web_inbound_adapter: ArchRule = classes()
+            .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestController")
+            .should().resideInAPackage("..adapter.in.web..")
+
+        @ArchTest
+        @JvmField
+        val rest_controller_advice_only_in_web_exception: ArchRule = classes()
+            .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestControllerAdvice")
+            .should().resideInAPackage("..adapter.in.web.exception..")
+
+        @ArchTest
+        @JvmField
+        val jpa_entities_only_in_persistence_adapter: ArchRule = classes()
+            .that().areAnnotatedWith("jakarta.persistence.Entity")
+            .should().resideInAPackage("..adapter.out.persistence..")
+
+        @ArchTest
+        @JvmField
+        val jpa_repositories_only_in_persistence_adapter: ArchRule = classes()
+            .that().haveSimpleNameEndingWith("JpaRepository")
+            .should().resideInAPackage("..adapter.out.persistence..")
+
+        @ArchTest
+        @JvmField
+        val configuration_properties_only_in_config: ArchRule = classes()
+            .that().areAnnotatedWith("org.springframework.boot.context.properties.ConfigurationProperties")
+            .should().resideInAPackage("..config..")
+            .allowEmptyShould(true)
+    }
+}

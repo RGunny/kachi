@@ -40,6 +40,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-data-jpa-test")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 
     // TestContainers (Spring Boot 관리 버전)
