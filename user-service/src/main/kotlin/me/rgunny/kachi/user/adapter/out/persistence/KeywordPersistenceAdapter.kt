@@ -2,6 +2,7 @@ package me.rgunny.kachi.user.adapter.out.persistence
 
 import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
 import me.rgunny.kachi.user.domain.Keyword
+import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.domain.UserId
 import org.springframework.stereotype.Repository
@@ -10,6 +11,13 @@ import org.springframework.stereotype.Repository
 class KeywordPersistenceAdapter(
     private val keywordJpaRepository: KeywordJpaRepository
 ) : KeywordPersistencePort {
+
+    override fun findById(keywordId: KeywordId): Keyword? {
+        return keywordJpaRepository.findById(keywordId.value)
+            .map { it.toDomain() }
+            .orElse(null)
+    }
+
     override fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean {
         return keywordJpaRepository.existsByUserIdAndName(
             userId = userId.value,
