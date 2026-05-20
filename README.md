@@ -112,3 +112,4 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.redis.yml up 
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |
 | [004. JWT Access/Refresh Token 정책](./docs/decisions/004-jwt-access-refresh-token-정책.md) | 토큰 분리, TTL, secret 관리, claim 범위 결정 |
 | [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 Redis 실행 구성과 Docker Compose 분리 기준 |
+| [006. OAuth2 로그인 흐름](./docs/decisions/006-oauth2-로그인-흐름.md) | OAuth2 provider 응답 정규화, 사용자 식별, token 발급 흐름 |
