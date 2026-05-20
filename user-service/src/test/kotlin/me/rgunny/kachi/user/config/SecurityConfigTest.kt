@@ -73,16 +73,6 @@ class SecurityConfigTest @Autowired constructor(
             }
         }
 
-        @Test
-        @DisplayName("관심 키워드 수정 API는 인증 없이 접근할 수 있다")
-        fun permitUpdateKeywordApi() {
-            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
-                contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody()
-            }.andExpect {
-                status { isOk() }
-            }
-        }
     }
 
     @Nested
@@ -155,6 +145,31 @@ class SecurityConfigTest @Autowired constructor(
             mockMvc.get("/api/v1/me/keywords") {
                 header("Authorization", "Bearer ${token.value}")
                 accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("관심 키워드 수정 API는 인증을 요구한다")
+        fun requireAuthenticationForUpdateKeywordApi() {
+            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+                contentType = MediaType.APPLICATION_JSON
+                content = updateKeywordBody()
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("관심 키워드 수정 API는 access token으로 접근할 수 있다")
+        fun permitUpdateKeywordApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+                header("Authorization", "Bearer ${token.value}")
+                contentType = MediaType.APPLICATION_JSON
+                content = updateKeywordBody()
             }.andExpect {
                 status { isOk() }
             }

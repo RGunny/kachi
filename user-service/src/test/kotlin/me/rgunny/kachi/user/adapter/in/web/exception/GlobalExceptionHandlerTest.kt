@@ -6,23 +6,33 @@ import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeRegisterKeywordUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeRegisterUserUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeUpdateKeywordUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
+import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.config.ApiVersionConfig
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
@@ -31,6 +41,11 @@ import kotlin.test.assertTrue
 
 @WebMvcTest(controllers = [UserController::class, KeywordController::class])
 @AutoConfigureMockMvc(addFilters = false)
+@ImportAutoConfiguration(
+    SecurityAutoConfiguration::class,
+    ServletWebSecurityAutoConfiguration::class,
+    SecurityFilterAutoConfiguration::class
+)
 @Import(ApiVersionConfig::class, WebMvcFakeUseCaseConfig::class)
 @DisplayName("GlobalExceptionHandler")
 class GlobalExceptionHandlerTest @Autowired constructor(
@@ -96,17 +111,50 @@ class GlobalExceptionHandlerTest @Autowired constructor(
             val keywordId = KeywordId.newId()
             updateKeywordUseCase.exception = KeywordNotFoundException(keywordId)
 
-            val response = mockMvc.patch("/api/v1/keywords/${keywordId.value}") {
-                contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody(name = "Trump")
-            }.andExpect {
-                status { isNotFound() }
-            }.andReturn().response
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication()
+
+            val response = try {
+                mockMvc.patch("/api/v1/keywords/${keywordId.value}") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = updateKeywordBody(name = "Trump")
+                }.andExpect {
+                    status { isNotFound() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
 
             assertErrorResponse(
                 actual = response.contentAsString,
                 code = "KEYWORD_NOT_FOUND",
                 message = "키워드를 찾을 수 없습니다: ${keywordId.value}"
+            )
+        }
+
+        @Test
+        @DisplayName("키워드 접근 거부 예외는 403 응답으로 변환한다")
+        fun handleKeywordAccessDenied() {
+            val keywordId = KeywordId.newId()
+            val userId = UserId.newId()
+            updateKeywordUseCase.exception = KeywordAccessDeniedException(keywordId, userId)
+
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication()
+
+            val response = try {
+                mockMvc.patch("/api/v1/keywords/${keywordId.value}") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = updateKeywordBody(name = "Trump")
+                }.andExpect {
+                    status { isForbidden() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "KEYWORD_ACCESS_DENIED",
+                message = "키워드에 접근할 수 없습니다: keywordId=${keywordId.value}, userId=${userId.value}"
             )
         }
     }
@@ -166,6 +214,19 @@ class GlobalExceptionHandlerTest @Autowired constructor(
               "enabled": true
             }
         """.trimIndent()
+    }
+
+    private fun authenticatedUserAuthentication(): UsernamePasswordAuthenticationToken {
+        val role = UserRole.USER
+
+        return UsernamePasswordAuthenticationToken(
+            AuthenticatedUser(
+                userId = UserId.newId(),
+                role = role
+            ),
+            null,
+            listOf(SimpleGrantedAuthority("ROLE_${role.name}"))
+        )
     }
 
 }

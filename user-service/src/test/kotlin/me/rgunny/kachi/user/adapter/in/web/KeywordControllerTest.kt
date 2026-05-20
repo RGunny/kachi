@@ -124,8 +124,13 @@ class KeywordControllerTest {
             val updateUseCase = FakeUpdateKeywordUseCase()
             val listUseCase = FakeListKeywordsUseCase()
             val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
+            val authenticatedUser = AuthenticatedUser(
+                userId = UserId.of(userId),
+                role = UserRole.USER
+            )
 
             val response = controller.update(
+                authenticatedUser = authenticatedUser,
                 keywordId = keywordId,
                 request = UpdateKeywordRequest(name = "Tesla", enabled = false)
             )
@@ -134,6 +139,7 @@ class KeywordControllerTest {
             assertEquals(true, response.body?.success)
             assertEquals(null, response.body?.error)
             assertEquals(KeywordId.of(keywordId), updateUseCase.command.keywordId)
+            assertEquals(UserId.of(userId), updateUseCase.command.userId)
             assertEquals("Tesla", updateUseCase.command.name)
             assertEquals(false, updateUseCase.command.enabled)
             assertEquals("Tesla", response.body?.data?.name)

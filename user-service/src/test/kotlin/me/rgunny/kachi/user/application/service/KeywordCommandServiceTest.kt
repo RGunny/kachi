@@ -2,6 +2,7 @@ package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
 import me.rgunny.kachi.user.application.exception.InactiveUserException
+import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
@@ -143,6 +144,7 @@ class KeywordCommandServiceTest {
             val result = service.update(
                 UpdateKeywordCommand(
                     keywordId = keyword.id,
+                    userId = userId,
                     name = "  Tesla  "
                 )
             )
@@ -169,6 +171,7 @@ class KeywordCommandServiceTest {
             val result = service.update(
                 UpdateKeywordCommand(
                     keywordId = keyword.id,
+                    userId = userId,
                     name = "Trump"
                 )
             )
@@ -188,6 +191,7 @@ class KeywordCommandServiceTest {
             val result = service.update(
                 UpdateKeywordCommand(
                     keywordId = keyword.id,
+                    userId = userId,
                     enabled = false
                 )
             )
@@ -207,6 +211,7 @@ class KeywordCommandServiceTest {
             val result = service.update(
                 UpdateKeywordCommand(
                     keywordId = keyword.id,
+                    userId = userId,
                     enabled = true
                 )
             )
@@ -221,7 +226,8 @@ class KeywordCommandServiceTest {
         fun rejectEmptyUpdateCommand() {
             assertFailsWith<IllegalArgumentException> {
                 UpdateKeywordCommand(
-                    keywordId = KeywordId.of(UUID.randomUUID())
+                    keywordId = KeywordId.of(UUID.randomUUID()),
+                    userId = userId
                 )
             }
         }
@@ -236,6 +242,7 @@ class KeywordCommandServiceTest {
                 service.update(
                     UpdateKeywordCommand(
                         keywordId = KeywordId.of(UUID.randomUUID()),
+                        userId = userId,
                         name = "Tesla"
                     )
                 )
@@ -259,6 +266,7 @@ class KeywordCommandServiceTest {
                 service.update(
                     UpdateKeywordCommand(
                         keywordId = keyword.id,
+                        userId = userId,
                         name = "Tesla"
                     )
                 )
@@ -282,6 +290,32 @@ class KeywordCommandServiceTest {
                 service.update(
                     UpdateKeywordCommand(
                         keywordId = keyword.id,
+                        userId = userId,
+                        name = "Tesla"
+                    )
+                )
+            }
+
+            assertFalse(keywordPersistencePort.existsByUserIdAndNameCalled)
+            assertFalse(keywordPersistencePort.saveCalled)
+        }
+
+        @Test
+        @DisplayName("키워드 소유자가 아니면 수정할 수 없다")
+        fun rejectNonOwnerUser() {
+            val keyword = activeKeyword(name = "Trump")
+            val otherUserId = UserId.of(UUID.randomUUID())
+            val keywordPersistencePort = FakeKeywordPersistencePort(keywords = mapOf(keyword.id to keyword))
+            val service = keywordCommandService(
+                keywordPersistencePort = keywordPersistencePort,
+                users = mapOf(userId to user(), otherUserId to user(id = otherUserId))
+            )
+
+            assertFailsWith<KeywordAccessDeniedException> {
+                service.update(
+                    UpdateKeywordCommand(
+                        keywordId = keyword.id,
+                        userId = otherUserId,
                         name = "Tesla"
                     )
                 )
@@ -341,9 +375,12 @@ class KeywordCommandServiceTest {
         )
     }
 
-    private fun user(status: UserStatus = UserStatus.ACTIVE): User {
+    private fun user(
+        id: UserId = userId,
+        status: UserStatus = UserStatus.ACTIVE
+    ): User {
         return User.restore(
-            id = userId,
+            id = id,
             email = Email.of("rgunny@kachi.com"),
             nickname = Nickname.of("rgunny"),
             status = status,

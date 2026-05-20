@@ -74,12 +74,14 @@ class KeywordController(
 
     @PatchMapping(ApiPaths.KEYWORDS, version = ApiVersions.V1)
     fun update(
+        @AuthenticationPrincipal authenticatedUser: AuthenticatedUser,
         @PathVariable keywordId: UUID,
         @Valid @RequestBody request: UpdateKeywordRequest
     ): ResponseEntity<ApiResponse<KeywordResponse>> {
         val result = updateKeywordUseCase.update(
             UpdateKeywordCommand(
                 keywordId = KeywordId.of(keywordId),
+                userId = authenticatedUser.userId,
                 name = request.name,
                 enabled = request.enabled
             )

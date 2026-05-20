@@ -28,11 +28,10 @@ class SecurityConfig {
             .httpBasic { it.disable() }
             .authorizeHttpRequests { requests ->
                 requests
-                    // 현재 구현된 API는 인증 흐름이 붙기 전까지 공개 API로 열어둔다.
+                    // 사용자 등록과 기존 userId 기반 키워드 등록 API만 공개한다.
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_USERS).permitAll()
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_USER_KEYWORDS).permitAll()
-                    .requestMatchers(HttpMethod.PATCH, ApiPaths.V1_KEYWORDS).permitAll()
-                    // 새 API는 의도적으로 허용하기 전까지 인증을 요구한다.
+                    // 그 외 API는 access token 인증을 요구한다.
                     .anyRequest().authenticated()
             }
             .addFilterBefore(

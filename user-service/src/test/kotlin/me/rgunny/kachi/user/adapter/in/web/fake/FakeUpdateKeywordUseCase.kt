@@ -3,7 +3,6 @@ package me.rgunny.kachi.user.adapter.`in`.web.fake
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordResult
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordUseCase
-import me.rgunny.kachi.user.domain.UserId
 import java.time.Instant
 
 class FakeUpdateKeywordUseCase : UpdateKeywordUseCase {
@@ -14,7 +13,7 @@ class FakeUpdateKeywordUseCase : UpdateKeywordUseCase {
 
         return UpdateKeywordResult(
             id = command.keywordId,
-            userId = UserId.newId(),
+            userId = command.userId,
             name = command.name ?: "Trump",
             enabled = command.enabled ?: true,
             registeredAt = REGISTERED_AT,

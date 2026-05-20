@@ -6,6 +6,7 @@ import me.rgunny.kachi.user.adapter.`in`.web.response.ErrorResponse
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import org.springframework.http.ResponseEntity
@@ -39,6 +40,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(KeywordNotFoundException::class)
     fun handleKeywordNotFound(exception: KeywordNotFoundException): ResponseEntity<ApiResponse<Unit>> {
         return error(ErrorCode.KEYWORD_NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(KeywordAccessDeniedException::class)
+    fun handleKeywordAccessDenied(exception: KeywordAccessDeniedException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.KEYWORD_ACCESS_DENIED, exception.message)
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)

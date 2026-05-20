@@ -1,9 +1,11 @@
 package me.rgunny.kachi.user.application.port.`in`
 
 import me.rgunny.kachi.user.domain.KeywordId
+import me.rgunny.kachi.user.domain.UserId
 
 data class UpdateKeywordCommand(
     val keywordId: KeywordId,
+    val userId: UserId,
     val name: String? = null,
     val enabled: Boolean? = null
 ) {

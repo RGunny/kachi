@@ -1,6 +1,7 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordResult
@@ -43,6 +44,10 @@ class KeywordCommandService(
     override fun update(command: UpdateKeywordCommand): UpdateKeywordResult {
         val keyword = keywordPersistencePort.findById(command.keywordId)
             ?: throw KeywordNotFoundException(command.keywordId)
+
+        if (keyword.userId != command.userId) {
+            throw KeywordAccessDeniedException(command.keywordId, command.userId)
+        }
 
         activeUserValidator.get(keyword.userId)
 
