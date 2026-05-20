@@ -52,6 +52,7 @@ JWT claim은 최소한만 넣는다.
 | `role` | 사용 | 미사용 | access token 인가 판단용 |
 
 Refresh token은 `jti` 기준으로 Redis에 저장하고, 재발급 시 기존 token을 새 token으로 회전한다.
+로그아웃 시에는 요청으로 받은 refresh token의 `jti`를 Redis에서 삭제한다.
 
 ```text
 refresh_token:{userId}:{jti} -> "1"
@@ -117,12 +118,24 @@ key에는 `userId`와 `jti`를 모두 포함한다.
 재발급 시에는 Lua script로 기존 key 삭제와 새 key 저장을 한 번에 수행한다.
 분리된 `DEL`/`SET` 호출은 중간에 다른 요청이 끼어들 수 있으므로, Redis 서버에서 script를 원자적으로 실행해 token rotation 경쟁 조건을 줄인다.
 
+### 로그아웃 처리
+
+로그아웃은 refresh token 저장소에서 해당 `jti`를 삭제하는 방식으로 처리한다.
+삭제된 refresh token은 이후 access token 재발급에 사용할 수 없다.
+
+access token은 15분으로 짧게 유지하고, 만료 전까지는 stateless JWT 특성을 유지한다.
+access token까지 즉시 회수하려면 요청마다 blacklist 저장소를 조회해야 하므로 모든 API 요청 비용과 장애 의존성이 커진다.
+
+현재 user-service 단계에서는 refresh token 재발급 차단만 로그아웃 책임으로 둔다.
+계정 탈퇴, 관리자 강제 로그아웃, 보안 사고 대응처럼 즉시 access token 회수가 필요한 요구가 생기면 blacklist 또는 token version 정책을 별도로 결정한다.
+
 ## 결과
 
 - user-service는 서버 세션 없이 API 인증을 처리할 수 있다.
 - Access token 만료 시간이 짧아 refresh token 재발급 흐름이 필요하다.
 - Refresh token은 Redis 저장소에 존재해야 재발급에 사용할 수 있다.
 - Refresh token 재발급 시 기존 refresh token은 폐기되고 새 refresh token으로 교체된다.
+- 로그아웃 시 refresh token `jti`를 Redis에서 삭제해 추가 재발급을 막는다.
 - OAuth 로그인처럼 refresh token을 최초 발급하는 흐름은 클라이언트에 응답하기 전에 refresh token `jti`를 Redis에 저장해야 한다.
 - JWT secret은 반드시 운영 환경변수로 private 하게 관리해야 한다.
 - 토큰 claim이 최소화되어 사용자 정보가 필요할 때는 서버 저장소 조회가 필요하다.
