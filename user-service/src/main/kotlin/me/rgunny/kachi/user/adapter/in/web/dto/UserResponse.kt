@@ -1,5 +1,6 @@
 package me.rgunny.kachi.user.adapter.`in`.web.dto
 
+import me.rgunny.kachi.user.application.port.`in`.GetUserResult
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserResult
 import java.time.Instant
 
@@ -16,6 +17,18 @@ data class UserResponse(
     companion object {
 
         fun from(result: RegisterUserResult): UserResponse {
+            return UserResponse(
+                id = result.id.value.toString(),
+                email = result.email,
+                nickname = result.nickname,
+                status = result.status.name,
+                role = result.role.name,
+                authProvider = result.authProvider.name,
+                registeredAt = result.registeredAt
+            )
+        }
+
+        fun from(result: GetUserResult): UserResponse {
             return UserResponse(
                 id = result.id.value.toString(),
                 email = result.email,

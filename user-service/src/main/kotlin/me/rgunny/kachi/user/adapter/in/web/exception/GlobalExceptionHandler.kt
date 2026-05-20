@@ -3,9 +3,11 @@ package me.rgunny.kachi.user.adapter.`in`.web.exception
 import me.rgunny.kachi.user.adapter.`in`.web.response.ApiResponse
 import me.rgunny.kachi.user.adapter.`in`.web.response.ErrorCode
 import me.rgunny.kachi.user.adapter.`in`.web.response.ErrorResponse
+import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
+import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -17,6 +19,16 @@ class GlobalExceptionHandler {
     @ExceptionHandler(DuplicateEmailException::class)
     fun handleDuplicateEmail(exception: DuplicateEmailException): ResponseEntity<ApiResponse<Unit>> {
         return error(ErrorCode.DUPLICATE_EMAIL, exception.message)
+    }
+
+    @ExceptionHandler(UserNotFoundException::class)
+    fun handleUserNotFound(exception: UserNotFoundException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.USER_NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(InactiveUserException::class)
+    fun handleInactiveUser(exception: InactiveUserException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.INACTIVE_USER, exception.message)
     }
 
     @ExceptionHandler(DuplicateKeywordException::class)

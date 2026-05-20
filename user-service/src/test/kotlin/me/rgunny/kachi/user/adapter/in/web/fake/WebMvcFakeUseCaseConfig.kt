@@ -10,6 +10,9 @@ class WebMvcFakeUseCaseConfig {
     fun registerUserUseCase(): FakeRegisterUserUseCase = FakeRegisterUserUseCase()
 
     @Bean
+    fun getUserUseCase(): FakeGetUserUseCase = FakeGetUserUseCase()
+
+    @Bean
     fun registerKeywordUseCase(): FakeRegisterKeywordUseCase = FakeRegisterKeywordUseCase()
 
     @Bean
