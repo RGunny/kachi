@@ -38,7 +38,8 @@ class UserController(
             RegisterUserCommand(
                 email = request.email,
                 nickname = request.nickname,
-                authProvider = request.authProvider
+                authProvider = request.authProvider,
+                providerUserId = request.providerUserId
             )
         )
 

@@ -5,6 +5,7 @@ import me.rgunny.kachi.user.application.port.`in`.RegisterUserCommand
 import me.rgunny.kachi.user.application.port.out.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
@@ -40,7 +41,8 @@ class UserCommandServiceTest {
                 RegisterUserCommand(
                     email = "  rgunny@kachi.COM  ",
                     nickname = "  rgunny  ",
-                    authProvider = AuthProvider.GOOGLE
+                    authProvider = AuthProvider.GOOGLE,
+                    providerUserId = "google-123"
                 )
             )
 
@@ -53,6 +55,7 @@ class UserCommandServiceTest {
             assertEquals(now, result.registeredAt)
             assertEquals(1, userPersistencePort.savedUsers.size)
             assertEquals(result.id, userPersistencePort.savedUsers.single().id)
+            assertEquals(ProviderUserId.of("google-123"), userPersistencePort.savedUsers.single().providerUserId)
         }
 
         @Test
@@ -84,6 +87,13 @@ class UserCommandServiceTest {
         var saveCalled = false
 
         override fun findById(userId: UserId): User? {
+            return null
+        }
+
+        override fun findByAuthProviderAndProviderUserId(
+            authProvider: AuthProvider,
+            providerUserId: ProviderUserId
+        ): User? {
             return null
         }
 

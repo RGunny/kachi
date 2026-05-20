@@ -9,6 +9,7 @@ class User private constructor(
     val status: UserStatus = UserStatus.ACTIVE,
     val role: UserRole = UserRole.USER,
     val authProvider: AuthProvider,
+    val providerUserId: ProviderUserId?,
     val registeredAt: Instant,
     val lastLoginAt: Instant?,
     val deactivatedAt: Instant?
@@ -19,8 +20,16 @@ class User private constructor(
             email: Email,
             nickname: Nickname,
             authProvider: AuthProvider,
+            providerUserId: ProviderUserId?,
             registeredAt: Instant
         ): User {
+            require(authProvider != AuthProvider.LOCAL || providerUserId == null) {
+                "LOCAL 사용자는 OAuth provider 사용자 ID를 가질 수 없습니다"
+            }
+            require(authProvider == AuthProvider.LOCAL || providerUserId != null) {
+                "OAuth 사용자는 provider 사용자 ID가 필요합니다"
+            }
+
             return User(
                 id = UserId.newId(),
                 email = email,
@@ -28,6 +37,7 @@ class User private constructor(
                 status = UserStatus.ACTIVE,
                 role = UserRole.USER,
                 authProvider = authProvider,
+                providerUserId = providerUserId,
                 registeredAt = registeredAt,
                 deactivatedAt = null,
                 lastLoginAt = null,
@@ -41,6 +51,7 @@ class User private constructor(
             status: UserStatus,
             role: UserRole,
             authProvider: AuthProvider,
+            providerUserId: ProviderUserId?,
             registeredAt: Instant,
             lastLoginAt: Instant?,
             deactivatedAt: Instant?
@@ -52,6 +63,7 @@ class User private constructor(
                 status = status,
                 role = role,
                 authProvider = authProvider,
+                providerUserId = providerUserId,
                 registeredAt = registeredAt,
                 lastLoginAt = lastLoginAt,
                 deactivatedAt = deactivatedAt
@@ -69,6 +81,7 @@ class User private constructor(
             status = UserStatus.ACTIVE,
             role = role,
             authProvider = authProvider,
+            providerUserId = providerUserId,
             registeredAt = registeredAt,
             lastLoginAt = lastLoginAt,
             deactivatedAt = null
@@ -85,6 +98,7 @@ class User private constructor(
             status = UserStatus.DELETED,
             role = role,
             authProvider = authProvider,
+            providerUserId = providerUserId,
             registeredAt = registeredAt,
             lastLoginAt = lastLoginAt,
             deactivatedAt = deactivatedAt
@@ -101,6 +115,7 @@ class User private constructor(
             status = status,
             role = role,
             authProvider = authProvider,
+            providerUserId = providerUserId,
             registeredAt = registeredAt,
             lastLoginAt = loggedInAt,
             deactivatedAt = deactivatedAt

@@ -16,6 +16,7 @@ import me.rgunny.kachi.user.application.token.TokenType
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
@@ -287,6 +288,13 @@ class TokenServiceTest {
             return users[userId]
         }
 
+        override fun findByAuthProviderAndProviderUserId(
+            authProvider: AuthProvider,
+            providerUserId: ProviderUserId
+        ): User? {
+            return null
+        }
+
         override fun existsByEmail(email: Email): Boolean {
             return false
         }
@@ -306,6 +314,7 @@ class TokenServiceTest {
             status = status,
             role = UserRole.USER,
             authProvider = AuthProvider.GOOGLE,
+            providerUserId = ProviderUserId.of("google-123"),
             registeredAt = registeredAt,
             lastLoginAt = null,
             deactivatedAt = null

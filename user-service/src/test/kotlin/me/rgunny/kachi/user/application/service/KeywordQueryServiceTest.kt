@@ -10,6 +10,7 @@ import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
@@ -113,6 +114,7 @@ class KeywordQueryServiceTest {
             status = status,
             role = UserRole.USER,
             authProvider = AuthProvider.GOOGLE,
+            providerUserId = ProviderUserId.of("google-123"),
             registeredAt = registeredAt,
             lastLoginAt = null,
             deactivatedAt = null
@@ -125,6 +127,13 @@ class KeywordQueryServiceTest {
 
         override fun findById(userId: UserId): User? {
             return users[userId]
+        }
+
+        override fun findByAuthProviderAndProviderUserId(
+            authProvider: AuthProvider,
+            providerUserId: ProviderUserId
+        ): User? {
+            return null
         }
 
         override fun existsByEmail(email: Email): Boolean {

@@ -3,6 +3,7 @@ package me.rgunny.kachi.user.adapter.out.persistence
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
@@ -37,6 +38,7 @@ class UserJpaEntityTest {
             assertEquals(user.status, entity.status)
             assertEquals(user.role, entity.role)
             assertEquals(user.authProvider, entity.authProvider)
+            assertEquals(user.providerUserId?.value, entity.providerUserId)
             assertEquals(user.registeredAt, entity.registeredAt)
             assertEquals(user.lastLoginAt, entity.lastLoginAt)
             assertEquals(user.deactivatedAt, entity.deactivatedAt)
@@ -60,6 +62,7 @@ class UserJpaEntityTest {
             assertEquals(entity.status, user.status)
             assertEquals(entity.role, user.role)
             assertEquals(entity.authProvider, user.authProvider)
+            assertEquals(entity.providerUserId?.let(ProviderUserId::of), user.providerUserId)
             assertEquals(entity.registeredAt, user.registeredAt)
             assertEquals(entity.lastLoginAt, user.lastLoginAt)
             assertEquals(entity.deactivatedAt, user.deactivatedAt)
@@ -74,6 +77,7 @@ class UserJpaEntityTest {
             status = UserStatus.DELETED,
             role = UserRole.ADMIN,
             authProvider = AuthProvider.LOCAL,
+            providerUserId = null,
             registeredAt = registeredAt,
             lastLoginAt = lastLoginAt,
             deactivatedAt = deactivatedAt

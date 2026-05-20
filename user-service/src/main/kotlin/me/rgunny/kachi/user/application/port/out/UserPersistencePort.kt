@@ -1,6 +1,8 @@
 package me.rgunny.kachi.user.application.port.out
 
 import me.rgunny.kachi.user.domain.Email
+import me.rgunny.kachi.user.domain.AuthProvider
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 
@@ -8,6 +10,8 @@ import me.rgunny.kachi.user.domain.UserId
 interface UserPersistencePort {
 
     fun findById(userId: UserId): User?
+
+    fun findByAuthProviderAndProviderUserId(authProvider: AuthProvider, providerUserId: ProviderUserId): User?
 
     fun existsByEmail(email: Email): Boolean
 

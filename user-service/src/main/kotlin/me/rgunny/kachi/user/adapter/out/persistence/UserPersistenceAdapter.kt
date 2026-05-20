@@ -1,7 +1,9 @@
 package me.rgunny.kachi.user.adapter.out.persistence
 
 import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import org.springframework.stereotype.Repository
@@ -15,6 +17,14 @@ class UserPersistenceAdapter(
         return userJpaRepository.findById(userId.value)
             .map { it.toDomain() }
             .orElse(null)
+    }
+
+    override fun findByAuthProviderAndProviderUserId(
+        authProvider: AuthProvider,
+        providerUserId: ProviderUserId
+    ): User? {
+        return userJpaRepository.findByAuthProviderAndProviderUserId(authProvider, providerUserId.value)
+            ?.toDomain()
     }
 
     override fun existsByEmail(email: Email): Boolean {

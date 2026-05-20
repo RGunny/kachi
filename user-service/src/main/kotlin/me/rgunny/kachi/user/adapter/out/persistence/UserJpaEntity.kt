@@ -10,6 +10,7 @@ import jakarta.persistence.UniqueConstraint
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
@@ -21,7 +22,11 @@ import java.util.UUID
 @Table(
     name = "users",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_users_email", columnNames = ["email"])
+        UniqueConstraint(name = "uk_users_email", columnNames = ["email"]),
+        UniqueConstraint(
+            name = "uk_users_auth_provider_provider_user_id",
+            columnNames = ["auth_provider", "provider_user_id"]
+        )
     ]
 )
 class UserJpaEntity(
@@ -48,6 +53,9 @@ class UserJpaEntity(
     @Column(name = "auth_provider", nullable = false, length = 20)
     val authProvider: AuthProvider,
 
+    @Column(name = "provider_user_id", length = 255)
+    val providerUserId: String?,
+
     @Column(name = "registered_at", nullable = false)
     val registeredAt: Instant,
 
@@ -68,6 +76,7 @@ class UserJpaEntity(
                 status = user.status,
                 role = user.role,
                 authProvider = user.authProvider,
+                providerUserId = user.providerUserId?.value,
                 registeredAt = user.registeredAt,
                 lastLoginAt = user.lastLoginAt,
                 deactivatedAt = user.deactivatedAt
@@ -83,6 +92,7 @@ class UserJpaEntity(
             status = status,
             role = role,
             authProvider = authProvider,
+            providerUserId = providerUserId?.let(ProviderUserId::of),
             registeredAt = registeredAt,
             lastLoginAt = lastLoginAt,
             deactivatedAt = deactivatedAt

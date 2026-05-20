@@ -7,6 +7,7 @@ import me.rgunny.kachi.user.application.port.`in`.RegisterUserUseCase
 import me.rgunny.kachi.user.application.port.out.UserPersistencePort
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -21,6 +22,7 @@ class UserCommandService(
     override fun register(command: RegisterUserCommand): RegisterUserResult {
         val email = Email.of(command.email)
         val nickname = Nickname.of(command.nickname)
+        val providerUserId = command.providerUserId?.let(ProviderUserId::of)
 
         if (userPersistencePort.existsByEmail(email)) {
             throw DuplicateEmailException(email)
@@ -30,6 +32,7 @@ class UserCommandService(
             email = email,
             nickname = nickname,
             authProvider = command.authProvider,
+            providerUserId = providerUserId,
             registeredAt = Instant.now(clock)
         )
 

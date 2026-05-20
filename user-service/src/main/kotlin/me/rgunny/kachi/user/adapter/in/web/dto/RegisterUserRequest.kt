@@ -13,5 +13,7 @@ data class RegisterUserRequest(
     @field:NotBlank
     val nickname: String,
 
-    val authProvider: AuthProvider
+    val authProvider: AuthProvider,
+
+    val providerUserId: String? = null
 )

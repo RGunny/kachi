@@ -28,6 +28,7 @@ class UserTest {
                 email = email,
                 nickname = nickname,
                 authProvider = AuthProvider.GOOGLE,
+                providerUserId = ProviderUserId.of("google-123"),
                 registeredAt = registeredAt
             )
 
@@ -37,9 +38,38 @@ class UserTest {
             assertEquals(UserStatus.ACTIVE, user.status)
             assertEquals(UserRole.USER, user.role)
             assertEquals(AuthProvider.GOOGLE, user.authProvider)
+            assertEquals(ProviderUserId.of("google-123"), user.providerUserId)
             assertEquals(registeredAt, user.registeredAt)
             assertNull(user.lastLoginAt)
             assertNull(user.deactivatedAt)
+        }
+
+        @Test
+        @DisplayName("OAuth 사용자는 provider 사용자 ID가 필요하다")
+        fun rejectOAuthUserWithoutProviderUserId() {
+            assertFailsWith<IllegalArgumentException> {
+                User.register(
+                    email = email,
+                    nickname = nickname,
+                    authProvider = AuthProvider.GOOGLE,
+                    providerUserId = null,
+                    registeredAt = registeredAt
+                )
+            }
+        }
+
+        @Test
+        @DisplayName("LOCAL 사용자는 provider 사용자 ID를 가질 수 없다")
+        fun rejectLocalUserWithProviderUserId() {
+            assertFailsWith<IllegalArgumentException> {
+                User.register(
+                    email = email,
+                    nickname = nickname,
+                    authProvider = AuthProvider.LOCAL,
+                    providerUserId = ProviderUserId.of("local-123"),
+                    registeredAt = registeredAt
+                )
+            }
         }
     }
 
@@ -61,6 +91,7 @@ class UserTest {
                 status = UserStatus.DELETED,
                 role = UserRole.ADMIN,
                 authProvider = AuthProvider.LOCAL,
+                providerUserId = null,
                 registeredAt = registeredAt,
                 lastLoginAt = lastLoginAt,
                 deactivatedAt = deactivatedAt
@@ -90,6 +121,7 @@ class UserTest {
                 status = UserStatus.INACTIVE,
                 role = UserRole.USER,
                 authProvider = AuthProvider.NAVER,
+                providerUserId = ProviderUserId.of("naver-123"),
                 registeredAt = registeredAt,
                 lastLoginAt = Instant.parse("2026-05-20T01:00:00Z"),
                 deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
@@ -139,6 +171,7 @@ class UserTest {
                 status = UserStatus.INACTIVE,
                 role = UserRole.USER,
                 authProvider = AuthProvider.KAKAO,
+                providerUserId = ProviderUserId.of("kakao-123"),
                 registeredAt = registeredAt,
                 lastLoginAt = null,
                 deactivatedAt = null
@@ -183,6 +216,7 @@ class UserTest {
             email = email,
             nickname = nickname,
             authProvider = AuthProvider.GOOGLE,
+            providerUserId = ProviderUserId.of("google-123"),
             registeredAt = registeredAt
         )
     }
@@ -195,6 +229,7 @@ class UserTest {
             status = UserStatus.DELETED,
             role = UserRole.USER,
             authProvider = AuthProvider.GOOGLE,
+            providerUserId = ProviderUserId.of("google-123"),
             registeredAt = registeredAt,
             lastLoginAt = null,
             deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
