@@ -2,6 +2,8 @@ package me.rgunny.kachi.user.adapter.`in`.web
 
 import me.rgunny.kachi.user.adapter.`in`.web.dto.RegisterUserRequest
 import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
+import me.rgunny.kachi.user.application.port.`in`.DeactivateUserCommand
+import me.rgunny.kachi.user.application.port.`in`.DeactivateUserUseCase
 import me.rgunny.kachi.user.application.port.`in`.GetUserQuery
 import me.rgunny.kachi.user.application.port.`in`.GetUserResult
 import me.rgunny.kachi.user.application.port.`in`.GetUserUseCase
@@ -34,7 +36,7 @@ class UserControllerTest {
         fun getMe() {
             val registerUseCase = FakeRegisterUserUseCase()
             val getUseCase = FakeGetUserUseCase()
-            val controller = UserController(registerUseCase, getUseCase)
+            val controller = UserController(registerUseCase, getUseCase, FakeDeactivateUserUseCase())
             val authenticatedUser = AuthenticatedUser(
                 userId = userId,
                 role = UserRole.USER
@@ -61,7 +63,7 @@ class UserControllerTest {
         fun registerUser() {
             val registerUseCase = FakeRegisterUserUseCase()
             val getUseCase = FakeGetUserUseCase()
-            val controller = UserController(registerUseCase, getUseCase)
+            val controller = UserController(registerUseCase, getUseCase, FakeDeactivateUserUseCase())
 
             val response = controller.register(
                 RegisterUserRequest(
@@ -80,6 +82,34 @@ class UserControllerTest {
             assertEquals("USER", response.body?.data?.role)
             assertEquals("GOOGLE", response.body?.data?.authProvider)
             assertEquals(registeredAt, response.body?.data?.registeredAt)
+        }
+    }
+
+    @Nested
+    @DisplayName("deactivateMe()")
+    inner class DeactivateMe {
+
+        @Test
+        @DisplayName("인증 사용자 기준 탈퇴 요청을 처리한다")
+        fun deactivateMe() {
+            val deactivateUseCase = FakeDeactivateUserUseCase()
+            val controller = UserController(
+                registerUserUseCase = FakeRegisterUserUseCase(),
+                getUserUseCase = FakeGetUserUseCase(),
+                deactivateUserUseCase = deactivateUseCase
+            )
+            val authenticatedUser = AuthenticatedUser(
+                userId = userId,
+                role = UserRole.USER
+            )
+
+            val response = controller.deactivateMe(authenticatedUser)
+
+            assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
+            assertEquals(null, response.body?.data)
+            assertEquals(userId, deactivateUseCase.command.userId)
         }
     }
 
@@ -116,6 +146,14 @@ class UserControllerTest {
                 authProvider = command.authProvider,
                 registeredAt = registeredAt
             )
+        }
+    }
+
+    private class FakeDeactivateUserUseCase : DeactivateUserUseCase {
+        lateinit var command: DeactivateUserCommand
+
+        override fun deactivate(command: DeactivateUserCommand) {
+            this.command = command
         }
     }
 }

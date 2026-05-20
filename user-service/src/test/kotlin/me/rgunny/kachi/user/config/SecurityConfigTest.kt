@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
@@ -121,6 +122,29 @@ class SecurityConfigTest @Autowired constructor(
             val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
 
             mockMvc.get("/api/v1/me") {
+                header("Authorization", "Bearer ${token.value}")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("내 탈퇴 API는 인증을 요구한다")
+        fun requireAuthenticationForDeactivateMeApi() {
+            mockMvc.delete("/api/v1/me") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("내 탈퇴 API는 access token으로 접근할 수 있다")
+        fun permitDeactivateMeApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.delete("/api/v1/me") {
                 header("Authorization", "Bearer ${token.value}")
                 accept = MediaType.APPLICATION_JSON
             }.andExpect {

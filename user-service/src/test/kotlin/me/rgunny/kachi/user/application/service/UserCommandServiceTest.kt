@@ -1,10 +1,13 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
+import me.rgunny.kachi.user.application.exception.InactiveUserException
+import me.rgunny.kachi.user.application.port.`in`.DeactivateUserCommand
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserCommand
 import me.rgunny.kachi.user.application.port.out.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
+import me.rgunny.kachi.user.domain.Nickname
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
@@ -35,7 +38,7 @@ class UserCommandServiceTest {
         @DisplayName("사용자를 등록하고 저장한다")
         fun registerUser() {
             val userPersistencePort = FakeUserPersistencePort()
-            val service = UserCommandService(userPersistencePort, clock)
+            val service = userCommandService(userPersistencePort)
 
             val result = service.register(
                 RegisterUserCommand(
@@ -62,7 +65,7 @@ class UserCommandServiceTest {
         @DisplayName("이미 등록된 이메일이면 사용자를 저장하지 않는다")
         fun rejectDuplicateEmail() {
             val userPersistencePort = FakeUserPersistencePort(existingEmails = setOf(Email.of("rgunny@kachi.com")))
-            val service = UserCommandService(userPersistencePort, clock)
+            val service = userCommandService(userPersistencePort)
 
             assertFailsWith<DuplicateEmailException> {
                 service.register(
@@ -79,15 +82,60 @@ class UserCommandServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("deactivate()")
+    inner class Deactivate {
+
+        @Test
+        @DisplayName("활성 사용자를 탈퇴 상태로 변경한다")
+        fun deactivateUser() {
+            val userId = UserId.newId()
+            val userPersistencePort = FakeUserPersistencePort(users = mapOf(userId to user(userId)))
+            val service = userCommandService(userPersistencePort)
+
+            service.deactivate(DeactivateUserCommand(userId))
+
+            val savedUser = userPersistencePort.savedUsers.single()
+            assertEquals(userId, savedUser.id)
+            assertEquals(UserStatus.DELETED, savedUser.status)
+            assertEquals(now, savedUser.deactivatedAt)
+        }
+
+        @Test
+        @DisplayName("활성 사용자가 아니면 탈퇴 처리하지 않는다")
+        fun rejectInactiveUser() {
+            val userId = UserId.newId()
+            val userPersistencePort = FakeUserPersistencePort(
+                users = mapOf(userId to user(userId, status = UserStatus.DELETED))
+            )
+            val service = userCommandService(userPersistencePort)
+
+            assertFailsWith<InactiveUserException> {
+                service.deactivate(DeactivateUserCommand(userId))
+            }
+
+            assertFalse(userPersistencePort.saveCalled)
+        }
+    }
+
+    private fun userCommandService(userPersistencePort: FakeUserPersistencePort): UserCommandService {
+        return UserCommandService(
+            userPersistencePort = userPersistencePort,
+            clock = clock,
+            activeUserValidator = ActiveUserValidator(userPersistencePort)
+        )
+    }
+
     private class FakeUserPersistencePort(
-        private val existingEmails: Set<Email> = emptySet()
+        private val existingEmails: Set<Email> = emptySet(),
+        private val users: Map<UserId, User> = emptyMap()
     ) : UserPersistencePort {
         val savedUsers = mutableListOf<User>()
         var existsByEmailCalled = false
         var saveCalled = false
 
         override fun findById(userId: UserId): User? {
-            return null
+            return users[userId]
         }
 
         override fun findByAuthProviderAndProviderUserId(
@@ -107,5 +155,20 @@ class UserCommandServiceTest {
             savedUsers += user
             return user
         }
+    }
+
+    private fun user(userId: UserId, status: UserStatus = UserStatus.ACTIVE): User {
+        return User.restore(
+            id = userId,
+            email = Email.of("rgunny@kachi.com"),
+            nickname = Nickname.of("rgunny"),
+            status = status,
+            role = UserRole.USER,
+            authProvider = AuthProvider.GOOGLE,
+            providerUserId = ProviderUserId.of("google-123"),
+            registeredAt = Instant.parse("2026-05-19T00:00:00Z"),
+            lastLoginAt = null,
+            deactivatedAt = if (status == UserStatus.DELETED) now else null
+        )
     }
 }
