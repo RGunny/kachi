@@ -57,6 +57,7 @@ class JwtTokenProvider(
         val claims = parse(token)
 
         return ParsedToken(
+            id = claims.id,
             userId = claims.userId,
             type = TokenType.valueOf(claims.type.name),
             role = claims.role
@@ -79,6 +80,7 @@ class JwtTokenProvider(
         }
 
         return JwtTokenClaims(
+            id = requiredClaim(claims.id, "jti"),
             userId = UserId.of(UUID.fromString(requiredClaim(claims.subject, "sub"))),
             type = type,
             role = role
@@ -98,6 +100,7 @@ class JwtTokenProvider(
 
     private fun JwtToken.toIssuedToken(): IssuedToken {
         return IssuedToken(
+            id = id,
             value = value,
             expiresAt = expiresAt
         )
@@ -113,7 +116,9 @@ class JwtTokenProvider(
 
         val issuedAt = Instant.now(clock)
         val expiresAt = issuedAt.plus(ttl)
+        val tokenId = UUID.randomUUID().toString()
         val token = Jwts.builder()
+            .id(tokenId)
             .subject(userId.value.toString())
             .claim(TYPE_CLAIM, type.name)
             .claims(claims)
@@ -123,6 +128,7 @@ class JwtTokenProvider(
             .compact()
 
         return JwtToken(
+            id = tokenId,
             value = token,
             expiresAt = expiresAt
         )

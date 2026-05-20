@@ -13,8 +13,10 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Date
+import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 @DisplayName("JwtTokenProvider")
@@ -43,6 +45,7 @@ class JwtTokenProviderTest {
             val token = tokenProvider.createAccessToken(userId, UserRole.USER)
 
             val claims = tokenProvider.parse(token.value)
+            assertEquals(token.id, claims.id)
             assertEquals(userId, claims.userId)
             assertEquals(JwtTokenType.ACCESS, claims.type)
             assertEquals(UserRole.USER, claims.role)
@@ -62,6 +65,7 @@ class JwtTokenProviderTest {
             val token = tokenProvider.createRefreshToken(userId)
 
             val claims = tokenProvider.parse(token.value)
+            assertEquals(token.id, claims.id)
             assertEquals(userId, claims.userId)
             assertEquals(JwtTokenType.REFRESH, claims.type)
             assertEquals(null, claims.role)
@@ -119,6 +123,20 @@ class JwtTokenProviderTest {
         }
 
         @Test
+        @DisplayName("jti claim이 없으면 false를 반환한다")
+        fun missingTokenIdClaim() {
+            val token = createSignedToken(
+                claims = mapOf(
+                    "type" to JwtTokenType.ACCESS.name,
+                    "role" to UserRole.USER.name
+                ),
+                tokenId = null
+            )
+
+            assertFalse(tokenProvider.isValid(token))
+        }
+
+        @Test
         @DisplayName("access token에 role claim이 없으면 false를 반환한다")
         fun accessTokenWithoutRoleClaim() {
             val token = createSignedToken(claims = mapOf("type" to JwtTokenType.ACCESS.name))
@@ -127,14 +145,52 @@ class JwtTokenProviderTest {
         }
     }
 
-    private fun createSignedToken(claims: Map<String, Any>): String {
+    @Nested
+    @DisplayName("parseToken()")
+    inner class ParseToken {
+
+        @Test
+        @DisplayName("같은 토큰의 jti를 application token model로 전달한다")
+        fun parseTokenId() {
+            val token = tokenProvider.createRefreshToken(UserId.newId())
+
+            val parsedToken = tokenProvider.parseToken(token.value)
+
+            assertEquals(token.id, parsedToken.id)
+        }
+    }
+
+    @Nested
+    @DisplayName("issueRefreshToken()")
+    inner class IssueRefreshToken {
+
+        @Test
+        @DisplayName("새로 발급한 refresh token마다 다른 jti를 가진다")
+        fun issueDifferentTokenId() {
+            val userId = UserId.newId()
+
+            val firstToken = tokenProvider.issueRefreshToken(userId)
+            val secondToken = tokenProvider.issueRefreshToken(userId)
+
+            assertNotEquals(firstToken.id, secondToken.id)
+        }
+    }
+
+    private fun createSignedToken(
+        claims: Map<String, Any>,
+        tokenId: String? = UUID.randomUUID().toString()
+    ): String {
         val secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET))
 
-        return Jwts.builder()
+        val builder = Jwts.builder()
             .subject(UserId.newId().value.toString())
             .claims(claims)
             .issuedAt(Date.from(issuedAt))
             .expiration(Date.from(issuedAt.plus(accessTokenTtl)))
+
+        tokenId?.let(builder::id)
+
+        return builder
             .signWith(secretKey)
             .compact()
     }

@@ -112,6 +112,7 @@ class TokenServiceTest {
             issuedAccessTokenRole = role
 
             return IssuedToken(
+                id = "new-access-token-id",
                 value = "new-access-token",
                 expiresAt = Instant.parse("2026-05-20T00:15:00Z")
             )
@@ -121,6 +122,7 @@ class TokenServiceTest {
             issuedRefreshTokenUserId = userId
 
             return IssuedToken(
+                id = "new-refresh-token-id",
                 value = "new-refresh-token",
                 expiresAt = Instant.parse("2026-06-03T00:00:00Z")
             )
@@ -130,6 +132,7 @@ class TokenServiceTest {
             parsedToken = token
 
             return ParsedToken(
+                id = "refresh-token-id",
                 userId = userId,
                 type = tokenType,
                 role = null
