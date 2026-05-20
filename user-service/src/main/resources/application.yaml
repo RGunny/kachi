@@ -16,3 +16,5 @@ kachi:
     secret: ${KACHI_JWT_SECRET}
     access-token-ttl: 15m
     refresh-token-ttl: 14d
+  oauth2:
+    success-redirect-uri: ${KACHI_OAUTH2_SUCCESS_REDIRECT_URI}
