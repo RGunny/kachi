@@ -6,6 +6,7 @@ import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.`in`.web.security.JwtTokenProvider
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -42,7 +43,8 @@ import java.time.Duration
 )
 @DisplayName("SecurityConfig")
 class SecurityConfigTest @Autowired constructor(
-    private val mockMvc: MockMvc
+    private val mockMvc: MockMvc,
+    private val jwtTokenProvider: JwtTokenProvider
 ) {
 
     @Nested
@@ -86,6 +88,31 @@ class SecurityConfigTest @Autowired constructor(
     @Nested
     @DisplayName("authenticated")
     inner class Authenticated {
+
+        @Test
+        @DisplayName("인증 사용자 관심 키워드 등록 API는 인증을 요구한다")
+        fun requireAuthenticationForMyKeywordApi() {
+            mockMvc.post("/api/v1/me/keywords") {
+                contentType = MediaType.APPLICATION_JSON
+                content = registerKeywordBody()
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("인증 사용자 관심 키워드 등록 API는 access token으로 접근할 수 있다")
+        fun permitMyKeywordApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.post("/api/v1/me/keywords") {
+                header("Authorization", "Bearer ${token.value}")
+                contentType = MediaType.APPLICATION_JSON
+                content = registerKeywordBody()
+            }.andExpect {
+                status { isCreated() }
+            }
+        }
 
         @Test
         @DisplayName("허용하지 않은 API는 인증을 요구한다")
