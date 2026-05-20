@@ -16,7 +16,7 @@ object OAuth2UserInfoFactory {
         }
     }
 
-    private fun authProvider(registrationId: String): AuthProvider {
+    fun authProvider(registrationId: String): AuthProvider {
         return AuthProvider.entries.firstOrNull {
             it != AuthProvider.LOCAL && it.name.equals(registrationId, ignoreCase = true)
         } ?: throw IllegalArgumentException("지원하지 않는 OAuth provider입니다: $registrationId")
