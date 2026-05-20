@@ -77,6 +77,17 @@ class SecurityConfigTest @Autowired constructor(
         }
 
         @Test
+        @DisplayName("로그아웃 API는 인증 없이 접근할 수 있다")
+        fun permitLogoutApi() {
+            mockMvc.post("/api/v1/auth/logout") {
+                contentType = MediaType.APPLICATION_JSON
+                content = refreshTokenBody()
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
         @DisplayName("OAuth2 인증 시작 endpoint는 인증 없이 provider로 리다이렉트한다")
         fun permitOAuth2AuthorizationApi() {
             mockMvc.get("/oauth2/authorization/google") {

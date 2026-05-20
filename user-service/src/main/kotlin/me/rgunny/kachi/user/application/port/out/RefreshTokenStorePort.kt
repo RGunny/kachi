@@ -13,4 +13,6 @@ interface RefreshTokenStorePort {
     fun exists(userId: UserId, tokenId: String): Boolean
 
     fun rotate(userId: UserId, oldTokenId: String, newToken: StoredRefreshToken): Boolean
+
+    fun revoke(userId: UserId, tokenId: String)
 }

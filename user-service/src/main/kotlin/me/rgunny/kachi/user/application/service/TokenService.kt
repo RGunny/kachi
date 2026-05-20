@@ -4,6 +4,8 @@ import me.rgunny.kachi.user.application.exception.InvalidTokenException
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensCommand
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensResult
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensUseCase
+import me.rgunny.kachi.user.application.port.`in`.LogoutCommand
+import me.rgunny.kachi.user.application.port.`in`.LogoutUseCase
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenUseCase
@@ -23,7 +25,7 @@ class TokenService(
     private val userPersistencePort: UserPersistencePort,
     private val clock: Clock,
     private val activeUserValidator: ActiveUserValidator
-) : IssueAuthTokensUseCase, RefreshTokenUseCase {
+) : IssueAuthTokensUseCase, RefreshTokenUseCase, LogoutUseCase {
 
     override fun issue(command: IssueAuthTokensCommand): IssueAuthTokensResult {
         // 1. 인증 성공 사용자가 현재도 활성 상태인지 확인한다.
@@ -96,5 +98,21 @@ class TokenService(
             refreshToken = refreshToken.value,
             refreshTokenExpiresAt = refreshToken.expiresAt
         )
+    }
+
+    override fun logout(command: LogoutCommand) {
+        // 1. refresh token의 서명과 만료 시간을 검증한다.
+        if (!tokenPort.isValid(command.refreshToken)) {
+            throw InvalidTokenException()
+        }
+
+        // 2. 로그아웃은 서버가 관리하는 refresh token만 폐기한다.
+        val claims = tokenPort.parseToken(command.refreshToken)
+        if (claims.type != TokenType.REFRESH) {
+            throw InvalidTokenException("refresh token이 필요합니다")
+        }
+
+        // 3. 이미 저장소에 없더라도 로그아웃 결과는 성공으로 본다.
+        refreshTokenStorePort.revoke(claims.userId, claims.id)
     }
 }

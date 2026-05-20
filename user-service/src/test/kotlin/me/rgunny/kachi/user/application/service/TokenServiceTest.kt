@@ -4,6 +4,7 @@ import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensCommand
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensResult
+import me.rgunny.kachi.user.application.port.`in`.LogoutCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
 import me.rgunny.kachi.user.application.port.out.RefreshTokenStorePort
@@ -170,6 +171,49 @@ class TokenServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("logout()")
+    inner class Logout {
+
+        @Test
+        @DisplayName("refresh token을 폐기한다")
+        fun logout() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(tokenPort = tokenPort)
+
+            service.logout(LogoutCommand(refreshToken = "valid-refresh-token"))
+
+            assertEquals("valid-refresh-token", tokenPort.parsedToken)
+            assertEquals(userId to "refresh-token-id", service.refreshTokenStorePort.revokedToken)
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 토큰이면 실패한다")
+        fun rejectInvalidToken() {
+            val tokenPort = FakeTokenPort(valid = false)
+            val service = tokenService(tokenPort = tokenPort)
+
+            assertFailsWith<InvalidTokenException> {
+                service.logout(LogoutCommand(refreshToken = "invalid-token"))
+            }
+
+            assertEquals(null, service.refreshTokenStorePort.revokedToken)
+        }
+
+        @Test
+        @DisplayName("refresh token이 아니면 실패한다")
+        fun rejectNonRefreshToken() {
+            val tokenPort = FakeTokenPort(tokenType = TokenType.ACCESS)
+            val service = tokenService(tokenPort = tokenPort)
+
+            assertFailsWith<InvalidTokenException> {
+                service.logout(LogoutCommand(refreshToken = "access-token"))
+            }
+
+            assertEquals(null, service.refreshTokenStorePort.revokedToken)
+        }
+    }
+
     private fun tokenService(
         tokenPort: TokenPort,
         refreshTokenStorePort: FakeRefreshTokenStorePort = FakeRefreshTokenStorePort(),
@@ -203,6 +247,10 @@ class TokenServiceTest {
 
         fun refresh(command: RefreshTokenCommand): RefreshTokenResult {
             return tokenService.refresh(command)
+        }
+
+        fun logout(command: LogoutCommand) {
+            tokenService.logout(command)
         }
     }
 
@@ -260,6 +308,7 @@ class TokenServiceTest {
         var savedToken: StoredRefreshToken? = null
         var rotatedOldTokenId: String? = null
         var rotatedNewToken: StoredRefreshToken? = null
+        var revokedToken: Pair<UserId, String>? = null
 
         override fun save(token: StoredRefreshToken) {
             savedToken = token
@@ -276,6 +325,10 @@ class TokenServiceTest {
             rotatedNewToken = newToken
 
             return rotate
+        }
+
+        override fun revoke(userId: UserId, tokenId: String) {
+            revokedToken = userId to tokenId
         }
     }
 

@@ -67,5 +67,20 @@ class ApiVersionConfigTest @Autowired constructor(
             }
         }
 
+        @Test
+        @DisplayName("v1 로그아웃 API를 매핑한다")
+        fun mapV1LogoutApi() {
+            mockMvc.post("/api/v1/auth/logout") {
+                contentType = MediaType.APPLICATION_JSON
+                content = """
+                    {
+                      "refreshToken": "refresh-token"
+                    }
+                """.trimIndent()
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
     }
 }

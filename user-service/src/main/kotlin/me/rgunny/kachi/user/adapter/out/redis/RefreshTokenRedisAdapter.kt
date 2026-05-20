@@ -67,6 +67,13 @@ class RefreshTokenRedisAdapter(
         return result == 1L
     }
 
+    /**
+     * 로그아웃 시 해당 refresh token jti를 삭제해 추가 재발급을 막는다.
+     */
+    override fun revoke(userId: UserId, tokenId: String) {
+        redisTemplate.delete(key(userId, tokenId))
+    }
+
     private fun ttlUntil(expiresAt: Instant): Duration {
         return Duration.between(Instant.now(clock), expiresAt)
     }

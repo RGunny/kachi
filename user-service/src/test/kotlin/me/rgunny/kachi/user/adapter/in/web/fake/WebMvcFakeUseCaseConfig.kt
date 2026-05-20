@@ -16,6 +16,9 @@ class WebMvcFakeUseCaseConfig {
     fun refreshTokenUseCase(): FakeRefreshTokenUseCase = FakeRefreshTokenUseCase()
 
     @Bean
+    fun logoutUseCase(): FakeLogoutUseCase = FakeLogoutUseCase()
+
+    @Bean
     fun registerKeywordUseCase(): FakeRegisterKeywordUseCase = FakeRegisterKeywordUseCase()
 
     @Bean

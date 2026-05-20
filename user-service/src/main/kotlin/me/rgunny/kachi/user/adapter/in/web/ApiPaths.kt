@@ -8,12 +8,14 @@ package me.rgunny.kachi.user.adapter.`in`.web
  */
 object ApiPaths {
     const val AUTH_TOKEN_REFRESH = "/auth/token/refresh"
+    const val AUTH_LOGOUT = "/auth/logout"
     const val USERS = "/users"
     const val ME = "/me"
     const val ME_KEYWORDS = "/me/keywords"
     const val KEYWORDS = "/keywords/{keywordId}"
 
     const val V1_AUTH_TOKEN_REFRESH = "${ApiVersions.V1_PATH_PREFIX}$AUTH_TOKEN_REFRESH"
+    const val V1_AUTH_LOGOUT = "${ApiVersions.V1_PATH_PREFIX}$AUTH_LOGOUT"
     const val V1_USERS = "${ApiVersions.V1_PATH_PREFIX}$USERS"
     const val V1_ME = "${ApiVersions.V1_PATH_PREFIX}$ME"
     const val V1_ME_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$ME_KEYWORDS"

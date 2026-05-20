@@ -16,6 +16,14 @@ data class ApiResponse<T>(
             )
         }
 
+        fun success(): ApiResponse<Unit> {
+            return ApiResponse(
+                success = true,
+                data = null,
+                error = null
+            )
+        }
+
         fun failure(error: ErrorResponse): ApiResponse<Unit> {
             return ApiResponse(
                 success = false,
