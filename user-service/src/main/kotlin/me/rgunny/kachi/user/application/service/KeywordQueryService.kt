@@ -8,10 +8,13 @@ import org.springframework.stereotype.Service
 
 @Service
 class KeywordQueryService(
-    private val keywordPersistencePort: KeywordPersistencePort
+    private val keywordPersistencePort: KeywordPersistencePort,
+    private val activeUserValidator: ActiveUserValidator
 ) : ListKeywordsUseCase {
 
     override fun list(query: ListKeywordsQuery): List<ListKeywordResult> {
+        activeUserValidator.get(query.userId)
+
         return keywordPersistencePort.findAllByUserId(query.userId)
             .sortedByDescending { it.registeredAt }
             .map(ListKeywordResult::from)

@@ -18,10 +18,13 @@ import java.time.Instant
 @Service
 class KeywordCommandService(
     private val keywordPersistencePort: KeywordPersistencePort,
+    private val activeUserValidator: ActiveUserValidator,
     private val clock: Clock
 ) : RegisterKeywordUseCase, UpdateKeywordUseCase {
 
     override fun register(command: RegisterKeywordCommand): RegisterKeywordResult {
+        activeUserValidator.get(command.userId)
+
         val name = KeywordName.of(command.name)
 
         if (keywordPersistencePort.existsByUserIdAndName(command.userId, name)) {
@@ -40,6 +43,8 @@ class KeywordCommandService(
     override fun update(command: UpdateKeywordCommand): UpdateKeywordResult {
         val keyword = keywordPersistencePort.findById(command.keywordId)
             ?: throw KeywordNotFoundException(command.keywordId)
+
+        activeUserValidator.get(keyword.userId)
 
         var updatedKeyword = keyword
 

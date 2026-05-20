@@ -1,14 +1,23 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
+import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
 import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.domain.AuthProvider
+import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
+import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
+import me.rgunny.kachi.user.domain.UserStatus
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -36,7 +45,7 @@ class KeywordCommandServiceTest {
         @DisplayName("관심 키워드를 등록하고 저장한다")
         fun registerKeyword() {
             val keywordPersistencePort = FakeKeywordPersistencePort()
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             val result = service.register(
                 RegisterKeywordCommand(
@@ -60,7 +69,7 @@ class KeywordCommandServiceTest {
             val keywordPersistencePort = FakeKeywordPersistencePort(
                 existingPairs = setOf(userId to KeywordName.of("TRUMP"))
             )
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             assertFailsWith<DuplicateKeywordException> {
                 service.register(
@@ -74,6 +83,50 @@ class KeywordCommandServiceTest {
             assertTrue(keywordPersistencePort.existsByUserIdAndNameCalled)
             assertFalse(keywordPersistencePort.saveCalled)
         }
+
+        @Test
+        @DisplayName("사용자가 없으면 키워드를 등록할 수 없다")
+        fun rejectMissingUser() {
+            val keywordPersistencePort = FakeKeywordPersistencePort()
+            val service = keywordCommandService(
+                keywordPersistencePort = keywordPersistencePort,
+                users = emptyMap()
+            )
+
+            assertFailsWith<UserNotFoundException> {
+                service.register(
+                    RegisterKeywordCommand(
+                        userId = userId,
+                        name = "Trump"
+                    )
+                )
+            }
+
+            assertFalse(keywordPersistencePort.existsByUserIdAndNameCalled)
+            assertFalse(keywordPersistencePort.saveCalled)
+        }
+
+        @Test
+        @DisplayName("활성 사용자가 아니면 키워드를 등록할 수 없다")
+        fun rejectInactiveUser() {
+            val keywordPersistencePort = FakeKeywordPersistencePort()
+            val service = keywordCommandService(
+                keywordPersistencePort = keywordPersistencePort,
+                users = mapOf(userId to user(status = UserStatus.DELETED))
+            )
+
+            assertFailsWith<InactiveUserException> {
+                service.register(
+                    RegisterKeywordCommand(
+                        userId = userId,
+                        name = "Trump"
+                    )
+                )
+            }
+
+            assertFalse(keywordPersistencePort.existsByUserIdAndNameCalled)
+            assertFalse(keywordPersistencePort.saveCalled)
+        }
     }
 
     @Nested
@@ -85,7 +138,7 @@ class KeywordCommandServiceTest {
         fun updateKeywordName() {
             val keyword = activeKeyword(name = "Trump")
             val keywordPersistencePort = FakeKeywordPersistencePort(keywords = mapOf(keyword.id to keyword))
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             val result = service.update(
                 UpdateKeywordCommand(
@@ -111,7 +164,7 @@ class KeywordCommandServiceTest {
                 existingPairs = setOf(userId to KeywordName.of("Trump")),
                 keywords = mapOf(keyword.id to keyword)
             )
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             val result = service.update(
                 UpdateKeywordCommand(
@@ -130,7 +183,7 @@ class KeywordCommandServiceTest {
         fun disableKeyword() {
             val keyword = activeKeyword(name = "Trump")
             val keywordPersistencePort = FakeKeywordPersistencePort(keywords = mapOf(keyword.id to keyword))
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             val result = service.update(
                 UpdateKeywordCommand(
@@ -149,7 +202,7 @@ class KeywordCommandServiceTest {
         fun enableKeyword() {
             val keyword = activeKeyword(name = "Trump").disable(now)
             val keywordPersistencePort = FakeKeywordPersistencePort(keywords = mapOf(keyword.id to keyword))
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             val result = service.update(
                 UpdateKeywordCommand(
@@ -177,7 +230,7 @@ class KeywordCommandServiceTest {
         @DisplayName("변경할 키워드가 없으면 실패한다")
         fun rejectMissingKeyword() {
             val keywordPersistencePort = FakeKeywordPersistencePort()
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             assertFailsWith<KeywordNotFoundException> {
                 service.update(
@@ -200,7 +253,7 @@ class KeywordCommandServiceTest {
                 existingPairs = setOf(userId to KeywordName.of("Tesla")),
                 keywords = mapOf(keyword.id to keyword)
             )
-            val service = KeywordCommandService(keywordPersistencePort, clock)
+            val service = keywordCommandService(keywordPersistencePort)
 
             assertFailsWith<DuplicateKeywordException> {
                 service.update(
@@ -214,6 +267,42 @@ class KeywordCommandServiceTest {
             assertTrue(keywordPersistencePort.existsByUserIdAndNameCalled)
             assertFalse(keywordPersistencePort.saveCalled)
         }
+
+        @Test
+        @DisplayName("키워드 소유 사용자가 활성 사용자가 아니면 수정할 수 없다")
+        fun rejectInactiveUserOnUpdate() {
+            val keyword = activeKeyword(name = "Trump")
+            val keywordPersistencePort = FakeKeywordPersistencePort(keywords = mapOf(keyword.id to keyword))
+            val service = keywordCommandService(
+                keywordPersistencePort = keywordPersistencePort,
+                users = mapOf(userId to user(status = UserStatus.DELETED))
+            )
+
+            assertFailsWith<InactiveUserException> {
+                service.update(
+                    UpdateKeywordCommand(
+                        keywordId = keyword.id,
+                        name = "Tesla"
+                    )
+                )
+            }
+
+            assertFalse(keywordPersistencePort.existsByUserIdAndNameCalled)
+            assertFalse(keywordPersistencePort.saveCalled)
+        }
+    }
+
+    private fun keywordCommandService(
+        keywordPersistencePort: KeywordPersistencePort,
+        users: Map<UserId, User> = mapOf(userId to user())
+    ): KeywordCommandService {
+        val userPersistencePort = FakeUserPersistencePort(users)
+
+        return KeywordCommandService(
+            keywordPersistencePort = keywordPersistencePort,
+            activeUserValidator = ActiveUserValidator(userPersistencePort),
+            clock = clock
+        )
     }
 
     private class FakeKeywordPersistencePort(
@@ -250,5 +339,36 @@ class KeywordCommandServiceTest {
             name = KeywordName.of(name),
             registeredAt = now
         )
+    }
+
+    private fun user(status: UserStatus = UserStatus.ACTIVE): User {
+        return User.restore(
+            id = userId,
+            email = Email.of("rgunny@kachi.com"),
+            nickname = Nickname.of("rgunny"),
+            status = status,
+            role = UserRole.USER,
+            authProvider = AuthProvider.GOOGLE,
+            registeredAt = now,
+            lastLoginAt = null,
+            deactivatedAt = null
+        )
+    }
+
+    private class FakeUserPersistencePort(
+        private val users: Map<UserId, User>
+    ) : UserPersistencePort {
+
+        override fun findById(userId: UserId): User? {
+            return users[userId]
+        }
+
+        override fun existsByEmail(email: Email): Boolean {
+            return false
+        }
+
+        override fun save(user: User): User {
+            return user
+        }
     }
 }

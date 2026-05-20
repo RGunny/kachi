@@ -32,7 +32,7 @@ class UserQueryServiceTest {
         fun getUser() {
             val user = user()
             val userPersistencePort = FakeUserPersistencePort(users = mapOf(user.id to user))
-            val service = UserQueryService(userPersistencePort)
+            val service = UserQueryService(ActiveUserValidator(userPersistencePort))
 
             val result = service.get(GetUserQuery(userId))
 
@@ -47,7 +47,7 @@ class UserQueryServiceTest {
         @DisplayName("사용자가 없으면 실패한다")
         fun rejectMissingUser() {
             val userPersistencePort = FakeUserPersistencePort()
-            val service = UserQueryService(userPersistencePort)
+            val service = UserQueryService(ActiveUserValidator(userPersistencePort))
 
             assertFailsWith<UserNotFoundException> {
                 service.get(GetUserQuery(userId))
@@ -61,7 +61,7 @@ class UserQueryServiceTest {
         fun rejectInactiveUser() {
             val user = user(status = UserStatus.DELETED)
             val userPersistencePort = FakeUserPersistencePort(users = mapOf(user.id to user))
-            val service = UserQueryService(userPersistencePort)
+            val service = UserQueryService(ActiveUserValidator(userPersistencePort))
 
             assertFailsWith<InactiveUserException> {
                 service.get(GetUserQuery(userId))
