@@ -1,0 +1,121 @@
+package me.rgunny.kachi.user.config
+
+import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
+import me.rgunny.kachi.user.adapter.`in`.web.UserController
+import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
+import me.rgunny.kachi.user.domain.KeywordId
+import me.rgunny.kachi.user.domain.UserId
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.context.annotation.Import
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.patch
+import org.springframework.test.web.servlet.post
+
+@WebMvcTest(controllers = [UserController::class, KeywordController::class])
+@AutoConfigureMockMvc
+@ImportAutoConfiguration(
+    SecurityAutoConfiguration::class,
+    ServletWebSecurityAutoConfiguration::class,
+    SecurityFilterAutoConfiguration::class
+)
+@Import(
+    ApiVersionConfig::class,
+    SecurityConfig::class,
+    WebMvcFakeUseCaseConfig::class
+)
+@DisplayName("SecurityConfig")
+class SecurityConfigTest @Autowired constructor(
+    private val mockMvc: MockMvc
+) {
+
+    @Nested
+    @DisplayName("permit all")
+    inner class PermitAll {
+
+        @Test
+        @DisplayName("사용자 등록 API는 인증 없이 접근할 수 있다")
+        fun permitRegisterUserApi() {
+            mockMvc.post("/api/v1/users") {
+                contentType = MediaType.APPLICATION_JSON
+                content = registerUserBody()
+            }.andExpect {
+                status { isCreated() }
+            }
+        }
+
+        @Test
+        @DisplayName("관심 키워드 등록 API는 인증 없이 접근할 수 있다")
+        fun permitRegisterKeywordApi() {
+            mockMvc.post("/api/v1/users/${UserId.newId().value}/keywords") {
+                contentType = MediaType.APPLICATION_JSON
+                content = registerKeywordBody()
+            }.andExpect {
+                status { isCreated() }
+            }
+        }
+
+        @Test
+        @DisplayName("관심 키워드 수정 API는 인증 없이 접근할 수 있다")
+        fun permitUpdateKeywordApi() {
+            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+                contentType = MediaType.APPLICATION_JSON
+                content = updateKeywordBody()
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("authenticated")
+    inner class Authenticated {
+
+        @Test
+        @DisplayName("허용하지 않은 API는 인증을 요구한다")
+        fun requireAuthenticationForOtherApis() {
+            mockMvc.get("/api/v1/internal") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+    }
+
+    private fun registerUserBody(): String {
+        return """
+            {
+              "email": "rgunny@kachi.com",
+              "nickname": "rgunny",
+              "authProvider": "GOOGLE"
+            }
+        """.trimIndent()
+    }
+
+    private fun registerKeywordBody(): String {
+        return """
+            {
+              "name": "Trump"
+            }
+        """.trimIndent()
+    }
+
+    private fun updateKeywordBody(): String {
+        return """
+            {
+              "name": "Trump",
+              "enabled": true
+            }
+        """.trimIndent()
+    }
+}

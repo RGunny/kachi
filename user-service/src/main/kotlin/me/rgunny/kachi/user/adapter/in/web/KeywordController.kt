@@ -25,7 +25,7 @@ class KeywordController(
     private val updateKeywordUseCase: UpdateKeywordUseCase
 ) {
 
-    @PostMapping("/users/{userId}/keywords", version = ApiVersions.V1)
+    @PostMapping(ApiPaths.USER_KEYWORDS, version = ApiVersions.V1)
     fun register(
         @PathVariable userId: UUID,
         @Valid @RequestBody request: RegisterKeywordRequest
@@ -40,7 +40,7 @@ class KeywordController(
         return ResponseEntity.status(HttpStatus.CREATED).body(KeywordResponse.from(result))
     }
 
-    @PatchMapping("/keywords/{keywordId}", version = ApiVersions.V1)
+    @PatchMapping(ApiPaths.KEYWORDS, version = ApiVersions.V1)
     fun update(
         @PathVariable keywordId: UUID,
         @Valid @RequestBody request: UpdateKeywordRequest
