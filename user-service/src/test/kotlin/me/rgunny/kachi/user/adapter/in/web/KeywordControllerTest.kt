@@ -49,11 +49,13 @@ class KeywordControllerTest {
             val response = controller.listMyKeywords(authenticatedUser)
 
             assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
             assertEquals(UserId.of(userId), listUseCase.query.userId)
-            assertEquals(1, response.body?.size)
-            assertEquals("Trump", response.body?.single()?.name)
-            assertEquals(false, response.body?.single()?.enabled)
-            assertEquals(disabledAt, response.body?.single()?.disabledAt)
+            assertEquals(1, response.body?.data?.size)
+            assertEquals("Trump", response.body?.data?.single()?.name)
+            assertEquals(false, response.body?.data?.single()?.enabled)
+            assertEquals(disabledAt, response.body?.data?.single()?.disabledAt)
         }
     }
 
@@ -79,11 +81,13 @@ class KeywordControllerTest {
             )
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
             assertEquals(UserId.of(userId), registerUseCase.command.userId)
             assertEquals("Trump", registerUseCase.command.name)
-            assertEquals("Trump", response.body?.name)
-            assertEquals(true, response.body?.enabled)
-            assertEquals(null, response.body?.disabledAt)
+            assertEquals("Trump", response.body?.data?.name)
+            assertEquals(true, response.body?.data?.enabled)
+            assertEquals(null, response.body?.data?.disabledAt)
         }
 
         @Test
@@ -100,11 +104,13 @@ class KeywordControllerTest {
             )
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
             assertEquals(UserId.of(userId), registerUseCase.command.userId)
             assertEquals("Trump", registerUseCase.command.name)
-            assertEquals("Trump", response.body?.name)
-            assertEquals(true, response.body?.enabled)
-            assertEquals(null, response.body?.disabledAt)
+            assertEquals("Trump", response.body?.data?.name)
+            assertEquals(true, response.body?.data?.enabled)
+            assertEquals(null, response.body?.data?.disabledAt)
         }
     }
 
@@ -125,12 +131,14 @@ class KeywordControllerTest {
             )
 
             assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
             assertEquals(KeywordId.of(keywordId), updateUseCase.command.keywordId)
             assertEquals("Tesla", updateUseCase.command.name)
             assertEquals(false, updateUseCase.command.enabled)
-            assertEquals("Tesla", response.body?.name)
-            assertEquals(false, response.body?.enabled)
-            assertEquals(disabledAt, response.body?.disabledAt)
+            assertEquals("Tesla", response.body?.data?.name)
+            assertEquals(false, response.body?.data?.enabled)
+            assertEquals(disabledAt, response.body?.data?.disabledAt)
         }
     }
 

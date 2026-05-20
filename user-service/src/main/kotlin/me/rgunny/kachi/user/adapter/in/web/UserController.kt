@@ -3,6 +3,7 @@ package me.rgunny.kachi.user.adapter.`in`.web
 import jakarta.validation.Valid
 import me.rgunny.kachi.user.adapter.`in`.web.dto.RegisterUserRequest
 import me.rgunny.kachi.user.adapter.`in`.web.dto.UserResponse
+import me.rgunny.kachi.user.adapter.`in`.web.response.ApiResponse
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserCommand
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserUseCase
 import org.springframework.http.HttpStatus
@@ -19,7 +20,7 @@ class UserController(
 ) {
 
     @PostMapping(version = ApiVersions.V1)
-    fun register(@Valid @RequestBody request: RegisterUserRequest): ResponseEntity<UserResponse> {
+    fun register(@Valid @RequestBody request: RegisterUserRequest): ResponseEntity<ApiResponse<UserResponse>> {
         val result = registerUserUseCase.register(
             RegisterUserCommand(
                 email = request.email,
@@ -28,6 +29,6 @@ class UserController(
             )
         )
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(result))
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(UserResponse.from(result)))
     }
 }

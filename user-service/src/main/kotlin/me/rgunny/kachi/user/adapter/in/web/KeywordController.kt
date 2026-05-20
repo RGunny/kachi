@@ -4,6 +4,7 @@ import jakarta.validation.Valid
 import me.rgunny.kachi.user.adapter.`in`.web.dto.KeywordResponse
 import me.rgunny.kachi.user.adapter.`in`.web.dto.RegisterKeywordRequest
 import me.rgunny.kachi.user.adapter.`in`.web.dto.UpdateKeywordRequest
+import me.rgunny.kachi.user.adapter.`in`.web.response.ApiResponse
 import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
 import me.rgunny.kachi.user.application.port.`in`.ListKeywordsQuery
 import me.rgunny.kachi.user.application.port.`in`.ListKeywordsUseCase
@@ -34,18 +35,18 @@ class KeywordController(
     @GetMapping(ApiPaths.ME_KEYWORDS, version = ApiVersions.V1)
     fun listMyKeywords(
         @AuthenticationPrincipal authenticatedUser: AuthenticatedUser
-    ): ResponseEntity<List<KeywordResponse>> {
+    ): ResponseEntity<ApiResponse<List<KeywordResponse>>> {
         val response = listKeywordsUseCase.list(ListKeywordsQuery(authenticatedUser.userId))
             .map(KeywordResponse::from)
 
-        return ResponseEntity.ok(response)
+        return ResponseEntity.ok(ApiResponse.success(response))
     }
 
     @PostMapping(ApiPaths.ME_KEYWORDS, version = ApiVersions.V1)
     fun registerMyKeyword(
         @AuthenticationPrincipal authenticatedUser: AuthenticatedUser,
         @Valid @RequestBody request: RegisterKeywordRequest
-    ): ResponseEntity<KeywordResponse> {
+    ): ResponseEntity<ApiResponse<KeywordResponse>> {
         val result = registerKeywordUseCase.register(
             RegisterKeywordCommand(
                 userId = authenticatedUser.userId,
@@ -53,14 +54,14 @@ class KeywordController(
             )
         )
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(KeywordResponse.from(result))
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(KeywordResponse.from(result)))
     }
 
     @PostMapping(ApiPaths.USER_KEYWORDS, version = ApiVersions.V1)
     fun register(
         @PathVariable userId: UUID,
         @Valid @RequestBody request: RegisterKeywordRequest
-    ): ResponseEntity<KeywordResponse> {
+    ): ResponseEntity<ApiResponse<KeywordResponse>> {
         val result = registerKeywordUseCase.register(
             RegisterKeywordCommand(
                 userId = UserId.of(userId),
@@ -68,14 +69,14 @@ class KeywordController(
             )
         )
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(KeywordResponse.from(result))
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(KeywordResponse.from(result)))
     }
 
     @PatchMapping(ApiPaths.KEYWORDS, version = ApiVersions.V1)
     fun update(
         @PathVariable keywordId: UUID,
         @Valid @RequestBody request: UpdateKeywordRequest
-    ): ResponseEntity<KeywordResponse> {
+    ): ResponseEntity<ApiResponse<KeywordResponse>> {
         val result = updateKeywordUseCase.update(
             UpdateKeywordCommand(
                 keywordId = KeywordId.of(keywordId),
@@ -84,6 +85,6 @@ class KeywordController(
             )
         )
 
-        return ResponseEntity.ok(KeywordResponse.from(result))
+        return ResponseEntity.ok(ApiResponse.success(KeywordResponse.from(result)))
     }
 }

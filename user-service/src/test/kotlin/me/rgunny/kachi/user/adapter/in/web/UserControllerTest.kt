@@ -40,11 +40,13 @@ class UserControllerTest {
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
             assertEquals("rgunny@kachi.com", useCase.command.email)
-            assertEquals("rgunny", response.body?.nickname)
-            assertEquals("ACTIVE", response.body?.status)
-            assertEquals("USER", response.body?.role)
-            assertEquals("GOOGLE", response.body?.authProvider)
-            assertEquals(registeredAt, response.body?.registeredAt)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
+            assertEquals("rgunny", response.body?.data?.nickname)
+            assertEquals("ACTIVE", response.body?.data?.status)
+            assertEquals("USER", response.body?.data?.role)
+            assertEquals("GOOGLE", response.body?.data?.authProvider)
+            assertEquals(registeredAt, response.body?.data?.registeredAt)
         }
     }
 

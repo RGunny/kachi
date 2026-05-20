@@ -126,6 +126,7 @@ class GlobalExceptionHandlerTest @Autowired constructor(
             }.andReturn().response
 
             assertTrue(response.contentAsString.contains("\"code\":\"INVALID_REQUEST\""))
+            assertTrue(response.contentAsString.contains("\"success\":false"))
         }
     }
 
@@ -134,7 +135,10 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         code: String,
         message: String
     ) {
-        assertEquals("""{"code":"$code","message":"$message"}""", actual)
+        assertEquals(
+            """{"success":false,"data":null,"error":{"code":"$code","message":"$message"}}""",
+            actual
+        )
     }
 
     private fun registerUserBody(email: String): String {
