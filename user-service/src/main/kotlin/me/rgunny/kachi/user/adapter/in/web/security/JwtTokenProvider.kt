@@ -1,0 +1,113 @@
+package me.rgunny.kachi.user.adapter.`in`.web.security
+
+import io.jsonwebtoken.JwtException
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.io.Decoders
+import io.jsonwebtoken.security.Keys
+import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.Date
+import java.util.UUID
+
+class JwtTokenProvider(
+    secret: String,
+    private val accessTokenTtl: Duration,
+    private val refreshTokenTtl: Duration,
+    private val clock: Clock
+) {
+    private val secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret))
+
+    fun createAccessToken(
+        userId: UserId,
+        role: UserRole
+    ): JwtToken {
+        return createToken(
+            userId = userId,
+            type = JwtTokenType.ACCESS,
+            ttl = accessTokenTtl,
+            claims = mapOf(ROLE_CLAIM to role.name)
+        )
+    }
+
+    fun createRefreshToken(userId: UserId): JwtToken {
+        return createToken(
+            userId = userId,
+            type = JwtTokenType.REFRESH,
+            ttl = refreshTokenTtl,
+            claims = emptyMap()
+        )
+    }
+
+    fun parse(token: String): JwtTokenClaims {
+        val claims = Jwts.parser()
+            .verifyWith(secretKey)
+            .clock { Date.from(Instant.now(clock)) }
+            .build()
+            .parseSignedClaims(token)
+            .payload
+
+        val type = JwtTokenType.valueOf(requiredClaim(claims.get(TYPE_CLAIM, String::class.java), TYPE_CLAIM))
+        val role = claims.get(ROLE_CLAIM, String::class.java)?.let(UserRole::valueOf)
+
+        if (type == JwtTokenType.ACCESS) {
+            require(role != null) { "access token에는 role claim이 필요합니다" }
+        }
+
+        return JwtTokenClaims(
+            userId = UserId.of(UUID.fromString(requiredClaim(claims.subject, "sub"))),
+            type = type,
+            role = role
+        )
+    }
+
+    fun isValid(token: String): Boolean {
+        return try {
+            parse(token)
+            true
+        } catch (exception: JwtException) {
+            false
+        } catch (exception: IllegalArgumentException) {
+            false
+        }
+    }
+
+    private fun createToken(
+        userId: UserId,
+        type: JwtTokenType,
+        ttl: Duration,
+        claims: Map<String, Any>
+    ): JwtToken {
+        require(!ttl.isNegative && !ttl.isZero) { "JWT 만료 시간은 0보다 커야 합니다" }
+
+        val issuedAt = Instant.now(clock)
+        val expiresAt = issuedAt.plus(ttl)
+        val token = Jwts.builder()
+            .subject(userId.value.toString())
+            .claim(TYPE_CLAIM, type.name)
+            .claims(claims)
+            .issuedAt(Date.from(issuedAt))
+            .expiration(Date.from(expiresAt))
+            .signWith(secretKey)
+            .compact()
+
+        return JwtToken(
+            value = token,
+            expiresAt = expiresAt
+        )
+    }
+
+    companion object {
+        private const val TYPE_CLAIM = "type"
+        private const val ROLE_CLAIM = "role"
+
+        private fun requiredClaim(
+            value: String?,
+            name: String
+        ): String {
+            return requireNotNull(value) { "JWT $name claim이 필요합니다" }
+        }
+    }
+}

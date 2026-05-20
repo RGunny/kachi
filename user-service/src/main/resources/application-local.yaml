@@ -1,0 +1,4 @@
+kachi:
+  jwt:
+    # openssl rand -base64 32
+    secret: ${KACHI_JWT_SECRET:YUCDjV24k7qJu6C82BxdVsEkHfb65UtJDNPSOqjljhA=}
