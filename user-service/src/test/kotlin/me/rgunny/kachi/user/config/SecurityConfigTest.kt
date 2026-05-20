@@ -90,6 +90,29 @@ class SecurityConfigTest @Autowired constructor(
     inner class Authenticated {
 
         @Test
+        @DisplayName("내 정보 조회 API는 인증을 요구한다")
+        fun requireAuthenticationForGetMeApi() {
+            mockMvc.get("/api/v1/me") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("내 정보 조회 API는 access token으로 접근할 수 있다")
+        fun permitGetMeApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.get("/api/v1/me") {
+                header("Authorization", "Bearer ${token.value}")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
         @DisplayName("인증 사용자 관심 키워드 등록 API는 인증을 요구한다")
         fun requireAuthenticationForRegisterMyKeywordApi() {
             mockMvc.post("/api/v1/me/keywords") {

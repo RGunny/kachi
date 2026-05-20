@@ -6,6 +6,7 @@ import me.rgunny.kachi.user.application.port.out.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.User
+import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
 import org.junit.jupiter.api.DisplayName
@@ -81,6 +82,10 @@ class UserCommandServiceTest {
         val savedUsers = mutableListOf<User>()
         var existsByEmailCalled = false
         var saveCalled = false
+
+        override fun findById(userId: UserId): User? {
+            return null
+        }
 
         override fun existsByEmail(email: Email): Boolean {
             existsByEmailCalled = true

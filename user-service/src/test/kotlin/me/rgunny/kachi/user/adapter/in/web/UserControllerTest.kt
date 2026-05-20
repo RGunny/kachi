@@ -1,6 +1,10 @@
 package me.rgunny.kachi.user.adapter.`in`.web
 
 import me.rgunny.kachi.user.adapter.`in`.web.dto.RegisterUserRequest
+import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
+import me.rgunny.kachi.user.application.port.`in`.GetUserQuery
+import me.rgunny.kachi.user.application.port.`in`.GetUserResult
+import me.rgunny.kachi.user.application.port.`in`.GetUserUseCase
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserCommand
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserResult
 import me.rgunny.kachi.user.application.port.`in`.RegisterUserUseCase
@@ -18,7 +22,35 @@ import kotlin.test.assertEquals
 
 @DisplayName("UserController")
 class UserControllerTest {
+    private val userId = UserId.of(UUID.randomUUID())
     private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+
+    @Nested
+    @DisplayName("getMe()")
+    inner class GetMe {
+
+        @Test
+        @DisplayName("인증 사용자 기준 내 정보를 조회한다")
+        fun getMe() {
+            val registerUseCase = FakeRegisterUserUseCase()
+            val getUseCase = FakeGetUserUseCase()
+            val controller = UserController(registerUseCase, getUseCase)
+            val authenticatedUser = AuthenticatedUser(
+                userId = userId,
+                role = UserRole.USER
+            )
+
+            val response = controller.getMe(authenticatedUser)
+
+            assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(true, response.body?.success)
+            assertEquals(null, response.body?.error)
+            assertEquals(userId, getUseCase.query.userId)
+            assertEquals(userId.value.toString(), response.body?.data?.id)
+            assertEquals("rgunny@kachi.com", response.body?.data?.email)
+            assertEquals("rgunny", response.body?.data?.nickname)
+        }
+    }
 
     @Nested
     @DisplayName("register()")
@@ -27,8 +59,9 @@ class UserControllerTest {
         @Test
         @DisplayName("사용자 등록 요청을 처리하고 201 응답을 반환한다")
         fun registerUser() {
-            val useCase = FakeRegisterUserUseCase()
-            val controller = UserController(useCase)
+            val registerUseCase = FakeRegisterUserUseCase()
+            val getUseCase = FakeGetUserUseCase()
+            val controller = UserController(registerUseCase, getUseCase)
 
             val response = controller.register(
                 RegisterUserRequest(
@@ -39,7 +72,7 @@ class UserControllerTest {
             )
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
-            assertEquals("rgunny@kachi.com", useCase.command.email)
+            assertEquals("rgunny@kachi.com", registerUseCase.command.email)
             assertEquals(true, response.body?.success)
             assertEquals(null, response.body?.error)
             assertEquals("rgunny", response.body?.data?.nickname)
@@ -47,6 +80,24 @@ class UserControllerTest {
             assertEquals("USER", response.body?.data?.role)
             assertEquals("GOOGLE", response.body?.data?.authProvider)
             assertEquals(registeredAt, response.body?.data?.registeredAt)
+        }
+    }
+
+    private inner class FakeGetUserUseCase : GetUserUseCase {
+        lateinit var query: GetUserQuery
+
+        override fun get(query: GetUserQuery): GetUserResult {
+            this.query = query
+
+            return GetUserResult(
+                id = query.userId,
+                email = "rgunny@kachi.com",
+                nickname = "rgunny",
+                status = UserStatus.ACTIVE,
+                role = UserRole.USER,
+                authProvider = AuthProvider.GOOGLE,
+                registeredAt = registeredAt
+            )
         }
     }
 
