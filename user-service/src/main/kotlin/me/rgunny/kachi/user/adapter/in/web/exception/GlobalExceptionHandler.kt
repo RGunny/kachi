@@ -6,6 +6,7 @@ import me.rgunny.kachi.user.adapter.`in`.web.response.ErrorResponse
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.InvalidTokenException
 import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
@@ -30,6 +31,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(InactiveUserException::class)
     fun handleInactiveUser(exception: InactiveUserException): ResponseEntity<ApiResponse<Unit>> {
         return error(ErrorCode.INACTIVE_USER, exception.message)
+    }
+
+    @ExceptionHandler(InvalidTokenException::class)
+    fun handleInvalidToken(exception: InvalidTokenException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.INVALID_TOKEN, exception.message)
     }
 
     @ExceptionHandler(DuplicateKeywordException::class)

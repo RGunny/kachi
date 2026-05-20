@@ -4,6 +4,10 @@ import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
+import me.rgunny.kachi.user.application.port.out.TokenPort
+import me.rgunny.kachi.user.application.token.IssuedToken
+import me.rgunny.kachi.user.application.token.ParsedToken
+import me.rgunny.kachi.user.application.token.TokenType
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import java.time.Clock
@@ -17,7 +21,7 @@ class JwtTokenProvider(
     private val accessTokenTtl: Duration,
     private val refreshTokenTtl: Duration,
     private val clock: Clock
-) {
+) : TokenPort {
     private val secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret))
 
     fun createAccessToken(
@@ -38,6 +42,24 @@ class JwtTokenProvider(
             type = JwtTokenType.REFRESH,
             ttl = refreshTokenTtl,
             claims = emptyMap()
+        )
+    }
+
+    override fun issueAccessToken(userId: UserId, role: UserRole): IssuedToken {
+        return createAccessToken(userId, role).toIssuedToken()
+    }
+
+    override fun issueRefreshToken(userId: UserId): IssuedToken {
+        return createRefreshToken(userId).toIssuedToken()
+    }
+
+    override fun parseToken(token: String): ParsedToken {
+        val claims = parse(token)
+
+        return ParsedToken(
+            userId = claims.userId,
+            type = TokenType.valueOf(claims.type.name),
+            role = claims.role
         )
     }
 
@@ -63,7 +85,7 @@ class JwtTokenProvider(
         )
     }
 
-    fun isValid(token: String): Boolean {
+    override fun isValid(token: String): Boolean {
         return try {
             parse(token)
             true
@@ -72,6 +94,13 @@ class JwtTokenProvider(
         } catch (exception: IllegalArgumentException) {
             false
         }
+    }
+
+    private fun JwtToken.toIssuedToken(): IssuedToken {
+        return IssuedToken(
+            value = value,
+            expiresAt = expiresAt
+        )
     }
 
     private fun createToken(

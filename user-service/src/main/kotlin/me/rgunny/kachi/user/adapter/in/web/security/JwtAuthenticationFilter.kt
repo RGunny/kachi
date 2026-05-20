@@ -36,7 +36,7 @@ class JwtAuthenticationFilter(
             return
         }
 
-        // 2. API 인증에는 access token만 사용한다. refresh token은 재발급 용도다.
+        // 2. API 인증에는 access token만 사용한다. refresh token은 토큰 갱신 용도다.
         val claims = jwtTokenProvider.parse(token)
         if (claims.type != JwtTokenType.ACCESS || claims.role == null) {
             return

@@ -28,7 +28,8 @@ class SecurityConfig {
             .httpBasic { it.disable() }
             .authorizeHttpRequests { requests ->
                 requests
-                    // 사용자 등록 API만 공개한다.
+                    // 사용자 등록과 refresh token 갱신 API만 공개한다.
+                    .requestMatchers(HttpMethod.POST, ApiPaths.V1_AUTH_TOKEN_REFRESH).permitAll()
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_USERS).permitAll()
                     // 그 외 API는 access token 인증을 요구한다.
                     .anyRequest().authenticated()
