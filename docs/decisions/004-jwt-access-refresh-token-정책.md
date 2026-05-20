@@ -46,11 +46,13 @@ JWT claim은 최소한만 넣는다.
 
 | Claim | Access Token | Refresh Token | 설명 |
 | --- | --- | --- | --- |
+| `jti` | 사용 | 사용 | 토큰 자체의 고유 식별자 |
 | `sub` | 사용 | 사용 | `UserId` |
 | `type` | `ACCESS` | `REFRESH` | 토큰 용도 구분 |
 | `role` | 사용 | 미사용 | access token 인가 판단용 |
 
-Refresh token 저장소와 회수 정책은 Redis 기반으로 별도 구현 단계에서 결정한다.
+Refresh token은 `jti` 기준으로 저장, 회전, 회수할 수 있도록 설계한다.
+저장소와 회수 정책은 Redis 기반으로 별도 구현 단계에서 결정한다.
 
 ## 이유
 
@@ -84,12 +86,24 @@ JWT payload는 클라이언트에서 디코딩 가능하다.
 서명은 위변조를 막지만 내용을 숨기지는 않는다.
 
 따라서 이메일, 닉네임, OAuth provider 같은 개인정보나 변경 가능성이 큰 값은 넣지 않는다.
-API 인증과 기본 인가에 필요한 `sub`, `type`, `role`만 넣는다.
+API 인증과 기본 인가에 필요한 `sub`, `type`, `role`, 토큰 추적에 필요한 `jti`만 넣는다.
+
+### 토큰 식별자
+
+`sub`는 토큰이 어떤 사용자의 것인지 나타내고, `jti`는 발급된 토큰 자체를 구분한다.
+같은 사용자가 여러 기기나 브라우저에서 로그인하면 `sub`는 같지만 refresh token은 각각 별도로 회수되어야 한다.
+
+따라서 access token과 refresh token 모두 `jti`를 가진다.
+특히 refresh token은 이후 저장소에 `jti`를 저장해 다음 정책을 구현할 수 있다.
+
+- 특정 refresh token만 폐기한다.
+- refresh token 재발급 시 기존 token을 폐기하고 새 token으로 회전한다.
+- 이미 사용되었거나 폐기된 refresh token 재사용을 차단한다.
 
 ## 결과
 
 - user-service는 서버 세션 없이 API 인증을 처리할 수 있다.
 - Access token 만료 시간이 짧아 refresh token 재발급 흐름이 필요하다.
-- Refresh token 저장/회수 구현 전까지는 완전한 로그아웃과 토큰 폐기 정책이 완성되지 않는다.
+- Refresh token 저장/회수 구현 전까지는 `jti`가 있더라도 완전한 로그아웃과 토큰 폐기 정책이 완성되지 않는다.
 - JWT secret은 반드시 운영 환경변수로 private 하게 관리해야 한다.
 - 토큰 claim이 최소화되어 사용자 정보가 필요할 때는 서버 저장소 조회가 필요하다.
