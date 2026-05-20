@@ -86,7 +86,13 @@ user-service
 
 ## 6. 실행 / 검증
 
-현재 도메인 테스트:
+Redis 실행:
+
+```sh
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.redis.yml up -d
+```
+
+테스트:
 
 ```sh
 ./gradlew :user-service:test
@@ -105,3 +111,4 @@ user-service
 | [002. ArchUnit으로 아키텍처 검증](./docs/decisions/002-archunit으로-아키텍처-검증.md) | 아키텍처 규칙 자동 검증 결정 |
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |
 | [004. JWT Access/Refresh Token 정책](./docs/decisions/004-jwt-access-refresh-token-정책.md) | 토큰 분리, TTL, secret 관리, claim 범위 결정 |
+| [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 Redis 실행 구성과 Docker Compose 분리 기준 |
