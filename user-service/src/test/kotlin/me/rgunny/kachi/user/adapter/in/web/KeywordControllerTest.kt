@@ -3,6 +3,9 @@ package me.rgunny.kachi.user.adapter.`in`.web
 import me.rgunny.kachi.user.adapter.`in`.web.dto.RegisterKeywordRequest
 import me.rgunny.kachi.user.adapter.`in`.web.dto.UpdateKeywordRequest
 import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
+import me.rgunny.kachi.user.application.port.`in`.ListKeywordResult
+import me.rgunny.kachi.user.application.port.`in`.ListKeywordsQuery
+import me.rgunny.kachi.user.application.port.`in`.ListKeywordsUseCase
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordResult
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordUseCase
@@ -28,6 +31,33 @@ class KeywordControllerTest {
     private val disabledAt = Instant.parse("2026-05-20T01:00:00Z")
 
     @Nested
+    @DisplayName("listMyKeywords()")
+    inner class ListMyKeywords {
+
+        @Test
+        @DisplayName("인증 사용자 기준 관심 키워드 목록을 조회한다")
+        fun listMyKeywords() {
+            val registerUseCase = FakeRegisterKeywordUseCase()
+            val updateUseCase = FakeUpdateKeywordUseCase()
+            val listUseCase = FakeListKeywordsUseCase()
+            val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
+            val authenticatedUser = AuthenticatedUser(
+                userId = UserId.of(userId),
+                role = UserRole.USER
+            )
+
+            val response = controller.listMyKeywords(authenticatedUser)
+
+            assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(UserId.of(userId), listUseCase.query.userId)
+            assertEquals(1, response.body?.size)
+            assertEquals("Trump", response.body?.single()?.name)
+            assertEquals(false, response.body?.single()?.enabled)
+            assertEquals(disabledAt, response.body?.single()?.disabledAt)
+        }
+    }
+
+    @Nested
     @DisplayName("register()")
     inner class Register {
 
@@ -36,7 +66,8 @@ class KeywordControllerTest {
         fun registerMyKeyword() {
             val registerUseCase = FakeRegisterKeywordUseCase()
             val updateUseCase = FakeUpdateKeywordUseCase()
-            val controller = KeywordController(registerUseCase, updateUseCase)
+            val listUseCase = FakeListKeywordsUseCase()
+            val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
             val authenticatedUser = AuthenticatedUser(
                 userId = UserId.of(userId),
                 role = UserRole.USER
@@ -60,7 +91,8 @@ class KeywordControllerTest {
         fun registerKeyword() {
             val registerUseCase = FakeRegisterKeywordUseCase()
             val updateUseCase = FakeUpdateKeywordUseCase()
-            val controller = KeywordController(registerUseCase, updateUseCase)
+            val listUseCase = FakeListKeywordsUseCase()
+            val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
 
             val response = controller.register(
                 userId = userId,
@@ -84,19 +116,21 @@ class KeywordControllerTest {
         fun updateKeyword() {
             val registerUseCase = FakeRegisterKeywordUseCase()
             val updateUseCase = FakeUpdateKeywordUseCase()
-            val controller = KeywordController(registerUseCase, updateUseCase)
+            val listUseCase = FakeListKeywordsUseCase()
+            val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
 
             val response = controller.update(
                 keywordId = keywordId,
                 request = UpdateKeywordRequest(name = "Tesla", enabled = false)
             )
 
+            assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals(KeywordId.of(keywordId), updateUseCase.command.keywordId)
             assertEquals("Tesla", updateUseCase.command.name)
             assertEquals(false, updateUseCase.command.enabled)
-            assertEquals("Tesla", response.name)
-            assertEquals(false, response.enabled)
-            assertEquals(disabledAt, response.disabledAt)
+            assertEquals("Tesla", response.body?.name)
+            assertEquals(false, response.body?.enabled)
+            assertEquals(disabledAt, response.body?.disabledAt)
         }
     }
 
@@ -129,6 +163,25 @@ class KeywordControllerTest {
                 enabled = command.enabled ?: true,
                 registeredAt = registeredAt,
                 disabledAt = if (command.enabled == false) disabledAt else null
+            )
+        }
+    }
+
+    private inner class FakeListKeywordsUseCase : ListKeywordsUseCase {
+        lateinit var query: ListKeywordsQuery
+
+        override fun list(query: ListKeywordsQuery): List<ListKeywordResult> {
+            this.query = query
+
+            return listOf(
+                ListKeywordResult(
+                    id = KeywordId.of(keywordId),
+                    userId = query.userId,
+                    name = "Trump",
+                    enabled = false,
+                    registeredAt = registeredAt,
+                    disabledAt = disabledAt
+                )
             )
         }
     }

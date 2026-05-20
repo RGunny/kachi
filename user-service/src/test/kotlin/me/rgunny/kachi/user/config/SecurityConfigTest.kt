@@ -91,7 +91,7 @@ class SecurityConfigTest @Autowired constructor(
 
         @Test
         @DisplayName("인증 사용자 관심 키워드 등록 API는 인증을 요구한다")
-        fun requireAuthenticationForMyKeywordApi() {
+        fun requireAuthenticationForRegisterMyKeywordApi() {
             mockMvc.post("/api/v1/me/keywords") {
                 contentType = MediaType.APPLICATION_JSON
                 content = registerKeywordBody()
@@ -102,7 +102,7 @@ class SecurityConfigTest @Autowired constructor(
 
         @Test
         @DisplayName("인증 사용자 관심 키워드 등록 API는 access token으로 접근할 수 있다")
-        fun permitMyKeywordApiWithAccessToken() {
+        fun permitRegisterMyKeywordApiWithAccessToken() {
             val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
 
             mockMvc.post("/api/v1/me/keywords") {
@@ -111,6 +111,29 @@ class SecurityConfigTest @Autowired constructor(
                 content = registerKeywordBody()
             }.andExpect {
                 status { isCreated() }
+            }
+        }
+
+        @Test
+        @DisplayName("인증 사용자 관심 키워드 목록 조회 API는 인증을 요구한다")
+        fun requireAuthenticationForListMyKeywordsApi() {
+            mockMvc.get("/api/v1/me/keywords") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("인증 사용자 관심 키워드 목록 조회 API는 access token으로 접근할 수 있다")
+        fun permitListMyKeywordsApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.get("/api/v1/me/keywords") {
+                header("Authorization", "Bearer ${token.value}")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
             }
         }
 

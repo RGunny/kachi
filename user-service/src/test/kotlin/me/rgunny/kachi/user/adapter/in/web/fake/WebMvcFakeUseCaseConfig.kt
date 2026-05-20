@@ -14,4 +14,7 @@ class WebMvcFakeUseCaseConfig {
 
     @Bean
     fun updateKeywordUseCase(): FakeUpdateKeywordUseCase = FakeUpdateKeywordUseCase()
+
+    @Bean
+    fun listKeywordsUseCase(): FakeListKeywordsUseCase = FakeListKeywordsUseCase()
 }
