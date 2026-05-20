@@ -3,6 +3,7 @@ package me.rgunny.kachi.user.config
 import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
 import me.rgunny.kachi.user.adapter.`in`.web.UserController
 import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
+import me.rgunny.kachi.user.adapter.`in`.web.security.JwtTokenProvider
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.UserId
 import org.junit.jupiter.api.DisplayName
@@ -15,12 +16,16 @@ import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilte
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
+import java.time.Clock
+import java.time.Duration
 
 @WebMvcTest(controllers = [UserController::class, KeywordController::class])
 @AutoConfigureMockMvc
@@ -32,6 +37,7 @@ import org.springframework.test.web.servlet.post
 @Import(
     ApiVersionConfig::class,
     SecurityConfig::class,
+    SecurityConfigTest.JwtTestConfig::class,
     WebMvcFakeUseCaseConfig::class
 )
 @DisplayName("SecurityConfig")
@@ -117,5 +123,20 @@ class SecurityConfigTest @Autowired constructor(
               "enabled": true
             }
         """.trimIndent()
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    class JwtTestConfig {
+
+        @Bean
+        fun jwtTokenProvider(): JwtTokenProvider {
+            // SecurityConfig slice test는 properties binding 대신 필터에 필요한 provider만 직접 제공한다.
+            return JwtTokenProvider(
+                secret = "morCcncONBqndWq56eP75u8LgYDg+HLWlfhqugyfDA4=",
+                accessTokenTtl = Duration.ofMinutes(15),
+                refreshTokenTtl = Duration.ofDays(14),
+                clock = Clock.systemUTC()
+            )
+        }
     }
 }
