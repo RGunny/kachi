@@ -2,6 +2,8 @@ package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
+import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensCommand
+import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensResult
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
 import me.rgunny.kachi.user.application.port.out.RefreshTokenStorePort
@@ -21,7 +23,9 @@ import me.rgunny.kachi.user.domain.UserStatus
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -29,6 +33,49 @@ import kotlin.test.assertFailsWith
 class TokenServiceTest {
     private val userId = UserId.newId()
     private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val loggedInAt = Instant.parse("2026-05-20T01:00:00Z")
+    private val clock = Clock.fixed(loggedInAt, ZoneOffset.UTC)
+
+    @Nested
+    @DisplayName("issue()")
+    inner class Issue {
+
+        @Test
+        @DisplayName("활성 사용자에게 access token과 refresh token을 발급하고 refresh token을 저장한다")
+        fun issueAuthTokens() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(tokenPort = tokenPort)
+
+            val result = service.issue(IssueAuthTokensCommand(userId))
+
+            assertEquals(userId, tokenPort.issuedAccessTokenUserId)
+            assertEquals(UserRole.USER, tokenPort.issuedAccessTokenRole)
+            assertEquals(userId, tokenPort.issuedRefreshTokenUserId)
+            assertEquals(loggedInAt, service.userPersistencePort.savedUser?.lastLoginAt)
+            assertEquals("new-refresh-token-id", service.refreshTokenStorePort.savedToken?.id)
+            assertEquals(userId, service.refreshTokenStorePort.savedToken?.userId)
+            assertEquals("new-access-token", result.accessToken)
+            assertEquals("new-refresh-token", result.refreshToken)
+        }
+
+        @Test
+        @DisplayName("활성 사용자가 아니면 토큰을 발급하지 않는다")
+        fun rejectInactiveUser() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(
+                tokenPort = tokenPort,
+                users = mapOf(userId to user(status = UserStatus.DELETED))
+            )
+
+            assertFailsWith<InactiveUserException> {
+                service.issue(IssueAuthTokensCommand(userId))
+            }
+
+            assertEquals(null, tokenPort.issuedAccessTokenUserId)
+            assertEquals(null, tokenPort.issuedRefreshTokenUserId)
+            assertEquals(null, service.refreshTokenStorePort.savedToken)
+        }
+    }
 
     @Nested
     @DisplayName("refresh()")
@@ -132,19 +179,27 @@ class TokenServiceTest {
         val tokenService = TokenService(
             tokenPort = tokenPort,
             refreshTokenStorePort = refreshTokenStorePort,
+            userPersistencePort = userPersistencePort,
+            clock = clock,
             activeUserValidator = ActiveUserValidator(userPersistencePort)
         )
 
         return TokenServiceFixture(
             tokenService = tokenService,
-            refreshTokenStorePort = refreshTokenStorePort
+            refreshTokenStorePort = refreshTokenStorePort,
+            userPersistencePort = userPersistencePort
         )
     }
 
     private data class TokenServiceFixture(
         val tokenService: TokenService,
-        val refreshTokenStorePort: FakeRefreshTokenStorePort
+        val refreshTokenStorePort: FakeRefreshTokenStorePort,
+        val userPersistencePort: FakeUserPersistencePort
     ) {
+        fun issue(command: IssueAuthTokensCommand): IssueAuthTokensResult {
+            return tokenService.issue(command)
+        }
+
         fun refresh(command: RefreshTokenCommand): RefreshTokenResult {
             return tokenService.refresh(command)
         }
@@ -201,10 +256,13 @@ class TokenServiceTest {
         private val rotate: Boolean = true
     ) : RefreshTokenStorePort {
         var checkedToken: Pair<UserId, String>? = null
+        var savedToken: StoredRefreshToken? = null
         var rotatedOldTokenId: String? = null
         var rotatedNewToken: StoredRefreshToken? = null
 
-        override fun save(token: StoredRefreshToken) = Unit
+        override fun save(token: StoredRefreshToken) {
+            savedToken = token
+        }
 
         override fun exists(userId: UserId, tokenId: String): Boolean {
             checkedToken = userId to tokenId
@@ -223,6 +281,7 @@ class TokenServiceTest {
     private class FakeUserPersistencePort(
         private val users: Map<UserId, User>
     ) : UserPersistencePort {
+        var savedUser: User? = null
 
         override fun findById(userId: UserId): User? {
             return users[userId]
@@ -233,6 +292,8 @@ class TokenServiceTest {
         }
 
         override fun save(user: User): User {
+            savedUser = user
+
             return user
         }
     }
