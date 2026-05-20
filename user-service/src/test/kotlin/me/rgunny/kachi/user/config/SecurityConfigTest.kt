@@ -62,17 +62,6 @@ class SecurityConfigTest @Autowired constructor(
             }
         }
 
-        @Test
-        @DisplayName("관심 키워드 등록 API는 인증 없이 접근할 수 있다")
-        fun permitRegisterKeywordApi() {
-            mockMvc.post("/api/v1/users/${UserId.newId().value}/keywords") {
-                contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody()
-            }.andExpect {
-                status { isCreated() }
-            }
-        }
-
     }
 
     @Nested

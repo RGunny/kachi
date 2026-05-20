@@ -90,28 +90,6 @@ class KeywordControllerTest {
             assertEquals(null, response.body?.data?.disabledAt)
         }
 
-        @Test
-        @DisplayName("관심 키워드 등록 요청을 처리하고 201 응답을 반환한다")
-        fun registerKeyword() {
-            val registerUseCase = FakeRegisterKeywordUseCase()
-            val updateUseCase = FakeUpdateKeywordUseCase()
-            val listUseCase = FakeListKeywordsUseCase()
-            val controller = KeywordController(registerUseCase, updateUseCase, listUseCase)
-
-            val response = controller.register(
-                userId = userId,
-                request = RegisterKeywordRequest(name = "Trump")
-            )
-
-            assertEquals(HttpStatus.CREATED, response.statusCode)
-            assertEquals(true, response.body?.success)
-            assertEquals(null, response.body?.error)
-            assertEquals(UserId.of(userId), registerUseCase.command.userId)
-            assertEquals("Trump", registerUseCase.command.name)
-            assertEquals("Trump", response.body?.data?.name)
-            assertEquals(true, response.body?.data?.enabled)
-            assertEquals(null, response.body?.data?.disabledAt)
-        }
     }
 
     @Nested

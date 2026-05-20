@@ -13,14 +13,13 @@ import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordUseCase
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordUseCase
 import me.rgunny.kachi.user.domain.KeywordId
-import me.rgunny.kachi.user.domain.UserId
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
@@ -50,21 +49,6 @@ class KeywordController(
         val result = registerKeywordUseCase.register(
             RegisterKeywordCommand(
                 userId = authenticatedUser.userId,
-                name = request.name
-            )
-        )
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(KeywordResponse.from(result)))
-    }
-
-    @PostMapping(ApiPaths.USER_KEYWORDS, version = ApiVersions.V1)
-    fun register(
-        @PathVariable userId: UUID,
-        @Valid @RequestBody request: RegisterKeywordRequest
-    ): ResponseEntity<ApiResponse<KeywordResponse>> {
-        val result = registerKeywordUseCase.register(
-            RegisterKeywordCommand(
-                userId = UserId.of(userId),
                 name = request.name
             )
         )

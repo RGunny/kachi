@@ -10,12 +10,10 @@ object ApiPaths {
     const val USERS = "/users"
     const val ME = "/me"
     const val ME_KEYWORDS = "/me/keywords"
-    const val USER_KEYWORDS = "/users/{userId}/keywords"
     const val KEYWORDS = "/keywords/{keywordId}"
 
     const val V1_USERS = "${ApiVersions.V1_PATH_PREFIX}$USERS"
     const val V1_ME = "${ApiVersions.V1_PATH_PREFIX}$ME"
     const val V1_ME_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$ME_KEYWORDS"
-    const val V1_USER_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$USER_KEYWORDS"
     const val V1_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$KEYWORDS"
 }

@@ -91,12 +91,18 @@ class GlobalExceptionHandlerTest @Autowired constructor(
             val userId = UserId.newId()
             registerKeywordUseCase.exception = DuplicateKeywordException(userId, KeywordName.of("Trump"))
 
-            val response = mockMvc.post("/api/v1/users/${userId.value}/keywords") {
-                contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody(name = "Trump")
-            }.andExpect {
-                status { isConflict() }
-            }.andReturn().response
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication(userId)
+
+            val response = try {
+                mockMvc.post("/api/v1/me/keywords") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = registerKeywordBody(name = "Trump")
+                }.andExpect {
+                    status { isConflict() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
 
             assertErrorResponse(
                 actual = response.contentAsString,
@@ -216,12 +222,12 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         """.trimIndent()
     }
 
-    private fun authenticatedUserAuthentication(): UsernamePasswordAuthenticationToken {
+    private fun authenticatedUserAuthentication(userId: UserId = UserId.newId()): UsernamePasswordAuthenticationToken {
         val role = UserRole.USER
 
         return UsernamePasswordAuthenticationToken(
             AuthenticatedUser(
-                userId = UserId.newId(),
+                userId = userId,
                 role = role
             ),
             null,

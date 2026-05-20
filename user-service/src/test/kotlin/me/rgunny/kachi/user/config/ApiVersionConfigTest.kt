@@ -3,7 +3,6 @@ package me.rgunny.kachi.user.config
 import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
 import me.rgunny.kachi.user.adapter.`in`.web.UserController
 import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
-import me.rgunny.kachi.user.domain.UserId
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -44,23 +43,5 @@ class ApiVersionConfigTest @Autowired constructor(
             }
         }
 
-        @Test
-        @DisplayName("v1 관심 키워드 등록 API를 매핑한다")
-        fun mapV1RegisterKeywordApi() {
-            mockMvc.post("/api/v1/users/${USER_ID.value}/keywords") {
-                contentType = MediaType.APPLICATION_JSON
-                content = """
-                    {
-                      "name": "Trump"
-                    }
-                """.trimIndent()
-            }.andExpect {
-                status { isCreated() }
-            }
-        }
-    }
-
-    companion object {
-        private val USER_ID: UserId = UserId.newId()
     }
 }
