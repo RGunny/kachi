@@ -3,10 +3,13 @@ package me.rgunny.kachi.user.application.service
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
+import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
+import me.rgunny.kachi.user.application.port.out.RefreshTokenStorePort
 import me.rgunny.kachi.user.application.port.out.TokenPort
 import me.rgunny.kachi.user.application.port.out.UserPersistencePort
 import me.rgunny.kachi.user.application.token.IssuedToken
 import me.rgunny.kachi.user.application.token.ParsedToken
+import me.rgunny.kachi.user.application.token.StoredRefreshToken
 import me.rgunny.kachi.user.application.token.TokenType
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
@@ -40,9 +43,12 @@ class TokenServiceTest {
             val result = service.refresh(RefreshTokenCommand(refreshToken = "valid-refresh-token"))
 
             assertEquals("valid-refresh-token", tokenPort.parsedToken)
+            assertEquals(userId to "refresh-token-id", service.refreshTokenStorePort.checkedToken)
             assertEquals(userId, tokenPort.issuedAccessTokenUserId)
             assertEquals(UserRole.USER, tokenPort.issuedAccessTokenRole)
             assertEquals(userId, tokenPort.issuedRefreshTokenUserId)
+            assertEquals("refresh-token-id", service.refreshTokenStorePort.rotatedOldTokenId)
+            assertEquals("new-refresh-token-id", service.refreshTokenStorePort.rotatedNewToken?.id)
             assertEquals("new-access-token", result.accessToken)
             assertEquals("new-refresh-token", result.refreshToken)
         }
@@ -58,6 +64,36 @@ class TokenServiceTest {
             }
 
             assertEquals(null, tokenPort.parsedToken)
+        }
+
+        @Test
+        @DisplayName("저장소에 없는 refresh token이면 실패한다")
+        fun rejectMissingStoredRefreshToken() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(
+                tokenPort = tokenPort,
+                refreshTokenStorePort = FakeRefreshTokenStorePort(exists = false)
+            )
+
+            assertFailsWith<InvalidTokenException> {
+                service.refresh(RefreshTokenCommand(refreshToken = "missing-refresh-token"))
+            }
+
+            assertEquals(null, tokenPort.issuedAccessTokenUserId)
+            assertEquals(null, tokenPort.issuedRefreshTokenUserId)
+        }
+
+        @Test
+        @DisplayName("refresh token 회전에 실패하면 실패한다")
+        fun rejectFailedRefreshTokenRotation() {
+            val service = tokenService(
+                tokenPort = FakeTokenPort(),
+                refreshTokenStorePort = FakeRefreshTokenStorePort(rotate = false)
+            )
+
+            assertFailsWith<InvalidTokenException> {
+                service.refresh(RefreshTokenCommand(refreshToken = "valid-refresh-token"))
+            }
         }
 
         @Test
@@ -88,14 +124,30 @@ class TokenServiceTest {
 
     private fun tokenService(
         tokenPort: TokenPort,
+        refreshTokenStorePort: FakeRefreshTokenStorePort = FakeRefreshTokenStorePort(),
         users: Map<UserId, User> = mapOf(userId to user())
-    ): TokenService {
+    ): TokenServiceFixture {
         val userPersistencePort = FakeUserPersistencePort(users)
 
-        return TokenService(
+        val tokenService = TokenService(
             tokenPort = tokenPort,
+            refreshTokenStorePort = refreshTokenStorePort,
             activeUserValidator = ActiveUserValidator(userPersistencePort)
         )
+
+        return TokenServiceFixture(
+            tokenService = tokenService,
+            refreshTokenStorePort = refreshTokenStorePort
+        )
+    }
+
+    private data class TokenServiceFixture(
+        val tokenService: TokenService,
+        val refreshTokenStorePort: FakeRefreshTokenStorePort
+    ) {
+        fun refresh(command: RefreshTokenCommand): RefreshTokenResult {
+            return tokenService.refresh(command)
+        }
     }
 
     private inner class FakeTokenPort(
@@ -141,6 +193,30 @@ class TokenServiceTest {
 
         override fun isValid(token: String): Boolean {
             return valid
+        }
+    }
+
+    private class FakeRefreshTokenStorePort(
+        private val exists: Boolean = true,
+        private val rotate: Boolean = true
+    ) : RefreshTokenStorePort {
+        var checkedToken: Pair<UserId, String>? = null
+        var rotatedOldTokenId: String? = null
+        var rotatedNewToken: StoredRefreshToken? = null
+
+        override fun save(token: StoredRefreshToken) = Unit
+
+        override fun exists(userId: UserId, tokenId: String): Boolean {
+            checkedToken = userId to tokenId
+
+            return exists
+        }
+
+        override fun rotate(userId: UserId, oldTokenId: String, newToken: StoredRefreshToken): Boolean {
+            rotatedOldTokenId = oldTokenId
+            rotatedNewToken = newToken
+
+            return rotate
         }
     }
 
