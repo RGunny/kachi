@@ -113,6 +113,16 @@ MySQL 8.0은 현재 사용하는 `com.mysql:mysql-connector-j`와 호환되고, 
 이 값은 로컬 개발 편의용이며 운영 secret으로 사용하지 않는다.
 운영 공통 설정은 환경변수 주입을 요구하고 기본 비밀번호를 제공하지 않는다.
 
+### 설정 파일 분리
+
+`application.yaml`에는 환경변수 기반 필수 설정 구조를 둔다.
+운영 또는 CI에서 값이 누락되면 애플리케이션 기동 시점에 바로 드러나게 하기 위함이다.
+
+`application-local.yaml`에는 로컬 개발 기본값을 둔다.
+MySQL, Redis, OAuth2 callback처럼 로컬에서 반복 실행해야 하는 값은 기본값을 제공해 별도 `.env` 없이도 빠르게 실행할 수 있게 한다.
+
+따라서 `REDIS_HOST`, `REDIS_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`의 로컬 기본값은 `application-local.yaml`에만 둔다.
+
 ### `ddl-auto`
 
 로컬 프로필은 `spring.jpa.hibernate.ddl-auto=update`를 사용한다.

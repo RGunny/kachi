@@ -6,6 +6,10 @@ kachi:
     success-redirect-uri: ${KACHI_OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:5173/oauth2/callback}
 
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:kachi}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
     username: ${MYSQL_USER:rgunny}
