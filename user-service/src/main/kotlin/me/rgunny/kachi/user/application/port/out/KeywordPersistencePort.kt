@@ -9,6 +9,8 @@ import me.rgunny.kachi.user.domain.UserId
 interface KeywordPersistencePort {
     fun findById(keywordId: KeywordId): Keyword?
 
+    fun findAllByUserId(userId: UserId): List<Keyword>
+
     fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean
 
     fun save(keyword: Keyword): Keyword

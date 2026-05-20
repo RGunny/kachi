@@ -18,6 +18,11 @@ class KeywordPersistenceAdapter(
             .orElse(null)
     }
 
+    override fun findAllByUserId(userId: UserId): List<Keyword> {
+        return keywordJpaRepository.findAllByUserId(userId.value)
+            .map { it.toDomain() }
+    }
+
     override fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean {
         return keywordJpaRepository.existsByUserIdAndName(
             userId = userId.value,
