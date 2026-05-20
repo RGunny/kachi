@@ -6,6 +6,18 @@ kachi:
     success-redirect-uri: ${KACHI_OAUTH2_SUCCESS_REDIRECT_URI:http://localhost:5173/oauth2/callback}
 
 spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:kachi}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    username: ${MYSQL_USER:rgunny}
+    password: ${MYSQL_PASSWORD:rgunny}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
   security:
     oauth2:
       client:

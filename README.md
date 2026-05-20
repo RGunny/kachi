@@ -77,7 +77,7 @@ user-service
 
 ## 5. 현재 진행 상태
 
-현재는 `user-service`의 User / Keyword 도메인 모델과 테스트를 구현 중이다.
+현재는 `user-service`의 사용자 인증, 토큰, 관심 키워드 기본 흐름을 구현 중이다.
 
 도메인 세부 규칙은 [도메인 모델](./docs/도메인모델.md)을 기준으로 관리한다.  
 설계 결정의 배경과 trade-off는 [decisions](./docs/decisions)에 기록한다.
@@ -86,10 +86,10 @@ user-service
 
 ## 6. 실행 / 검증
 
-Redis 실행:
+로컬 인프라 실행:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.redis.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml up -d
 ```
 
 테스트:
@@ -111,5 +111,5 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.redis.yml up 
 | [002. ArchUnit으로 아키텍처 검증](./docs/decisions/002-archunit으로-아키텍처-검증.md) | 아키텍처 규칙 자동 검증 결정 |
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |
 | [004. JWT Access/Refresh Token 정책](./docs/decisions/004-jwt-access-refresh-token-정책.md) | 토큰 분리, TTL, secret 관리, claim 범위 결정 |
-| [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 Redis 실행 구성과 Docker Compose 분리 기준 |
+| [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 MySQL/Redis 실행 구성과 Docker Compose 분리 기준 |
 | [006. OAuth2 로그인 흐름](./docs/decisions/006-oauth2-로그인-흐름.md) | OAuth2 provider 응답 정규화, 사용자 식별, token 발급 흐름 |

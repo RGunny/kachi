@@ -6,3 +6,4 @@ networks:
 
 volumes:
   redis-data:
+  mysql-data:
