@@ -1,14 +1,17 @@
 package me.rgunny.kachi.user.adapter.`in`.web.exception
 
+import me.rgunny.kachi.user.adapter.`in`.web.AuthController
 import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
 import me.rgunny.kachi.user.adapter.`in`.web.UserController
 import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeRegisterKeywordUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeRegisterUserUseCase
+import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeRefreshTokenUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.FakeUpdateKeywordUseCase
 import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.`in`.web.security.AuthenticatedUser
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.InvalidTokenException
 import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.config.ApiVersionConfig
@@ -39,7 +42,7 @@ import org.springframework.test.web.servlet.post
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@WebMvcTest(controllers = [UserController::class, KeywordController::class])
+@WebMvcTest(controllers = [AuthController::class, UserController::class, KeywordController::class])
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(
     SecurityAutoConfiguration::class,
@@ -50,6 +53,7 @@ import kotlin.test.assertTrue
 @DisplayName("GlobalExceptionHandler")
 class GlobalExceptionHandlerTest @Autowired constructor(
     private val mockMvc: MockMvc,
+    private val refreshTokenUseCase: FakeRefreshTokenUseCase,
     private val registerUserUseCase: FakeRegisterUserUseCase,
     private val registerKeywordUseCase: FakeRegisterKeywordUseCase,
     private val updateKeywordUseCase: FakeUpdateKeywordUseCase
@@ -58,6 +62,7 @@ class GlobalExceptionHandlerTest @Autowired constructor(
     @BeforeEach
     fun setUp() {
         registerUserUseCase.exception = null
+        refreshTokenUseCase.exception = null
         registerKeywordUseCase.exception = null
         updateKeywordUseCase.exception = null
     }
@@ -163,6 +168,25 @@ class GlobalExceptionHandlerTest @Autowired constructor(
                 message = "키워드에 접근할 수 없습니다: keywordId=${keywordId.value}, userId=${userId.value}"
             )
         }
+
+        @Test
+        @DisplayName("유효하지 않은 토큰 예외는 401 응답으로 변환한다")
+        fun handleInvalidToken() {
+            refreshTokenUseCase.exception = InvalidTokenException()
+
+            val response = mockMvc.post("/api/v1/auth/token/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = refreshTokenBody()
+            }.andExpect {
+                status { isUnauthorized() }
+            }.andReturn().response
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "INVALID_TOKEN",
+                message = "유효하지 않은 토큰입니다"
+            )
+        }
     }
 
     @Nested
@@ -218,6 +242,14 @@ class GlobalExceptionHandlerTest @Autowired constructor(
             {
               "name": "$name",
               "enabled": true
+            }
+        """.trimIndent()
+    }
+
+    private fun refreshTokenBody(): String {
+        return """
+            {
+              "refreshToken": "refresh-token"
             }
         """.trimIndent()
     }

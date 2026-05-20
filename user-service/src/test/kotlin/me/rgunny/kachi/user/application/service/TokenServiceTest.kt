@@ -1,0 +1,174 @@
+package me.rgunny.kachi.user.application.service
+
+import me.rgunny.kachi.user.application.exception.InactiveUserException
+import me.rgunny.kachi.user.application.exception.InvalidTokenException
+import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
+import me.rgunny.kachi.user.application.port.out.TokenPort
+import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.token.IssuedToken
+import me.rgunny.kachi.user.application.token.ParsedToken
+import me.rgunny.kachi.user.application.token.TokenType
+import me.rgunny.kachi.user.domain.AuthProvider
+import me.rgunny.kachi.user.domain.Email
+import me.rgunny.kachi.user.domain.Nickname
+import me.rgunny.kachi.user.domain.User
+import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
+import me.rgunny.kachi.user.domain.UserStatus
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+@DisplayName("TokenService")
+class TokenServiceTest {
+    private val userId = UserId.newId()
+    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+
+    @Nested
+    @DisplayName("refresh()")
+    inner class Refresh {
+
+        @Test
+        @DisplayName("refresh token으로 access token과 refresh token을 갱신한다")
+        fun refreshToken() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(tokenPort = tokenPort)
+
+            val result = service.refresh(RefreshTokenCommand(refreshToken = "valid-refresh-token"))
+
+            assertEquals("valid-refresh-token", tokenPort.parsedToken)
+            assertEquals(userId, tokenPort.issuedAccessTokenUserId)
+            assertEquals(UserRole.USER, tokenPort.issuedAccessTokenRole)
+            assertEquals(userId, tokenPort.issuedRefreshTokenUserId)
+            assertEquals("new-access-token", result.accessToken)
+            assertEquals("new-refresh-token", result.refreshToken)
+        }
+
+        @Test
+        @DisplayName("유효하지 않은 토큰이면 실패한다")
+        fun rejectInvalidToken() {
+            val tokenPort = FakeTokenPort(valid = false)
+            val service = tokenService(tokenPort = tokenPort)
+
+            assertFailsWith<InvalidTokenException> {
+                service.refresh(RefreshTokenCommand(refreshToken = "invalid-token"))
+            }
+
+            assertEquals(null, tokenPort.parsedToken)
+        }
+
+        @Test
+        @DisplayName("refresh token이 아니면 실패한다")
+        fun rejectNonRefreshToken() {
+            val tokenPort = FakeTokenPort(tokenType = TokenType.ACCESS)
+            val service = tokenService(tokenPort = tokenPort)
+
+            assertFailsWith<InvalidTokenException> {
+                service.refresh(RefreshTokenCommand(refreshToken = "access-token"))
+            }
+        }
+
+        @Test
+        @DisplayName("활성 사용자가 아니면 실패한다")
+        fun rejectInactiveUser() {
+            val tokenPort = FakeTokenPort()
+            val service = tokenService(
+                tokenPort = tokenPort,
+                users = mapOf(userId to user(status = UserStatus.DELETED))
+            )
+
+            assertFailsWith<InactiveUserException> {
+                service.refresh(RefreshTokenCommand(refreshToken = "valid-refresh-token"))
+            }
+        }
+    }
+
+    private fun tokenService(
+        tokenPort: TokenPort,
+        users: Map<UserId, User> = mapOf(userId to user())
+    ): TokenService {
+        val userPersistencePort = FakeUserPersistencePort(users)
+
+        return TokenService(
+            tokenPort = tokenPort,
+            activeUserValidator = ActiveUserValidator(userPersistencePort)
+        )
+    }
+
+    private inner class FakeTokenPort(
+        private val valid: Boolean = true,
+        private val tokenType: TokenType = TokenType.REFRESH
+    ) : TokenPort {
+        var parsedToken: String? = null
+        var issuedAccessTokenUserId: UserId? = null
+        var issuedAccessTokenRole: UserRole? = null
+        var issuedRefreshTokenUserId: UserId? = null
+
+        override fun issueAccessToken(userId: UserId, role: UserRole): IssuedToken {
+            issuedAccessTokenUserId = userId
+            issuedAccessTokenRole = role
+
+            return IssuedToken(
+                value = "new-access-token",
+                expiresAt = Instant.parse("2026-05-20T00:15:00Z")
+            )
+        }
+
+        override fun issueRefreshToken(userId: UserId): IssuedToken {
+            issuedRefreshTokenUserId = userId
+
+            return IssuedToken(
+                value = "new-refresh-token",
+                expiresAt = Instant.parse("2026-06-03T00:00:00Z")
+            )
+        }
+
+        override fun parseToken(token: String): ParsedToken {
+            parsedToken = token
+
+            return ParsedToken(
+                userId = userId,
+                type = tokenType,
+                role = null
+            )
+        }
+
+        override fun isValid(token: String): Boolean {
+            return valid
+        }
+    }
+
+    private class FakeUserPersistencePort(
+        private val users: Map<UserId, User>
+    ) : UserPersistencePort {
+
+        override fun findById(userId: UserId): User? {
+            return users[userId]
+        }
+
+        override fun existsByEmail(email: Email): Boolean {
+            return false
+        }
+
+        override fun save(user: User): User {
+            return user
+        }
+    }
+
+    private fun user(status: UserStatus = UserStatus.ACTIVE): User {
+        return User.restore(
+            id = userId,
+            email = Email.of("rgunny@kachi.com"),
+            nickname = Nickname.of("rgunny"),
+            status = status,
+            role = UserRole.USER,
+            authProvider = AuthProvider.GOOGLE,
+            registeredAt = registeredAt,
+            lastLoginAt = null,
+            deactivatedAt = null
+        )
+    }
+}

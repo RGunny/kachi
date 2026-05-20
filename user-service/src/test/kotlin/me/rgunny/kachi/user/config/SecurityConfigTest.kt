@@ -1,5 +1,6 @@
 package me.rgunny.kachi.user.config
 
+import me.rgunny.kachi.user.adapter.`in`.web.AuthController
 import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
 import me.rgunny.kachi.user.adapter.`in`.web.UserController
 import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
@@ -28,7 +29,7 @@ import org.springframework.test.web.servlet.post
 import java.time.Clock
 import java.time.Duration
 
-@WebMvcTest(controllers = [UserController::class, KeywordController::class])
+@WebMvcTest(controllers = [AuthController::class, UserController::class, KeywordController::class])
 @AutoConfigureMockMvc
 @ImportAutoConfiguration(
     SecurityAutoConfiguration::class,
@@ -59,6 +60,17 @@ class SecurityConfigTest @Autowired constructor(
                 content = registerUserBody()
             }.andExpect {
                 status { isCreated() }
+            }
+        }
+
+        @Test
+        @DisplayName("토큰 갱신 API는 인증 없이 접근할 수 있다")
+        fun permitRefreshTokenApi() {
+            mockMvc.post("/api/v1/auth/token/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = refreshTokenBody()
+            }.andExpect {
+                status { isOk() }
             }
         }
 
@@ -198,6 +210,14 @@ class SecurityConfigTest @Autowired constructor(
             {
               "name": "Trump",
               "enabled": true
+            }
+        """.trimIndent()
+    }
+
+    private fun refreshTokenBody(): String {
+        return """
+            {
+              "refreshToken": "refresh-token"
             }
         """.trimIndent()
     }
