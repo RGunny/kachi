@@ -17,10 +17,13 @@ Kachi는 사용자가 등록한 관심 키워드를 기준으로 뉴스와 시�
 - [x] `user-service` Keyword 도메인 모델
 - [x] 도메인 값 객체 (`UserId`, `KeywordId`, `Email`, `Nickname`, `KeywordName`)
 - [x] User / Keyword 도메인 테스트
-- [ ] `user-service` application port / service
-- [ ] `user-service` persistence adapter
-- [ ] `user-service` web adapter
-- [ ] OAuth2 / JWT / Refresh Token
+- [x] `user-service` application port / service
+- [x] `user-service` persistence adapter
+- [x] `user-service` web adapter
+- [x] OAuth2 / JWT / Refresh Token
+- [x] MySQL / Redis 로컬 인프라
+- [x] Flyway schema migration
+- [x] Actuator health / graceful shutdown
 - [ ] `collector-service`
 - [ ] `ai-service`
 - [ ] `notification-service`
@@ -77,7 +80,7 @@ user-service
 
 ## 5. 현재 진행 상태
 
-현재는 `user-service`의 사용자 인증, 토큰, 관심 키워드 기본 흐름을 구현 중이다.
+현재는 `user-service`의 사용자 인증, 토큰, 관심 키워드 기본 흐름을 구현했다.
 
 도메인 세부 규칙은 [도메인 모델](./docs/도메인모델.md)을 기준으로 관리한다.  
 설계 결정의 배경과 trade-off는 [decisions](./docs/decisions)에 기록한다.
