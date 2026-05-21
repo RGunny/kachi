@@ -41,6 +41,8 @@ class SecurityConfig {
             }
             .authorizeHttpRequests { requests ->
                 requests
+                    // Actuator 헬스체크 endpoint는 인증 없이 접근할 수 있게 한다.
+                    .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                     // OAuth2 provider 이동과 callback endpoint는 Spring Security OAuth2 filter가 처리한다.
                     .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                     // 사용자 등록과 refresh token 기반 인증 API만 공개한다.
