@@ -125,13 +125,13 @@ MySQL, Redis, OAuth2 callback처럼 로컬에서 반복 실행해야 하는 값�
 
 ### `ddl-auto`
 
-로컬 프로필은 `spring.jpa.hibernate.ddl-auto=update`를 사용한다.
-현재는 schema migration 도구를 아직 도입하지 않았고, user-service 도메인과 JPA entity를 손타이핑하며 빠르게 확인하는 단계이기 때문이다.
+로컬 프로필도 `spring.jpa.hibernate.ddl-auto=validate`를 사용한다.
+초기에는 손타이핑하며 빠르게 확인하기 위해 local에서 `update`를 사용했지만, MySQL 인프라와 JPA adapter 통합 테스트를 붙인 뒤부터는 schema를 migration 파일로 명시한다.
 
-기본 설정은 `validate`로 둔다.
-로컬 외 환경에서 Hibernate가 임의로 schema를 변경하지 않게 하기 위함이다.
+기본 설정과 로컬 설정을 모두 `validate`로 둔다.
+Hibernate가 임의로 schema를 변경하지 않고, entity와 migration schema가 어긋나면 애플리케이션 기동 시점에 드러나게 하기 위함이다.
 
-마이그레이션 도구를 도입하면 로컬 `update`도 제거하고 schema 변경을 migration 파일로 관리한다.
+schema 생성과 변경은 Flyway migration 파일로 관리한다.
 
 ### UTF-8 설정
 
