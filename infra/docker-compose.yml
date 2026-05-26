@@ -1,0 +1,9 @@
+name: kachi
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mysql-data:
