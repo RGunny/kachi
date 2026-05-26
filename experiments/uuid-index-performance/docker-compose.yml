@@ -1,0 +1,69 @@
+name: kachi-uuid-index-performance
+
+x-mysql-common: &mysql-common
+  image: mysql:8.0
+  environment:
+    MYSQL_ROOT_PASSWORD: root
+    MYSQL_DATABASE: uuid_perf
+    TZ: Asia/Seoul
+  command:
+    - --character-set-server=utf8mb4
+    - --collation-server=utf8mb4_unicode_ci
+    - --local-infile=1
+    - --innodb-buffer-pool-size=512M
+    - --innodb-flush-log-at-trx-commit=1
+    - --innodb-flush-method=O_DIRECT
+    - --sync-binlog=1
+    - --skip-log-bin
+  cpus: "2.0"
+  mem_limit: "2g"
+  volumes:
+    - ./generated:/experiment/generated
+  healthcheck:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+    interval: 3s
+    timeout: 3s
+    retries: 30
+
+services:
+  mysql_bigint:
+    <<: *mysql-common
+    container_name: kachi-uuid-perf-bigint
+    ports:
+      - "33311:3306"
+    volumes:
+      - mysql-bigint-data:/var/lib/mysql
+      - ./generated:/experiment/generated
+
+  mysql_bin16:
+    <<: *mysql-common
+    container_name: kachi-uuid-perf-bin16
+    ports:
+      - "33312:3306"
+    volumes:
+      - mysql-bin16-data:/var/lib/mysql
+      - ./generated:/experiment/generated
+
+  mysql_char36:
+    <<: *mysql-common
+    container_name: kachi-uuid-perf-char36
+    ports:
+      - "33313:3306"
+    volumes:
+      - mysql-char36-data:/var/lib/mysql
+      - ./generated:/experiment/generated
+
+  mysql_prefix:
+    <<: *mysql-common
+    container_name: kachi-uuid-perf-prefix
+    ports:
+      - "33314:3306"
+    volumes:
+      - mysql-prefix-data:/var/lib/mysql
+      - ./generated:/experiment/generated
+
+volumes:
+  mysql-bigint-data:
+  mysql-bin16-data:
+  mysql-char36-data:
+  mysql-prefix-data:
