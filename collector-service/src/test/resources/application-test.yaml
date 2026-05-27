@@ -1,3 +1,5 @@
 spring:
   mongodb:
     uri: mongodb://localhost:27017/kachi_collector_test
+    representation:
+      uuid: standard
