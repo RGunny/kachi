@@ -113,6 +113,7 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 | [도메인 모델](./docs/도메인모델.md) | bounded context, aggregate, value object, 도메인 규칙 |
 | [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
+| [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |
 | [001. user-service에 Keyword 포함](./docs/decisions/001-user-service에-keyword-포함.md) | Keyword 경계 결정 |
 | [002. ArchUnit으로 아키텍처 검증](./docs/decisions/002-archunit으로-아키텍처-검증.md) | 아키텍처 규칙 자동 검증 결정 |
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |

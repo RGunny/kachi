@@ -32,6 +32,9 @@ dependencies {
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
 
     // Test
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // Test
     testImplementation("org.springframework.boot:spring-boot-webflux-test")
     testImplementation("org.springframework.boot:spring-boot-data-mongodb-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")

@@ -17,3 +17,18 @@ management:
     web:
       exposure:
         include: health
+
+kachi:
+  collector:
+    providers:
+      google:
+        enabled: ${KACHI_COLLECTOR_GOOGLE_ENABLED:true}
+        base-url: ${KACHI_COLLECTOR_GOOGLE_BASE_URL:https://news.google.com}
+        rss-search-path: ${KACHI_COLLECTOR_GOOGLE_RSS_SEARCH_PATH:/rss/search}
+        language-code: ${KACHI_COLLECTOR_GOOGLE_LANGUAGE_CODE:ko}
+        country-code: ${KACHI_COLLECTOR_GOOGLE_COUNTRY_CODE:KR}
+        connect-timeout: ${KACHI_COLLECTOR_GOOGLE_CONNECT_TIMEOUT:2s}
+        response-timeout: ${KACHI_COLLECTOR_GOOGLE_RESPONSE_TIMEOUT:5s}
+        read-timeout: ${KACHI_COLLECTOR_GOOGLE_READ_TIMEOUT:5s}
+        write-timeout: ${KACHI_COLLECTOR_GOOGLE_WRITE_TIMEOUT:5s}
+        max-in-memory-size: ${KACHI_COLLECTOR_GOOGLE_MAX_IN_MEMORY_SIZE:524288}

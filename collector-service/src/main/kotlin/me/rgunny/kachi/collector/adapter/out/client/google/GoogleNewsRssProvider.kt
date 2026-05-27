@@ -6,7 +6,6 @@ import me.rgunny.kachi.collector.application.port.out.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.util.UriComponentsBuilder
 import org.w3c.dom.Element
 import java.io.ByteArrayInputStream
 import java.time.Instant
@@ -22,27 +21,25 @@ class GoogleNewsRssProvider(
     override val source: NewsSource = NewsSource.GOOGLE
 
     override suspend fun collect(keyword: CollectedKeyword): List<CollectedArticle> {
-        // 1. Google News RSS 요청 URI를 만든다.
-        val rssUrl = UriComponentsBuilder.fromUriString(properties.baseUrl)
-            .queryParam("q", keyword.value)
-            .queryParam("hl", properties.languageCode)
-            .queryParam("gl", properties.countryCode)
-            .queryParam("ceid", "${properties.countryCode}:${properties.languageCode}")
-            .build()
-            .toUri()
-
-        // 2. WebClient로 Google News RSS를 호출하고, 응답 body를 String XML로 받는다.
+        // 1. Google 전용 WebClient로 RSS endpoint를 호출하고, 응답 body를 String XML로 받는다.
         val xml = webClient.get()
-            .uri(rssUrl)
+            .uri { uriBuilder ->
+                uriBuilder
+                    .path(properties.rssSearchPath)
+                    .queryParam("q", keyword.value)
+                    .queryParam("hl", properties.languageCode)
+                    .queryParam("gl", properties.countryCode)
+                    .queryParam("ceid", "${properties.countryCode}:${properties.languageCode}")
+                    .build()
+            }
             .retrieve()
             .bodyToMono(String::class.java)
-            .timeout(properties.timeout)
             .awaitSingle()
 
-        // 3. parseRss(xml)로 RSS item 목록을 만든다.
+        // 2. parseRss(xml)로 RSS item 목록을 만든다.
         val rssItems = parseRss(xml)
 
-        // 4. 제목이나 URL이 비어 있는 item은 adapter 안에서 제외한다.
+        // 3. 제목이나 URL이 비어 있는 item은 adapter 안에서 제외한다.
         // TODO: 상세 실패분리는 추후 고도화
         return rssItems
             .filter { it.title.isNotBlank() && it.link.isNotBlank() }
