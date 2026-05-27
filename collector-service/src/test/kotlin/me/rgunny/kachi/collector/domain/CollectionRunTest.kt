@@ -116,7 +116,7 @@ class CollectionRunTest {
             val completed = run.complete(
                 providerResults = listOf(
                     success(NewsSource.GOOGLE, savedCount = 2),
-                    ProviderCollectionResult.failure(NewsSource.NAVER, "timeout")
+                    failure(NewsSource.NAVER, "timeout")
                 ),
                 finishedAt = finishedAt
             )
@@ -134,8 +134,8 @@ class CollectionRunTest {
 
             val completed = run.complete(
                 providerResults = listOf(
-                    ProviderCollectionResult.failure(NewsSource.GOOGLE, "timeout"),
-                    ProviderCollectionResult.failure(NewsSource.NAVER, "quota exceeded")
+                    failure(NewsSource.GOOGLE, "timeout"),
+                    failure(NewsSource.NAVER, "quota exceeded")
                 ),
                 finishedAt = finishedAt
             )
@@ -208,6 +208,14 @@ class CollectionRunTest {
             fetchedCount = savedCount + duplicateCount,
             savedCount = savedCount,
             duplicateCount = duplicateCount
+        )
+    }
+
+    private fun failure(source: NewsSource, message: String): ProviderCollectionResult {
+        return ProviderCollectionResult.failure(
+            source = source,
+            failureReason = ProviderFailureReason.UNKNOWN,
+            failureMessage = message
         )
     }
 }

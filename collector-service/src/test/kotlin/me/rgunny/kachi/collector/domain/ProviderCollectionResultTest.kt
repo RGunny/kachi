@@ -29,6 +29,7 @@ class ProviderCollectionResultTest {
             assertEquals(10, result.fetchedCount)
             assertEquals(6, result.savedCount)
             assertEquals(4, result.duplicateCount)
+            assertNull(result.failureReason)
             assertNull(result.failureMessage)
         }
 
@@ -55,11 +56,13 @@ class ProviderCollectionResultTest {
         fun createFailureResult() {
             val result = ProviderCollectionResult.failure(
                 source = NewsSource.NAVER,
+                failureReason = ProviderFailureReason.TIMEOUT,
                 failureMessage = "timeout"
             )
 
             assertEquals(NewsSource.NAVER, result.source)
             assertEquals(ProviderCollectionStatus.FAILED, result.status)
+            assertEquals(ProviderFailureReason.TIMEOUT, result.failureReason)
             assertEquals("timeout", result.failureMessage)
         }
 
@@ -69,6 +72,7 @@ class ProviderCollectionResultTest {
             assertFailsWith<IllegalArgumentException> {
                 ProviderCollectionResult.failure(
                     source = NewsSource.NAVER,
+                    failureReason = ProviderFailureReason.UNKNOWN,
                     failureMessage = "   "
                 )
             }

@@ -6,6 +6,7 @@ class ProviderCollectionResult private constructor(
     val fetchedCount: Int,
     val savedCount: Int,
     val duplicateCount: Int,
+    val failureReason: ProviderFailureReason?,
     val failureMessage: String?
 ) {
     companion object {
@@ -26,12 +27,14 @@ class ProviderCollectionResult private constructor(
                 fetchedCount = fetchedCount,
                 savedCount = savedCount,
                 duplicateCount = duplicateCount,
+                failureReason = null,
                 failureMessage = null
             )
         }
 
         fun failure(
             source: NewsSource,
+            failureReason: ProviderFailureReason,
             failureMessage: String
         ): ProviderCollectionResult {
             val normalized = failureMessage.trim()
@@ -43,6 +46,7 @@ class ProviderCollectionResult private constructor(
                 fetchedCount = 0,
                 savedCount = 0,
                 duplicateCount = 0,
+                failureReason = failureReason,
                 failureMessage = normalized
             )
         }
