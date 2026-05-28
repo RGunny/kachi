@@ -91,6 +91,7 @@ class CollectNewsService(
 
         // 3. 이미 저장된 URL은 저장 대상에서 제외한다.
         val existingUrlHashes = newsPersistencePort.findExistingUrlHashes(
+            source = provider.source,
             mergedCandidates.map { it.urlHash }.toSet()
         )
         val newCandidates = mergedCandidates.filter { it.urlHash !in existingUrlHashes }

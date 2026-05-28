@@ -45,7 +45,10 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
             val result = adapter.save(news)
 
             assertEquals(SaveNewsResult.SAVED, result)
-            assertEquals(setOf(news.urlHash), adapter.findExistingUrlHashes(setOf(news.urlHash)))
+            assertEquals(
+                setOf(news.urlHash),
+                adapter.findExistingUrlHashes(NewsSource.GOOGLE, setOf(news.urlHash))
+            )
         }
 
         @Test
@@ -67,13 +70,14 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
     inner class FindExistingUrlHashes {
 
         @Test
-        @DisplayName("저장된 URL hash만 반환한다")
+        @DisplayName("같은 source에 저장된 URL hash만 반환한다")
         fun findExistingUrlHashes() = runBlocking {
             val saved = news(url = "https://kachi.com/news/1")
             val notSaved = news(url = "https://kachi.com/news/2")
             adapter.save(saved)
 
             val found = adapter.findExistingUrlHashes(
+                source = NewsSource.GOOGLE,
                 setOf(saved.urlHash, notSaved.urlHash)
             )
 
@@ -81,17 +85,34 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         }
 
         @Test
+        @DisplayName("다른 source의 같은 URL hash는 반환하지 않는다")
+        fun doesNotFindSameUrlHashWhenSourceIsDifferent() = runBlocking {
+            val saved = news(url = "https://kachi.com/news/1", source = NewsSource.NAVER)
+            adapter.save(saved)
+
+            val found = adapter.findExistingUrlHashes(
+                source = NewsSource.GOOGLE,
+                urlHashes = setOf(saved.urlHash)
+            )
+
+            assertEquals(emptySet(), found)
+        }
+
+        @Test
         @DisplayName("조회 대상 URL hash가 비어 있으면 빈 Set을 반환한다")
         fun returnEmptySetWhenUrlHashesAreEmpty() = runBlocking {
-            val found = adapter.findExistingUrlHashes(emptySet())
+            val found = adapter.findExistingUrlHashes(NewsSource.GOOGLE, emptySet())
 
             assertEquals(emptySet(), found)
         }
     }
 
-    private fun news(url: String): News {
+    private fun news(
+        url: String,
+        source: NewsSource = NewsSource.GOOGLE
+    ): News {
         return News.create(
-            source = NewsSource.GOOGLE,
+            source = source,
             title = NewsTitle.of("NVIDIA 뉴스"),
             url = NewsUrl.of(url),
             publishedAt = publishedAt,

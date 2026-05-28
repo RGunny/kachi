@@ -4,6 +4,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.collector.application.port.out.NewsPersistencePort
 import me.rgunny.kachi.collector.application.port.out.SaveNewsResult
 import me.rgunny.kachi.collector.domain.News
+import me.rgunny.kachi.collector.domain.NewsSource
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Component
 
@@ -12,10 +13,10 @@ class NewsPersistenceAdapter(
     private val repository: NewsMongoRepository
 ) : NewsPersistencePort {
 
-    override suspend fun findExistingUrlHashes(urlHashes: Set<String>): Set<String> {
+    override suspend fun findExistingUrlHashes(source: NewsSource, urlHashes: Set<String>): Set<String> {
         if (urlHashes.isEmpty()) return emptySet()
 
-        return repository.findByUrlHashIn(urlHashes)
+        return repository.findBySourceAndUrlHashIn(source, urlHashes)
             .map { it.urlHash }
             .collectList()
             .awaitSingle()

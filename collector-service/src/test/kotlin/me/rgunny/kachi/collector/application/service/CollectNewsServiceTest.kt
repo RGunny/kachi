@@ -130,7 +130,7 @@ class CollectNewsServiceTest {
         @DisplayName("이미 저장된 URL은 중복으로 집계하고 저장하지 않는다")
         fun skipExistingUrlHash() = runBlocking {
             val existingUrlHash = NewsUrl.of("https://kachi.com/news/1").hash
-            newsPersistence.existingUrlHashes = mutableSetOf(existingUrlHash)
+            newsPersistence.existingNewsKeys = mutableSetOf(NewsSource.GOOGLE to existingUrlHash)
             val googleProvider = FakeNewsProviderPort(
                 source = NewsSource.GOOGLE,
                 articles = listOf(article(NewsSource.GOOGLE, "NVIDIA 뉴스", "https://kachi.com/news/1"))
@@ -143,6 +143,25 @@ class CollectNewsServiceTest {
             assertEquals(0, result.collectedCount)
             assertEquals(1, result.duplicateCount)
             assertEquals(0, newsPersistence.savedNews.size)
+        }
+
+        @Test
+        @DisplayName("다른 source의 같은 URL은 기존 중복으로 보지 않는다")
+        fun saveSameUrlWhenSourceIsDifferent() = runBlocking {
+            val urlHash = NewsUrl.of("https://kachi.com/news/1").hash
+            newsPersistence.existingNewsKeys = mutableSetOf(NewsSource.NAVER to urlHash)
+            val googleProvider = FakeNewsProviderPort(
+                source = NewsSource.GOOGLE,
+                articles = listOf(article(NewsSource.GOOGLE, "NVIDIA 뉴스", "https://kachi.com/news/1"))
+            )
+            val service = serviceOf(googleProvider)
+
+            val result = service.collect(CollectNewsCommand(keywords = listOf(keyword)))
+
+            assertEquals(CollectionRunStatus.SUCCEEDED, result.status)
+            assertEquals(1, result.collectedCount)
+            assertEquals(0, result.duplicateCount)
+            assertEquals(1, newsPersistence.savedNews.size)
         }
 
         @Test
@@ -209,19 +228,25 @@ class CollectNewsServiceTest {
     }
 
     private class FakeNewsPersistencePort : NewsPersistencePort {
-        var existingUrlHashes: MutableSet<String> = mutableSetOf()
+        var existingNewsKeys: MutableSet<Pair<NewsSource, String>> = mutableSetOf()
         val savedNews: MutableList<News> = mutableListOf()
 
-        override suspend fun findExistingUrlHashes(urlHashes: Set<String>): Set<String> {
-            return existingUrlHashes.intersect(urlHashes)
+        override suspend fun findExistingUrlHashes(source: NewsSource, urlHashes: Set<String>): Set<String> {
+            return existingNewsKeys
+                .filter { (existingSource, existingUrlHash) ->
+                    existingSource == source && existingUrlHash in urlHashes
+                }
+                .map { it.second }
+                .toSet()
         }
 
         override suspend fun save(news: News): SaveNewsResult {
-            if (news.urlHash in existingUrlHashes) {
+            val newsKey = news.source to news.urlHash
+            if (newsKey in existingNewsKeys) {
                 return SaveNewsResult.DUPLICATED
             }
 
-            existingUrlHashes.add(news.urlHash)
+            existingNewsKeys.add(newsKey)
             savedNews.add(news)
             return SaveNewsResult.SAVED
         }
