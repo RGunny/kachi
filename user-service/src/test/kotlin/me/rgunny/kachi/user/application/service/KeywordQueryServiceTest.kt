@@ -89,6 +89,10 @@ class KeywordQueryServiceTest {
             return keywords
         }
 
+        override fun findAllEnabled(): List<Keyword> {
+            return keywords.filter { it.enabled }
+        }
+
         override fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean {
             return false
         }
