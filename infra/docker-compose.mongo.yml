@@ -1,0 +1,18 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: kachi-mongo
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kachi_collector}
+      TZ: Asia/Seoul
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
