@@ -17,9 +17,11 @@ import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
 import me.rgunny.kachi.collector.domain.ProviderFailureReason
 import me.rgunny.kachi.collector.domain.ProviderCollectionResult
+import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Instant
 
+@Service
 class CollectNewsService(
     private val keywordReaderPort: KeywordReaderPort,
     private val newsProviderPorts: List<NewsProviderPort>,

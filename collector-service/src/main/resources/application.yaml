@@ -22,6 +22,12 @@ management:
 
 kachi:
   collector:
+    clients:
+      user-service:
+        base-url: ${KACHI_USER_SERVICE_BASE_URL}
+        active-keywords-path: ${KACHI_USER_SERVICE_ACTIVE_KEYWORDS_PATH:/api/v1/internal/keywords/active}
+        timeout: ${KACHI_USER_SERVICE_TIMEOUT:3s}
+        max-in-memory-size: ${KACHI_USER_SERVICE_MAX_IN_MEMORY_SIZE:262144}
     providers:
       google:
         enabled: ${KACHI_COLLECTOR_GOOGLE_ENABLED:true}

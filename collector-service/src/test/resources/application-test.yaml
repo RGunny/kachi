@@ -3,3 +3,9 @@ spring:
     uri: mongodb://localhost:27017/kachi_collector_test
     representation:
       uuid: standard
+
+kachi:
+  collector:
+    clients:
+      user-service:
+        base-url: http://user-service-test
