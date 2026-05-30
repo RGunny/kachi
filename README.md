@@ -13,18 +13,8 @@ Kachi는 사용자가 등록한 관심 키워드를 기준으로 뉴스와 시�
 - [x] 멀티모듈 프로젝트
 - [x] 도메인 문서 초안
 - [x] 헥사고날 아키텍처 패키지 규칙 정리
-- [x] `user-service` User 도메인 모델
-- [x] `user-service` Keyword 도메인 모델
-- [x] 도메인 값 객체 (`UserId`, `KeywordId`, `Email`, `Nickname`, `KeywordName`)
-- [x] User / Keyword 도메인 테스트
-- [x] `user-service` application port / service
-- [x] `user-service` persistence adapter
-- [x] `user-service` web adapter
-- [x] OAuth2 / JWT / Refresh Token
-- [x] MySQL / Redis 로컬 인프라
-- [x] Flyway schema migration
-- [x] Actuator health / graceful shutdown
-- [ ] `collector-service`
+- [x] `user-service` 기본 기능
+- [x] `collector-service` 뉴스 수집 기본 기능
 - [ ] `ai-service`
 - [ ] `notification-service`
 - [ ] `history-service`
@@ -80,10 +70,18 @@ user-service
 
 ## 5. 현재 진행 상태
 
-현재는 `user-service`의 사용자 인증, 토큰, 관심 키워드 기본 흐름을 구현했다.
+현재는 `user-service`와 `collector-service`의 기본 기능을 구현 중이다.
 
 도메인 세부 규칙은 [도메인 모델](./docs/도메인모델.md)을 기준으로 관리한다.  
 설계 결정의 배경과 trade-off는 [decisions](./docs/decisions)에 기록한다.
+
+| 서비스 | 진행 상태 | 상세 문서 |
+| --- | --- | --- |
+| `user-service` | 사용자, 키워드, OAuth2/JWT, refresh token, MySQL/Redis 저장소 기본 흐름 구현 | 작성 예정 |
+| `collector-service` | 뉴스 도메인, Google RSS provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
+| `ai-service` | 미구현 | - |
+| `notification-service` | 미구현 | - |
+| `history-service` | 미구현 | - |
 
 ---
 
@@ -99,6 +97,7 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 
 ```sh
 ./gradlew :user-service:test
+./gradlew :collector-service:test
 ```
 
 테스트 분류와 인프라 연동 테스트 기준은 [테스트 전략](./docs/테스트전략.md)을 따른다.
@@ -121,3 +120,4 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 | [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 MySQL/Redis 실행 구성과 Docker Compose 분리 기준 |
 | [006. OAuth2 로그인 흐름](./docs/decisions/006-oauth2-로그인-흐름.md) | OAuth2 provider 응답 정규화, 사용자 식별, token 발급 흐름 |
 | [007. user-service 운영성 기본 설정](./docs/decisions/007-user-service-운영성-기본설정.md) | health endpoint, graceful shutdown 기본 설정 |
+| [008. collector-service 뉴스 수집 실행 모델](./docs/decisions/008-collector-service-뉴스-수집-실행-모델.md) | scheduler/internal API 진입점과 단일 인스턴스 lock 결정 |
