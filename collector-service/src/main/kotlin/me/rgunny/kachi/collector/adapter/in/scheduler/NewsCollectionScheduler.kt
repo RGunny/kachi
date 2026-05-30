@@ -1,5 +1,6 @@
 package me.rgunny.kachi.collector.adapter.`in`.scheduler
 
+import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.collector.adapter.`in`.collection.NewsCollectionExecutionResult
 import me.rgunny.kachi.collector.adapter.`in`.collection.NewsCollectionExecutor
 import me.rgunny.kachi.collector.application.port.`in`.CollectNewsCommand
@@ -19,6 +20,16 @@ class NewsCollectionScheduler(
     private val executor: NewsCollectionExecutor,
     private val properties: NewsCollectionSchedulerProperties
 ) {
+    @PostConstruct
+    fun logSchedulerProperties() {
+        log.info(
+            "News collection scheduler configured: enabled={}, initialDelay={}, fixedDelay={}",
+            properties.enabled,
+            properties.initialDelay,
+            properties.fixedDelay
+        )
+    }
+
     @Scheduled(
         fixedDelayString = "\${kachi.collector.scheduler.news.fixed-delay:10m}",
         initialDelayString = "\${kachi.collector.scheduler.news.initial-delay:30s}"
@@ -30,6 +41,7 @@ class NewsCollectionScheduler(
         }
 
         // 2. @Scheduled suspend 함수에서 수집 유스케이스를 직접 호출한다.
+        log.info("Scheduled news collection started")
         runCatching {
             executor.execute(CollectNewsCommand(keywords = emptyList()))
         }.onSuccess { result ->
