@@ -6,6 +6,9 @@ spring:
 
 kachi:
   collector:
+    scheduler:
+      news:
+        enabled: ${KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED:false}
     clients:
       user-service:
         base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8081}

@@ -6,6 +6,9 @@ spring:
 
 kachi:
   collector:
+    scheduler:
+      news:
+        enabled: false
     clients:
       user-service:
         base-url: http://user-service-test
