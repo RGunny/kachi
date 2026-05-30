@@ -23,7 +23,7 @@ class InternalCollectionController(
     private val executor: NewsCollectionExecutor
 ) {
 
-    @PostMapping("/api/v1/internal/collections/news")
+    @PostMapping(ApiPaths.INTERNAL_COLLECTIONS_NEWS, version = ApiVersions.V1)
     suspend fun collectNews(
         @RequestBody(required = false) request: CollectNewsRequest?
     ): ResponseEntity<ApiResponse<*>> {
