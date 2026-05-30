@@ -51,6 +51,7 @@ GET /api/v1/internal/providers/news/{source}/health?keyword=NVIDIA
 현재 지원 source:
 
 - `GOOGLE`
+- `NAVER` (`KACHI_COLLECTOR_NAVER_ENABLED=true`와 Naver API key 필요)
 
 이 API는 외부 provider 호출과 응답 파싱까지만 확인한다.
 뉴스 저장과 `CollectionRun` 기록은 하지 않는다.
@@ -174,6 +175,23 @@ API key 없이 수집 흐름을 검증할 수 있지만, 공식 안정 JSON API�
 
 상세 설정 근거는 [collector-service WebClient 설정](../docs/collector-webclient-설정.md)을 따른다.
 
+### Naver News Search
+
+Naver Search API의 뉴스 검색 endpoint를 provider로 사용할 수 있다.
+
+```yaml
+kachi:
+  collector:
+    providers:
+      naver:
+        enabled: true
+        client-id: ${NAVER_CLIENT_ID}
+        client-secret: ${NAVER_CLIENT_SECRET}
+        display: 100
+        sort: date
+```
+credential이 없으면 `KACHI_COLLECTOR_NAVER_ENABLED=false` 상태로 Google provider만 사용한다.
+
 ## 저장소
 
 `collector-service`는 MongoDB를 사용한다.
@@ -205,6 +223,9 @@ KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=false
 실행:
 
 ```sh
+set -a
+source ../.env.local
+set +a
 ./gradlew :collector-service:bootRun
 ```
 
@@ -212,6 +233,12 @@ Google RSS 연결 확인:
 
 ```sh
 curl "http://localhost:8082/api/v1/internal/providers/news/GOOGLE/health?keyword=NVIDIA"
+```
+
+Naver News Search 연결 확인:
+
+```sh
+curl "http://localhost:8082/api/v1/internal/providers/news/NAVER/health?keyword=NVIDIA"
 ```
 
 collector 단독 뉴스 수집 smoke:

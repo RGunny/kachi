@@ -93,6 +93,15 @@ user-service
 docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
 ```
 
+로컬 환경변수는 `.env.example`을 기준으로 `.env.local`에 둔다.
+실행 전에 shell에 로드하면 각 서비스가 같은 값을 사용한다.
+
+```sh
+set -a
+source .env.local
+set +a
+```
+
 테스트:
 
 ```sh
