@@ -42,6 +42,40 @@ Scheduler 또는 Internal API
 
 ## API
 
+뉴스 provider 연결 확인:
+
+```http
+GET /api/v1/internal/providers/news/{source}/health?keyword=NVIDIA
+```
+
+현재 지원 source:
+
+- `GOOGLE`
+
+이 API는 외부 provider 호출과 응답 파싱까지만 확인한다.
+뉴스 저장과 `CollectionRun` 기록은 하지 않는다.
+
+응답 예시:
+
+```json
+{
+  "success": true,
+  "data": {
+    "source": "GOOGLE",
+    "keyword": "NVIDIA",
+    "fetchedCount": 10,
+    "samples": [
+      {
+        "title": "NVIDIA ...",
+        "url": "https://news.google.com/...",
+        "publishedAt": "2026-05-30T00:00:00Z"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
 수동 뉴스 수집:
 
 ```http
@@ -49,6 +83,7 @@ POST /api/v1/internal/collections/news
 ```
 
 요청 body는 생략할 수 있다. 생략하면 활성 키워드를 자동 조회한다.
+현재 외부 provider 연결 확인 단계에서는 user-service 연동 없이 키워드를 직접 넘겨 collector 단독으로 smoke test를 진행한다.
 
 ```json
 {
@@ -145,8 +180,11 @@ API key 없이 수집 흐름을 검증할 수 있지만, 공식 안정 JSON API�
 - `news`: 수집된 뉴스
 - `collection_runs`: 수집 실행 기록
 
-현재 루트 `infra`에는 MongoDB Docker Compose가 아직 없다.
-로컬에서 애플리케이션을 직접 실행하려면 별도 MongoDB를 준비하거나 MongoDB compose를 추가해야 한다.
+로컬 MongoDB는 `infra/docker-compose.mongo.yml`로 실행한다.
+
+```sh
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mongo.yml up -d
+```
 
 ## 실행
 
@@ -167,6 +205,20 @@ KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=false
 ./gradlew :collector-service:bootRun
 ```
 
+Google RSS 연결 확인:
+
+```sh
+curl "http://localhost:8082/api/v1/internal/providers/news/GOOGLE/health?keyword=NVIDIA"
+```
+
+collector 단독 뉴스 수집 smoke:
+
+```sh
+curl -X POST "http://localhost:8082/api/v1/internal/collections/news" \
+  -H "Content-Type: application/json" \
+  -d '{"keywords":["NVIDIA"],"sources":["GOOGLE"]}'
+```
+
 테스트:
 
 ```sh
@@ -175,9 +227,10 @@ KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=false
 
 ## 다음 작업
 
-- MongoDB 로컬 Docker Compose 추가
 - `CollectionRun` 조회 API 추가
 - provider 실패 사유 세분화
 - Google RSS 원문 URL 정규화
+- Google RSS 제목/언론사명 정규화
+- Google RSS 동일 기사 URL 변형 보정
 - Naver/Finnhub provider 추가
 - 분산 실행이 필요해지는 시점에 distributed lock 도입

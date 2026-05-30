@@ -90,7 +90,7 @@ user-service
 로컬 인프라 실행:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
 ```
 
 테스트:
