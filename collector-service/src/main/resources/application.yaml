@@ -45,3 +45,17 @@ kachi:
         read-timeout: ${KACHI_COLLECTOR_GOOGLE_READ_TIMEOUT:5s}
         write-timeout: ${KACHI_COLLECTOR_GOOGLE_WRITE_TIMEOUT:5s}
         max-in-memory-size: ${KACHI_COLLECTOR_GOOGLE_MAX_IN_MEMORY_SIZE:524288}
+      naver:
+        enabled: ${KACHI_COLLECTOR_NAVER_ENABLED:false}
+        base-url: ${KACHI_COLLECTOR_NAVER_BASE_URL:https://openapi.naver.com}
+        news-search-path: ${KACHI_COLLECTOR_NAVER_NEWS_SEARCH_PATH:/v1/search/news.json}
+        client-id: ${NAVER_CLIENT_ID:}
+        client-secret: ${NAVER_CLIENT_SECRET:}
+        display: ${KACHI_COLLECTOR_NAVER_DISPLAY:100}
+        start: ${KACHI_COLLECTOR_NAVER_START:1}
+        sort: ${KACHI_COLLECTOR_NAVER_SORT:date}
+        connect-timeout: ${KACHI_COLLECTOR_NAVER_CONNECT_TIMEOUT:2s}
+        response-timeout: ${KACHI_COLLECTOR_NAVER_RESPONSE_TIMEOUT:5s}
+        read-timeout: ${KACHI_COLLECTOR_NAVER_READ_TIMEOUT:5s}
+        write-timeout: ${KACHI_COLLECTOR_NAVER_WRITE_TIMEOUT:5s}
+        max-in-memory-size: ${KACHI_COLLECTOR_NAVER_MAX_IN_MEMORY_SIZE:524288}
