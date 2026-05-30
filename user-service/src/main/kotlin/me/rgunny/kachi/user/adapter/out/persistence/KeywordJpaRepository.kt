@@ -8,5 +8,7 @@ interface KeywordJpaRepository : JpaRepository<KeywordJpaEntity, UUID> {
 
     fun findAllByEnabledTrue(): List<KeywordJpaEntity>
 
+    fun findByUserIdAndName(userId: UUID, name: String): KeywordJpaEntity?
+
     fun existsByUserIdAndName(userId: UUID, name: String): Boolean
 }

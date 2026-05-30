@@ -151,6 +151,9 @@ kachi:
 GET {KACHI_USER_SERVICE_BASE_URL}/api/v1/internal/keywords/active
 ```
 
+`user-service` local 프로필은 collector 연동 확인을 위해 기동 시 `TRUMP`, `NVIDIA`, `SPACE-X`, `TESLA`, `이란`
+활성 키워드를 앱 기동 시 초기화한다.
+
 설정:
 
 ```yaml
