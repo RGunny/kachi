@@ -158,7 +158,7 @@ kachi:
   collector:
     clients:
       user-service:
-        base-url: http://localhost:8081
+        base-url: http://localhost:8080
         active-keywords-path: /api/v1/internal/keywords/active
         timeout: 3s
         max-in-memory-size: 262144
@@ -195,7 +195,7 @@ server.port=8082
 MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DATABASE=kachi_collector
-KACHI_USER_SERVICE_BASE_URL=http://localhost:8081
+KACHI_USER_SERVICE_BASE_URL=http://localhost:8080
 KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=false
 ```
 

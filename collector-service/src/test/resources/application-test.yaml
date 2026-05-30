@@ -3,6 +3,9 @@ spring:
     uri: mongodb://localhost:27017/kachi_collector_test
     representation:
       uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
 
 kachi:
   collector:
