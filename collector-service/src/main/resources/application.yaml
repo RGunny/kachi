@@ -59,3 +59,14 @@ kachi:
         read-timeout: ${KACHI_COLLECTOR_NAVER_READ_TIMEOUT:5s}
         write-timeout: ${KACHI_COLLECTOR_NAVER_WRITE_TIMEOUT:5s}
         max-in-memory-size: ${KACHI_COLLECTOR_NAVER_MAX_IN_MEMORY_SIZE:524288}
+      finnhub:
+        enabled: ${KACHI_COLLECTOR_FINNHUB_ENABLED:false}
+        base-url: ${KACHI_COLLECTOR_FINNHUB_BASE_URL:https://finnhub.io}
+        company-news-path: ${KACHI_COLLECTOR_FINNHUB_COMPANY_NEWS_PATH:/api/v1/company-news}
+        api-key: ${FINNHUB_API_KEY:}
+        lookback-days: ${KACHI_COLLECTOR_FINNHUB_LOOKBACK_DAYS:7}
+        connect-timeout: ${KACHI_COLLECTOR_FINNHUB_CONNECT_TIMEOUT:2s}
+        response-timeout: ${KACHI_COLLECTOR_FINNHUB_RESPONSE_TIMEOUT:5s}
+        read-timeout: ${KACHI_COLLECTOR_FINNHUB_READ_TIMEOUT:5s}
+        write-timeout: ${KACHI_COLLECTOR_FINNHUB_WRITE_TIMEOUT:5s}
+        max-in-memory-size: ${KACHI_COLLECTOR_FINNHUB_MAX_IN_MEMORY_SIZE:524288}
