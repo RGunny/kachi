@@ -13,18 +13,8 @@ Kachi는 사용자가 등록한 관심 키워드를 기준으로 뉴스와 시�
 - [x] 멀티모듈 프로젝트
 - [x] 도메인 문서 초안
 - [x] 헥사고날 아키텍처 패키지 규칙 정리
-- [x] `user-service` User 도메인 모델
-- [x] `user-service` Keyword 도메인 모델
-- [x] 도메인 값 객체 (`UserId`, `KeywordId`, `Email`, `Nickname`, `KeywordName`)
-- [x] User / Keyword 도메인 테스트
-- [x] `user-service` application port / service
-- [x] `user-service` persistence adapter
-- [x] `user-service` web adapter
-- [x] OAuth2 / JWT / Refresh Token
-- [x] MySQL / Redis 로컬 인프라
-- [x] Flyway schema migration
-- [x] Actuator health / graceful shutdown
-- [ ] `collector-service`
+- [x] `user-service` 기본 기능
+- [x] `collector-service` 뉴스 수집 기본 기능
 - [ ] `ai-service`
 - [ ] `notification-service`
 - [ ] `history-service`
@@ -80,10 +70,18 @@ user-service
 
 ## 5. 현재 진행 상태
 
-현재는 `user-service`의 사용자 인증, 토큰, 관심 키워드 기본 흐름을 구현했다.
+현재는 `user-service`와 `collector-service`의 기본 기능을 구현 중이다.
 
 도메인 세부 규칙은 [도메인 모델](./docs/도메인모델.md)을 기준으로 관리한다.  
 설계 결정의 배경과 trade-off는 [decisions](./docs/decisions)에 기록한다.
+
+| 서비스 | 진행 상태 | 상세 문서 |
+| --- | --- | --- |
+| `user-service` | 사용자, 키워드, OAuth2/JWT, refresh token, MySQL/Redis 저장소 기본 흐름 구현 | [user-service README](./user-service/README.md) |
+| `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
+| `ai-service` | 미구현 | - |
+| `notification-service` | 미구현 | - |
+| `history-service` | 미구현 | - |
 
 ---
 
@@ -92,13 +90,23 @@ user-service
 로컬 인프라 실행:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
+```
+
+로컬 환경변수는 `.env.example`을 기준으로 `.env.local`에 둔다.
+실행 전에 shell에 로드하면 각 서비스가 같은 값을 사용한다.
+
+```sh
+set -a
+source .env.local
+set +a
 ```
 
 테스트:
 
 ```sh
 ./gradlew :user-service:test
+./gradlew :collector-service:test
 ```
 
 테스트 분류와 인프라 연동 테스트 기준은 [테스트 전략](./docs/테스트전략.md)을 따른다.
@@ -113,10 +121,13 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 | [도메인 모델](./docs/도메인모델.md) | bounded context, aggregate, value object, 도메인 규칙 |
 | [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
+| [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |
 | [001. user-service에 Keyword 포함](./docs/decisions/001-user-service에-keyword-포함.md) | Keyword 경계 결정 |
 | [002. ArchUnit으로 아키텍처 검증](./docs/decisions/002-archunit으로-아키텍처-검증.md) | 아키텍처 규칙 자동 검증 결정 |
 | [003. UUID v7과 ID Value Object 사용](./docs/decisions/003-uuid-v7과-id-value-object-사용.md) | 식별자 생성 전략과 타입 분리 결정 |
 | [004. JWT Access/Refresh Token 정책](./docs/decisions/004-jwt-access-refresh-token-정책.md) | 토큰 분리, TTL, secret 관리, claim 범위 결정 |
-| [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 MySQL/Redis 실행 구성과 Docker Compose 분리 기준 |
+| [005. 로컬 인프라 Docker Compose 구성](./docs/decisions/005-로컬-인프라-docker-compose-구성.md) | 로컬 MySQL/Redis/MongoDB 실행 구성과 Docker Compose 분리 기준 |
 | [006. OAuth2 로그인 흐름](./docs/decisions/006-oauth2-로그인-흐름.md) | OAuth2 provider 응답 정규화, 사용자 식별, token 발급 흐름 |
 | [007. user-service 운영성 기본 설정](./docs/decisions/007-user-service-운영성-기본설정.md) | health endpoint, graceful shutdown 기본 설정 |
+| [008. collector-service 뉴스 수집 실행 모델](./docs/decisions/008-collector-service-뉴스-수집-실행-모델.md) | scheduler/internal API 진입점과 단일 인스턴스 lock 결정 |
+| [009. 외부 뉴스 provider 연동 기준](./docs/decisions/009-외부-뉴스-provider-연동-기준.md) | Google RSS, Naver, Finnhub provider 설정과 credential 기본 정책 |

@@ -11,6 +11,8 @@ interface KeywordPersistencePort {
 
     fun findAllByUserId(userId: UserId): List<Keyword>
 
+    fun findAllEnabled(): List<Keyword>
+
     fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean
 
     fun save(keyword: Keyword): Keyword

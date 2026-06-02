@@ -356,6 +356,10 @@ class KeywordCommandServiceTest {
             return keywords.values.filter { it.userId == userId }
         }
 
+        override fun findAllEnabled(): List<Keyword> {
+            return keywords.values.filter { it.enabled }
+        }
+
         override fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean {
             existsByUserIdAndNameCalled = true
             return userId to name in existingPairs

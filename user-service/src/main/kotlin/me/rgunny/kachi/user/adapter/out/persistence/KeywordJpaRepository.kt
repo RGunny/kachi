@@ -6,5 +6,9 @@ import java.util.UUID
 interface KeywordJpaRepository : JpaRepository<KeywordJpaEntity, UUID> {
     fun findAllByUserId(userId: UUID): List<KeywordJpaEntity>
 
+    fun findAllByEnabledTrue(): List<KeywordJpaEntity>
+
+    fun findByUserIdAndName(userId: UUID, name: String): KeywordJpaEntity?
+
     fun existsByUserIdAndName(userId: UUID, name: String): Boolean
 }

@@ -3,25 +3,27 @@
 ## 배경
 
 `user-service`는 사용자와 키워드를 MySQL에 저장하고, refresh token 상태를 Redis에 저장한다.
-애플리케이션 설정은 `MYSQL_*`, `REDIS_*` 환경변수를 통해 인프라에 접속하도록 준비되어 있지만, 프로젝트 안에 실행 방법이 없으면 로컬 개발 환경을 재현하기 어렵다.
+`collector-service`는 수집 뉴스와 수집 실행 기록을 MongoDB에 저장한다.
+애플리케이션 설정은 `MYSQL_*`, `REDIS_*`, `MONGO_*` 환경변수를 통해 인프라에 접속하도록 준비되어 있지만, 프로젝트 안에 실행 방법이 없으면 로컬 개발 환경을 재현하기 어렵다.
 
 Kachi는 여러 인프라 컴포넌트를 사용할 수 있지만, 로컬 개발 인프라는 구현된 기능이 실제로 필요로 하는 범위만 제공한다.
-현재 `user-service`의 외부 인프라는 MySQL과 Redis다.
+현재 구현된 서비스의 외부 인프라는 MySQL, Redis, MongoDB다.
 
 ## 결정
 
-프로젝트에는 user-service 실행에 필요한 MySQL과 Redis Docker Compose를 둔다.
+프로젝트에는 user-service 실행에 필요한 MySQL/Redis와 collector-service 실행에 필요한 MongoDB Docker Compose를 둔다.
 
 ```text
 infra/docker-compose.yml
 infra/docker-compose.mysql.yml
 infra/docker-compose.redis.yml
+infra/docker-compose.mongo.yml
 ```
 
 실행 명령:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
 ```
 
 `docker-compose.yml`에는 프로젝트 공통 요소를 둔다.
@@ -30,6 +32,7 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 - 공통 network
 - MySQL volume
 - Redis volume
+- MongoDB volume
 
 `docker-compose.mysql.yml`에는 MySQL 서비스만 둔다.
 
@@ -69,14 +72,34 @@ services:
     command: redis-server --appendonly yes
 ```
 
+`docker-compose.mongo.yml`에는 MongoDB 서비스만 둔다.
+
+```yaml
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: kachi-mongo
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kachi_collector}
+      TZ: Asia/Seoul
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+```
+
 ## 이유
 
 ### 구현된 인프라만 추가
 
-현재 코드에서 실제로 필요한 외부 인프라는 사용자/키워드 저장소인 MySQL과 refresh token 저장소인 Redis다.
-MongoDB, Kafka까지 한 번에 추가하면 아직 사용하지 않는 실행 경로와 설정 관리 부담이 생긴다.
+현재 코드에서 실제로 필요한 외부 인프라는 사용자/키워드 저장소인 MySQL, refresh token 저장소인 Redis, 뉴스/수집 실행 저장소인 MongoDB다.
+Kafka까지 한 번에 추가하면 아직 사용하지 않는 실행 경로와 설정 관리 부담이 생긴다.
 
-따라서 현재 필요한 MySQL과 Redis만 추가하고, MongoDB/Kafka는 해당 서비스나 기능이 실제로 붙는 시점에 추가한다.
+따라서 현재 필요한 MySQL, Redis, MongoDB만 추가하고, Kafka는 해당 서비스나 기능이 실제로 붙는 시점에 추가한다.
 
 ### 공통 compose와 서비스 compose 분리
 
@@ -85,10 +108,10 @@ MongoDB, Kafka까지 한 번에 추가하면 아직 사용하지 않는 실행 �
 예:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
 ```
 
-MySQL과 Redis를 함께 실행할 때는 공통 compose에 서비스별 compose를 조합한다.
+MySQL, Redis, MongoDB를 함께 실행할 때는 공통 compose에 서비스별 compose를 조합한다.
 다른 인프라가 필요해지면 같은 방식으로 `docker-compose.{component}.yml`을 추가한다.
 
 ### `mysql:8.0`
@@ -119,9 +142,9 @@ MySQL 8.0은 현재 사용하는 `com.mysql:mysql-connector-j`와 호환되고, 
 운영 또는 CI에서 값이 누락되면 애플리케이션 기동 시점에 바로 드러나게 하기 위함이다.
 
 `application-local.yaml`에는 로컬 개발 기본값을 둔다.
-MySQL, Redis, OAuth2 callback처럼 로컬에서 반복 실행해야 하는 값은 기본값을 제공해 별도 `.env` 없이도 빠르게 실행할 수 있게 한다.
+MySQL, Redis, MongoDB, OAuth2 callback처럼 로컬에서 반복 실행해야 하는 값은 기본값을 제공해 별도 `.env` 없이도 빠르게 실행할 수 있게 한다.
 
-따라서 `REDIS_HOST`, `REDIS_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`의 로컬 기본값은 `application-local.yaml`에만 둔다.
+따라서 `REDIS_HOST`, `REDIS_PORT`, `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_DATABASE`의 로컬 기본값은 `application-local.yaml`에만 둔다.
 
 ### `ddl-auto`
 
@@ -155,6 +178,25 @@ Redis 7은 현재 refresh token 저장소 요구사항인 TTL, key 존재 확인
 기본값은 Redis 표준 포트인 `6379`로 둔다.
 다만 로컬 머신에 이미 Redis가 떠 있거나 다른 프로젝트가 같은 포트를 사용하면 `REDIS_PORT` 환경변수로 변경할 수 있게 한다.
 
+### `mongo:7.0`
+
+MongoDB는 collector-service의 뉴스와 수집 실행 기록 저장소로 사용한다.
+
+뉴스 원문 URL hash, provider별 수집 결과, 매칭 키워드 목록처럼 문서 단위로 함께 저장하고 조회하는 데이터가 많기 때문에 초기 collector 저장소는 MongoDB로 둔다.
+
+로컬 기본 이미지는 `mongo:7.0`으로 고정한다.
+Spring Data MongoDB reactive adapter와 Testcontainers MongoDB 테스트 기준에 맞춰 UUID representation은 `standard`로 사용한다.
+
+### `MONGO_*` 기본값
+
+로컬 compose에는 다음 기본값을 둔다.
+
+| 환경변수 | 기본값 | 이유 |
+| --- | --- | --- |
+| `MONGO_HOST` | `localhost` | 로컬 collector-service 접속 host |
+| `MONGO_PORT` | `27017` | MongoDB 표준 포트 |
+| `MONGO_DATABASE` | `kachi_collector` | collector-service 기본 데이터베이스 |
+
 ### Volume 사용
 
 Redis 데이터는 컨테이너 재시작 후에도 유지되도록 named volume에 저장한다.
@@ -163,10 +205,12 @@ refresh token은 TTL이 있는 데이터라 영구 보존 대상은 아니지만
 MySQL 데이터도 컨테이너 재시작 후 유지되도록 named volume에 저장한다.
 사용자와 키워드는 로컬 개발 중 반복 확인해야 하는 영속 데이터이므로 컨테이너 재시작만으로 사라지지 않는 편이 좋다.
 
-Compose 파일 안의 volume key는 `mysql-data`, `redis-data`로 둔다.
+MongoDB 데이터도 컨테이너 재시작 후 유지되도록 named volume에 저장한다.
+
+Compose 파일 안의 volume key는 `mysql-data`, `redis-data`, `mongo-data`로 둔다.
 이름은 인프라 컴포넌트와 리소스 성격을 함께 드러내는 `{component}-{resource}` 형식을 따른다.
 
-실제 Docker volume 이름은 Compose project name을 통해 `kachi_mysql-data`, `kachi_redis-data`로 생성된다.
+실제 Docker volume 이름은 Compose project name을 통해 `kachi_mysql-data`, `kachi_redis-data`, `kachi_mongo-data`로 생성된다.
 프로젝트 prefix는 Compose에 맡기고, 서비스별 compose 파일에서는 논리 이름만 관리한다.
 
 따라서 로컬 인프라 리소스 이름은 다음 기준을 따른다.
@@ -180,6 +224,7 @@ Compose 파일 안의 volume key는 `mysql-data`, `redis-data`로 둔다.
 ```text
 redis-data
 mysql-data
+mongo-data
 app-network
 ```
 
@@ -192,7 +237,7 @@ app-network
 
 ### Healthcheck
 
-MySQL은 `mysqladmin ping`, Redis는 `redis-cli ping` healthcheck를 둔다.
+MySQL은 `mysqladmin ping`, Redis는 `redis-cli ping`, MongoDB는 `mongosh` ping 기반 healthcheck를 둔다.
 로컬에서 컨테이너가 떠 있는지 Docker 상태만으로 빠르게 확인할 수 있고, 나중에 의존 서비스가 늘어날 때 readiness 판단 근거로 확장할 수 있다.
 
 ### Resource limit 미적용
@@ -204,8 +249,9 @@ Docker Compose의 `deploy.resources`는 일반 `docker compose up` 로컬 실행
 
 ## 결과
 
-- Redis가 필요한 기능을 로컬에서 재현할 수 있다.
 - MySQL이 필요한 user-service JPA 저장소를 로컬에서 재현할 수 있다.
+- Redis가 필요한 user-service refresh token 저장소를 로컬에서 재현할 수 있다.
+- MongoDB가 필요한 collector-service 저장소를 로컬에서 재현할 수 있다.
 - 현재 구현 범위에 필요한 인프라만 실행한다.
 - 인프라가 늘어날 때 공통 compose에 network/volume을 추가하고, 서비스별 compose를 조합하는 방식으로 확장한다.
 - Docker Compose는 로컬 개발 편의용이며 운영 배포 설정과 동일하다고 보지 않는다.
