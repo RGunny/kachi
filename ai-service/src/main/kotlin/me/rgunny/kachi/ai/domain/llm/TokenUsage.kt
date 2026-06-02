@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.llm
 
 data class TokenUsage(
     val inputTokens: Int,

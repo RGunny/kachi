@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.llm
 
 @JvmInline
 value class LlmModelName private constructor(

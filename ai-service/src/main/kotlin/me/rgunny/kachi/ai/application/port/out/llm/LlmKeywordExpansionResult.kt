@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.port.out.llm
 
-import me.rgunny.kachi.ai.domain.ExpandedKeyword
-import me.rgunny.kachi.ai.domain.TokenUsage
+import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
+import me.rgunny.kachi.ai.domain.llm.TokenUsage
 
 /**
  * LLM 키워드 확장 응답

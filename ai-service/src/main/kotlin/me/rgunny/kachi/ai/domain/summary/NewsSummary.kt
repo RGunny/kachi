@@ -1,5 +1,10 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.summary
 
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmModelName
+import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import java.time.Instant
 import java.util.UUID
 

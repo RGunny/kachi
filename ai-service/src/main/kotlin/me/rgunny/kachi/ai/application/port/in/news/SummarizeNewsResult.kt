@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.port.`in`.news
 
-import me.rgunny.kachi.ai.domain.AiRunId
-import me.rgunny.kachi.ai.domain.AiRunStatus
+import me.rgunny.kachi.ai.domain.run.AiRunId
+import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import java.time.Instant
 
 /**

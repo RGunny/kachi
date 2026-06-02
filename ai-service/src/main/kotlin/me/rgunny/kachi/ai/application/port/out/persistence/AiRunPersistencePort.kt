@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.port.out.persistence
 
-import me.rgunny.kachi.ai.domain.AiRun
-import me.rgunny.kachi.ai.domain.AiRunId
+import me.rgunny.kachi.ai.domain.run.AiRun
+import me.rgunny.kachi.ai.domain.run.AiRunId
 
 /**
  * AI 실행 기록 저장소 출력 포트

@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.run
 
 enum class AiRunStatus {
     RUNNING,

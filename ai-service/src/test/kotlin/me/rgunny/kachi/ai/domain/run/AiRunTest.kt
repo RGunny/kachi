@@ -1,5 +1,8 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.run
 
+import me.rgunny.kachi.ai.domain.llm.LlmModelName
+import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant

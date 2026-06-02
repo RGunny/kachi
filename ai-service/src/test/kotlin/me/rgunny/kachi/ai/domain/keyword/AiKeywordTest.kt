@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.domain
+package me.rgunny.kachi.ai.domain.keyword
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.application.port.`in`.keyword
 
-import me.rgunny.kachi.ai.domain.AiKeyword
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 
 /**
  * 키워드 확장 실행 요청

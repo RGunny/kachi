@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.application.port.out.news
 
-import me.rgunny.kachi.ai.domain.AiKeyword
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import java.time.Instant
 
 /**
