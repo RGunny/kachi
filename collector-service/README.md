@@ -15,6 +15,8 @@
 - 저장 중 unique 충돌을 중복으로 집계
 - provider별 수집 결과를 `CollectionRun`에 기록
 - Google News RSS provider
+- Naver Search API provider
+- Finnhub Company News provider
 - `user-service` 내부 API 기반 활성 키워드 조회
 - scheduler 기반 자동 수집 진입점
 - internal API 기반 수동 수집 진입점
@@ -31,6 +33,8 @@ Scheduler 또는 Internal API
               -> user-service internal active keywords API
           -> NewsProviderPort
               -> Google News RSS
+              -> Naver Search API
+              -> Finnhub Company News
           -> NewsPersistencePort
               -> MongoDB news
           -> CollectionRunPersistencePort
@@ -52,6 +56,7 @@ GET /api/v1/internal/providers/news/{source}/health?keyword=NVIDIA
 
 - `GOOGLE`
 - `NAVER` (`KACHI_COLLECTOR_NAVER_ENABLED=true`와 Naver API key 필요)
+- `FINNHUB` (`KACHI_COLLECTOR_FINNHUB_ENABLED=true`와 Finnhub API key 필요)
 
 이 API는 외부 provider 호출과 응답 파싱까지만 확인한다.
 뉴스 저장과 `CollectionRun` 기록은 하지 않는다.
@@ -192,6 +197,23 @@ kachi:
 ```
 credential이 없으면 `KACHI_COLLECTOR_NAVER_ENABLED=false` 상태로 Google provider만 사용한다.
 
+### Finnhub Company News
+
+Finnhub Company News endpoint를 provider로 사용할 수 있다.
+collector 키워드를 Finnhub의 company symbol로 보고 최근 N일 뉴스를 조회한다.
+
+```yaml
+kachi:
+  collector:
+    providers:
+      finnhub:
+        enabled: true
+        api-key: ${FINNHUB_API_KEY}
+        lookback-days: 7
+```
+
+credential이 없으면 `KACHI_COLLECTOR_FINNHUB_ENABLED=false` 상태로 Google provider만 사용한다.
+
 ## 저장소
 
 `collector-service`는 MongoDB를 사용한다.
@@ -241,6 +263,12 @@ Naver News Search 연결 확인:
 curl "http://localhost:8082/api/v1/internal/providers/news/NAVER/health?keyword=NVIDIA"
 ```
 
+Finnhub Company News 연결 확인:
+
+```sh
+curl "http://localhost:8082/api/v1/internal/providers/news/FINNHUB/health?keyword=NVDA"
+```
+
 collector 단독 뉴스 수집 smoke:
 
 ```sh
@@ -262,5 +290,4 @@ curl -X POST "http://localhost:8082/api/v1/internal/collections/news" \
 - Google RSS 원문 URL 정규화
 - Google RSS 제목/언론사명 정규화
 - Google RSS 동일 기사 URL 변형 보정
-- Naver/Finnhub provider 추가
 - 분산 실행이 필요해지는 시점에 distributed lock 도입

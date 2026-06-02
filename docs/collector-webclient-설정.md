@@ -59,7 +59,7 @@ kachi:
       {provider-name}:
 ```
 
-현재 Google News RSS 설정은 다음과 같다.
+현재 provider 설정은 다음과 같은 구조를 따른다.
 
 ```yaml
 kachi:
@@ -76,6 +76,21 @@ kachi:
         read-timeout: 5s
         write-timeout: 5s
         max-in-memory-size: 524288
+      naver:
+        enabled: false
+        base-url: https://openapi.naver.com
+        news-search-path: /v1/search/news.json
+        client-id: ${NAVER_CLIENT_ID}
+        client-secret: ${NAVER_CLIENT_SECRET}
+        display: 100
+        start: 1
+        sort: date
+      finnhub:
+        enabled: false
+        base-url: https://finnhub.io
+        company-news-path: /api/v1/company-news
+        api-key: ${FINNHUB_API_KEY}
+        lookback-days: 7
 ```
 
 ## Google News RSS
@@ -117,6 +132,73 @@ ceid={country-code}:{language-code}
 ```
 
 원문 URL 추출, 제목 정규화, 응답 크기 제한 조정은 실제 RSS 데이터를 확인한 뒤 추가한다.
+
+## Naver News Search
+
+### Provider 특성
+
+| 항목 | 값 |
+| --- | --- |
+| 응답 형식 | JSON |
+| 인증 | `X-Naver-Client-Id`, `X-Naver-Client-Secret` |
+| endpoint | `/v1/search/news.json` |
+| 검색어 query | `query` |
+| 페이지 query | `display`, `start` |
+| 정렬 query | `sort=sim` 또는 `sort=date` |
+| URL 특성 | `originallink`와 `link`가 함께 내려올 수 있음 |
+
+### Naver 설정값
+
+| 설정 | 값 | 근거 |
+| --- | --- | --- |
+| `enabled` | `false` | credential이 필요하므로 명시적으로 켠 경우에만 사용한다. |
+| `base-url` | `https://openapi.naver.com` | provider host와 endpoint path를 분리한다. |
+| `news-search-path` | `/v1/search/news.json` | Naver Search API 뉴스 검색 endpoint다. |
+| `client-id` | `${NAVER_CLIENT_ID}` | Naver API 인증 header에 사용한다. |
+| `client-secret` | `${NAVER_CLIENT_SECRET}` | Naver API 인증 header에 사용한다. |
+| `display` | `100` | Naver Search API의 최대 page size를 사용한다. |
+| `start` | `1` | 첫 페이지부터 수집한다. |
+| `sort` | `date` | 최신 뉴스 수집을 우선한다. |
+| `max-in-memory-size` | `524288` | JSON body 역직렬화에 512KB 상한을 둔다. |
+
+Naver 응답 변환 기준:
+
+- `title`은 HTML entity unescape 후 HTML tag를 제거한다.
+- URL은 `originallink`를 우선 사용하고, 없으면 `link`를 사용한다.
+- `pubDate`는 RFC 1123 형식으로 파싱하고, 실패하면 `publishedAt=null`로 둔다.
+
+## Finnhub Company News
+
+### Provider 특성
+
+| 항목 | 값 |
+| --- | --- |
+| 응답 형식 | JSON array |
+| 인증 | `X-Finnhub-Token` |
+| endpoint | `/api/v1/company-news` |
+| symbol query | `symbol` |
+| 기간 query | `from`, `to` |
+| 날짜 형식 | `YYYY-MM-DD` |
+| 시간 필드 | `datetime` UNIX timestamp seconds |
+
+### Finnhub 설정값
+
+| 설정 | 값 | 근거 |
+| --- | --- | --- |
+| `enabled` | `false` | API key가 필요하므로 명시적으로 켠 경우에만 사용한다. |
+| `base-url` | `https://finnhub.io` | provider host와 endpoint path를 분리한다. |
+| `company-news-path` | `/api/v1/company-news` | Finnhub Company News endpoint다. |
+| `api-key` | `${FINNHUB_API_KEY}` | Finnhub API 인증 header에 사용한다. |
+| `lookback-days` | `7` | 최근 7일 회사 뉴스를 조회하는 초기값이다. |
+| `max-in-memory-size` | `524288` | JSON body 역직렬화에 512KB 상한을 둔다. |
+
+Finnhub 응답 변환 기준:
+
+- collector keyword를 company symbol로 보고 대문자로 정규화한다.
+- `from`은 오늘 기준 `lookback-days` 전 날짜, `to`는 오늘 날짜로 요청한다.
+- `headline`을 제목으로 사용한다.
+- `url`을 원문 URL로 사용한다.
+- `datetime`은 UNIX timestamp seconds로 파싱하고, 없거나 epoch 이전이면 `publishedAt=null`로 둔다.
 
 ## 추후 조정 기준
 
