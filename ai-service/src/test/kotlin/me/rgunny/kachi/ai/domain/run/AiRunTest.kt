@@ -30,11 +30,17 @@ class AiRunTest {
             succeededCount = 2,
             failureCount = 0,
             failureReason = null,
+            provider = LlmProviderName.of("openai"),
+            model = LlmModelName.of("gpt-4.1-mini"),
+            promptVersion = PromptVersion.of("news-summary-v1"),
             finishedAt = Instant.parse("2026-06-02T00:00:01Z")
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, completed.status)
         assertEquals(null, completed.failureReason)
+        assertEquals(LlmProviderName.of("openai"), completed.provider)
+        assertEquals(LlmModelName.of("gpt-4.1-mini"), completed.model)
+        assertEquals(PromptVersion.of("news-summary-v1"), completed.promptVersion)
     }
 
     @Test
@@ -44,6 +50,9 @@ class AiRunTest {
             succeededCount = 1,
             failureCount = 1,
             failureReason = AiFailureReason.INVALID_RESPONSE,
+            provider = LlmProviderName.of("openai"),
+            model = LlmModelName.of("gpt-4.1-mini"),
+            promptVersion = PromptVersion.of("news-summary-v1"),
             finishedAt = Instant.parse("2026-06-02T00:00:01Z")
         )
 
@@ -58,6 +67,9 @@ class AiRunTest {
             succeededCount = 0,
             failureCount = 2,
             failureReason = AiFailureReason.RATE_LIMITED,
+            provider = null,
+            model = null,
+            promptVersion = null,
             finishedAt = Instant.parse("2026-06-02T00:00:01Z")
         )
 
@@ -73,6 +85,9 @@ class AiRunTest {
                 succeededCount = 1,
                 failureCount = 0,
                 failureReason = null,
+                provider = LlmProviderName.of("openai"),
+                model = LlmModelName.of("gpt-4.1-mini"),
+                promptVersion = PromptVersion.of("news-summary-v1"),
                 finishedAt = Instant.parse("2026-06-01T23:59:59Z")
             )
         }
@@ -82,9 +97,6 @@ class AiRunTest {
         return AiRun.start(
             targetType = AiRunTargetType.NEWS_SUMMARY,
             requestedKeywords = 2,
-            provider = LlmProviderName.of("openai"),
-            model = LlmModelName.of("gpt-4.1-mini"),
-            promptVersion = PromptVersion.of("news-summary-v1"),
             startedAt = Instant.parse("2026-06-02T00:00:00Z")
         )
     }

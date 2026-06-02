@@ -17,3 +17,17 @@ kachi:
         base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8080}
       collector-service:
         base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL:http://localhost:8082}
+    providers:
+      active-provider: ${KACHI_AI_LLM_ACTIVE_PROVIDER:openrouter}
+      openrouter:
+        enabled: ${KACHI_AI_OPENROUTER_ENABLED:true}
+      groq:
+        enabled: ${KACHI_AI_GROQ_ENABLED:true}
+      together:
+        enabled: ${KACHI_AI_TOGETHER_ENABLED:true}
+      cerebras:
+        enabled: ${KACHI_AI_CEREBRAS_ENABLED:true}
+      mistral:
+        enabled: ${KACHI_AI_MISTRAL_ENABLED:true}
+      gemini:
+        enabled: ${KACHI_AI_GEMINI_ENABLED:true}

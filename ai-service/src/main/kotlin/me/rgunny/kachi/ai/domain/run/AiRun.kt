@@ -15,9 +15,9 @@ class AiRun private constructor(
     val succeededCount: Int,
     val failureCount: Int,
     val failureReason: AiFailureReason?,
-    val provider: LlmProviderName,
-    val model: LlmModelName,
-    val promptVersion: PromptVersion
+    val provider: LlmProviderName?,
+    val model: LlmModelName?,
+    val promptVersion: PromptVersion?
 ) {
 
     companion object {
@@ -25,9 +25,6 @@ class AiRun private constructor(
         fun start(
             targetType: AiRunTargetType,
             requestedKeywords: Int,
-            provider: LlmProviderName,
-            model: LlmModelName,
-            promptVersion: PromptVersion,
             startedAt: Instant
         ): AiRun {
             require(requestedKeywords >= 0) { "요청 키워드 수는 0 이상이어야 합니다" }
@@ -42,9 +39,9 @@ class AiRun private constructor(
                 succeededCount = 0,
                 failureCount = 0,
                 failureReason = null,
-                provider = provider,
-                model = model,
-                promptVersion = promptVersion
+                provider = null,
+                model = null,
+                promptVersion = null
             )
         }
 
@@ -58,9 +55,9 @@ class AiRun private constructor(
             succeededCount: Int,
             failureCount: Int,
             failureReason: AiFailureReason?,
-            provider: LlmProviderName,
-            model: LlmModelName,
-            promptVersion: PromptVersion
+            provider: LlmProviderName?,
+            model: LlmModelName?,
+            promptVersion: PromptVersion?
         ): AiRun {
             return AiRun(
                 id = id,
@@ -83,6 +80,9 @@ class AiRun private constructor(
         succeededCount: Int,
         failureCount: Int,
         failureReason: AiFailureReason?,
+        provider: LlmProviderName?,
+        model: LlmModelName?,
+        promptVersion: PromptVersion?,
         finishedAt: Instant
     ): AiRun {
         require(status == AiRunStatus.RUNNING) { "RUNNING 상태의 AI 실행만 완료할 수 있습니다" }

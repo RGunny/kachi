@@ -17,3 +17,17 @@ kachi:
         base-url: http://localhost:8080
       collector-service:
         base-url: http://localhost:8082
+    providers:
+      active-provider: openrouter
+      openrouter:
+        enabled: true
+      groq:
+        enabled: true
+      together:
+        enabled: true
+      cerebras:
+        enabled: true
+      mistral:
+        enabled: true
+      gemini:
+        enabled: true

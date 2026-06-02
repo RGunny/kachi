@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.port.out.llm
 
-import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 
 /**
  * LLM provider 호출을 추상화하는 출력 포트

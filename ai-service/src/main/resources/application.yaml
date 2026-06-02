@@ -38,3 +38,43 @@ kachi:
         news-path: ${KACHI_COLLECTOR_SERVICE_NEWS_PATH:/api/v1/internal/news}
         timeout: ${KACHI_COLLECTOR_SERVICE_TIMEOUT:3s}
         max-in-memory-size: ${KACHI_COLLECTOR_SERVICE_MAX_IN_MEMORY_SIZE:262144}
+    providers:
+      active-provider: ${KACHI_AI_LLM_ACTIVE_PROVIDER:openrouter}
+      keyword-expansion-prompt-version: ${KACHI_AI_KEYWORD_EXPANSION_PROMPT_VERSION:keyword-expansion-v1}
+      news-summary-prompt-version: ${KACHI_AI_NEWS_SUMMARY_PROMPT_VERSION:news-summary-v1}
+      openrouter:
+        enabled: ${KACHI_AI_OPENROUTER_ENABLED:false}
+        api-key: ${OPENROUTER_API_KEY:}
+        base-url: ${KACHI_AI_OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+        chat-completions-path: ${KACHI_AI_OPENROUTER_CHAT_COMPLETIONS_PATH:/chat/completions}
+        model: ${KACHI_AI_OPENROUTER_MODEL:}
+      groq:
+        enabled: ${KACHI_AI_GROQ_ENABLED:false}
+        api-key: ${GROQ_API_KEY:}
+        base-url: ${KACHI_AI_GROQ_BASE_URL:https://api.groq.com/openai/v1}
+        chat-completions-path: ${KACHI_AI_GROQ_CHAT_COMPLETIONS_PATH:/chat/completions}
+        model: ${KACHI_AI_GROQ_MODEL:}
+      together:
+        enabled: ${KACHI_AI_TOGETHER_ENABLED:false}
+        api-key: ${TOGETHER_API_KEY:}
+        base-url: ${KACHI_AI_TOGETHER_BASE_URL:https://api.together.xyz/v1}
+        chat-completions-path: ${KACHI_AI_TOGETHER_CHAT_COMPLETIONS_PATH:/chat/completions}
+        model: ${KACHI_AI_TOGETHER_MODEL:}
+      cerebras:
+        enabled: ${KACHI_AI_CEREBRAS_ENABLED:false}
+        api-key: ${CEREBRAS_API_KEY:}
+        base-url: ${KACHI_AI_CEREBRAS_BASE_URL:https://api.cerebras.ai/v1}
+        chat-completions-path: ${KACHI_AI_CEREBRAS_CHAT_COMPLETIONS_PATH:/chat/completions}
+        model: ${KACHI_AI_CEREBRAS_MODEL:}
+      mistral:
+        enabled: ${KACHI_AI_MISTRAL_ENABLED:false}
+        api-key: ${MISTRAL_API_KEY:}
+        base-url: ${KACHI_AI_MISTRAL_BASE_URL:https://api.mistral.ai/v1}
+        chat-completions-path: ${KACHI_AI_MISTRAL_CHAT_COMPLETIONS_PATH:/chat/completions}
+        model: ${KACHI_AI_MISTRAL_MODEL:}
+      gemini:
+        enabled: ${KACHI_AI_GEMINI_ENABLED:false}
+        api-key: ${GEMINI_API_KEY:}
+        base-url: ${KACHI_AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+        generate-content-path: ${KACHI_AI_GEMINI_GENERATE_CONTENT_PATH:/v1beta/models/{model}:generateContent}
+        model: ${KACHI_AI_GEMINI_MODEL:}
