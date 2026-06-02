@@ -81,10 +81,7 @@ GET /api/v1/internal/keywords/active
 
 ### collector-service
 
-요약 대상 뉴스를 읽기 위한 internal API가 필요하다.
-현재 collector에는 저장된 뉴스 조회 API가 없으므로 `ai-service` 구현 전에 추가한다.
-
-예정 계약:
+요약 대상 뉴스를 읽기 위한 internal API를 사용한다.
 
 ```text
 GET /api/v1/internal/news?keyword={keyword}&from={from}&to={to}&limit={limit}

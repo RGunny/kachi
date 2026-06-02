@@ -139,10 +139,7 @@ GET {KACHI_USER_SERVICE_BASE_URL}/api/v1/internal/keywords/active
 
 ### collector-service
 
-요약 대상 뉴스 조회 API는 아직 없다.
-`ai-service` 구현 전에 `collector-service`에 internal news query API를 추가해야 한다.
-
-예정 계약:
+요약 대상 뉴스 조회:
 
 ```text
 GET {KACHI_COLLECTOR_SERVICE_BASE_URL}/api/v1/internal/news?keyword={keyword}&from={from}&to={to}&limit={limit}

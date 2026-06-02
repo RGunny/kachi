@@ -240,6 +240,15 @@ class CollectNewsServiceTest {
                 .toSet()
         }
 
+        override suspend fun findByKeyword(
+            keyword: CollectedKeyword,
+            from: Instant?,
+            to: Instant?,
+            limit: Int
+        ): List<News> {
+            return savedNews.filter { keyword in it.matchedKeywords }.take(limit)
+        }
+
         override suspend fun save(news: News): SaveNewsResult {
             val newsKey = news.source to news.urlHash
             if (newsKey in existingNewsKeys) {
