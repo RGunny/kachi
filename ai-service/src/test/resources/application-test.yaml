@@ -1,0 +1,19 @@
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/kachi_ai_test
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
+
+kachi:
+  ai:
+    scheduler:
+      news-summary:
+        enabled: false
+    clients:
+      user-service:
+        base-url: http://localhost:8080
+      collector-service:
+        base-url: http://localhost:8082
