@@ -7,18 +7,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "kachi.ai.providers")
 data class LlmProviderProperties(
-    val activeProvider: String = "openrouter",
+    val mode: String = LlmProviderMode.SINGLE_RANDOM.value,
     val keywordExpansionPromptVersion: String = "keyword-expansion-v1",
-    val newsSummaryPromptVersion: String = "news-summary-v1",
-    val openrouter: OpenAiCompatibleProviderProperties = OpenAiCompatibleProviderProperties(),
-    val groq: OpenAiCompatibleProviderProperties = OpenAiCompatibleProviderProperties(),
-    val together: OpenAiCompatibleProviderProperties = OpenAiCompatibleProviderProperties(),
-    val cerebras: OpenAiCompatibleProviderProperties = OpenAiCompatibleProviderProperties(),
-    val mistral: OpenAiCompatibleProviderProperties = OpenAiCompatibleProviderProperties(),
+    val openrouter: OpenAiProviderProperties = OpenAiProviderProperties(),
+    val groq: OpenAiProviderProperties = OpenAiProviderProperties(),
+    val together: OpenAiProviderProperties = OpenAiProviderProperties(),
+    val cerebras: OpenAiProviderProperties = OpenAiProviderProperties(),
+    val mistral: OpenAiProviderProperties = OpenAiProviderProperties(),
     val gemini: GeminiProviderProperties = GeminiProviderProperties()
 )
 
-data class OpenAiCompatibleProviderProperties(
+data class OpenAiProviderProperties(
     val enabled: Boolean = false,
     val apiKey: String = "",
     val baseUrl: String = "",

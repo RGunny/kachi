@@ -39,9 +39,8 @@ kachi:
         timeout: ${KACHI_COLLECTOR_SERVICE_TIMEOUT:3s}
         max-in-memory-size: ${KACHI_COLLECTOR_SERVICE_MAX_IN_MEMORY_SIZE:262144}
     providers:
-      active-provider: ${KACHI_AI_LLM_ACTIVE_PROVIDER:openrouter}
+      mode: ${KACHI_AI_LLM_PROVIDER_MODE:single-random}
       keyword-expansion-prompt-version: ${KACHI_AI_KEYWORD_EXPANSION_PROMPT_VERSION:keyword-expansion-v1}
-      news-summary-prompt-version: ${KACHI_AI_NEWS_SUMMARY_PROMPT_VERSION:news-summary-v1}
       openrouter:
         enabled: ${KACHI_AI_OPENROUTER_ENABLED:false}
         api-key: ${OPENROUTER_API_KEY:}

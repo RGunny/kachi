@@ -18,7 +18,7 @@ kachi:
       collector-service:
         base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL:http://localhost:8082}
     providers:
-      active-provider: ${KACHI_AI_LLM_ACTIVE_PROVIDER:openrouter}
+      mode: ${KACHI_AI_LLM_PROVIDER_MODE:single-random}
       openrouter:
         enabled: ${KACHI_AI_OPENROUTER_ENABLED:true}
       groq:
@@ -30,4 +30,4 @@ kachi:
       mistral:
         enabled: ${KACHI_AI_MISTRAL_ENABLED:true}
       gemini:
-        enabled: ${KACHI_AI_GEMINI_ENABLED:true}
+        enabled: ${KACHI_AI_GEMINI_ENABLED:false}

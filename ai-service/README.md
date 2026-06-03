@@ -20,7 +20,7 @@ Scheduler 또는 Internal API
           -> NewsReaderPort
               -> collector-service internal news API
           -> LlmProviderPort
-              -> OpenAI 또는 compatible LLM provider
+              -> OpenAI 계열 LLM provider
           -> KeywordExpansionPersistencePort / NewsSummaryPersistencePort / AiRunPersistencePort
               -> MongoDB
 ```
@@ -58,6 +58,51 @@ LLM 호출은 외부 I/O가 많고 timeout, retry, rate limit 대응이 필요�
 현재 HTTP API는 `/api/v1` prefix를 사용한다.
 
 ### Internal
+
+LLM provider 연결 확인:
+
+```http
+GET /api/v1/internal/providers/llm/health?keyword=NVIDIA
+```
+
+이 API는 현재 provider mode에 따라 키워드 확장 요청을 실제 호출하고 응답 파싱까지 확인한다.
+초기 구현은 OpenAI 계열 chat completions provider를 지원한다.
+
+지원 provider:
+
+- `openrouter`
+- `groq`
+- `together`
+- `cerebras`
+- `mistral`
+
+`gemini`는 설정 항목은 있지만 별도 `generateContent` adapter 구현 전까지 `enabled=true`로 사용할 수 없다.
+
+local에서 확인하려면 `.env.local`에 사용할 provider를 `enabled=true`로 두고 API key와 model을 지정한다.
+
+```env
+KACHI_AI_LLM_PROVIDER_MODE=single-random
+KACHI_AI_OPENROUTER_ENABLED=true
+OPENROUTER_API_KEY=...
+KACHI_AI_OPENROUTER_MODEL=openai/gpt-4o-mini
+```
+
+응답 예시:
+
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "promptVersion": "keyword-expansion-v1",
+    "expandedKeywords": ["AI 반도체", "GPU", "데이터센터"],
+    "inputTokens": 100,
+    "outputTokens": 20
+  },
+  "error": null
+}
+```
 
 키워드 확장 수동 실행:
 
