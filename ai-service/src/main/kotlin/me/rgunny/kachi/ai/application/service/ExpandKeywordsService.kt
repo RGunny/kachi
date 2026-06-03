@@ -12,9 +12,11 @@ import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Instant
 
+@Service
 class ExpandKeywordsService(
     private val keywordReaderPort: KeywordReaderPort,
     private val llmProviderPort: LlmProviderPort,
