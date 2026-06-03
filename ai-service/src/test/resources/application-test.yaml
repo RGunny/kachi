@@ -18,7 +18,7 @@ kachi:
       collector-service:
         base-url: http://localhost:8082
     providers:
-      active-provider: openrouter
+      mode: single-random
       openrouter:
         enabled: true
         api-key: test-openrouter-key
@@ -40,6 +40,6 @@ kachi:
         api-key: test-mistral-key
         model: test-mistral-model
       gemini:
-        enabled: true
+        enabled: false
         api-key: test-gemini-key
         model: test-gemini-model
