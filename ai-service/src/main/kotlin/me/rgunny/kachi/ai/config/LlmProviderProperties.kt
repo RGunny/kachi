@@ -2,6 +2,9 @@ package me.rgunny.kachi.ai.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
+/**
+ * LLM provider 설정.
+ */
 @ConfigurationProperties(prefix = "kachi.ai.providers")
 data class LlmProviderProperties(
     val activeProvider: String = "openrouter",
@@ -20,7 +23,12 @@ data class OpenAiCompatibleProviderProperties(
     val apiKey: String = "",
     val baseUrl: String = "",
     val chatCompletionsPath: String = "/chat/completions",
-    val model: String = ""
+    val model: String = "",
+    val connectTimeout: java.time.Duration = java.time.Duration.ofSeconds(2),
+    val responseTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
+    val readTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
+    val writeTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
+    val maxInMemorySize: Int = 524288
 )
 
 data class GeminiProviderProperties(
