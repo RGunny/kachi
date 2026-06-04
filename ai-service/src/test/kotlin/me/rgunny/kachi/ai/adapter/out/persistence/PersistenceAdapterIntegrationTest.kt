@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import
 @Import(
     AiRunPersistenceAdapter::class,
     KeywordExpansionPersistenceAdapter::class,
+    NewsSummaryPersistenceAdapter::class,
     PersistenceAdapterTestContainersConfig::class
 )
 abstract class PersistenceAdapterIntegrationTest

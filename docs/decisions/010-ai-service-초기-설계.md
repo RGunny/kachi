@@ -139,10 +139,10 @@ MongoDB collection은 다음을 사용한다.
 요약 중복 방지를 위해 `news_summaries`에는 다음 기준의 unique index를 둔다.
 
 ```text
-keyword + sourceWindowHash + promptVersion + model
+keyword + newsHash + promptVersion + model
 ```
 
-`sourceWindowHash`는 요약 대상 뉴스 id 목록, 기간, 키워드를 기준으로 계산한다.
+`newsHash`는 요약 대상 뉴스 id 목록, 기간, 키워드를 기준으로 계산한다.
 같은 키워드라도 뉴스 묶음이나 prompt/model이 바뀌면 새 요약으로 저장할 수 있게 한다.
 
 키워드 확장 중복 방지를 위해 `keyword_expansions`에는 다음 기준의 unique index를 둔다.

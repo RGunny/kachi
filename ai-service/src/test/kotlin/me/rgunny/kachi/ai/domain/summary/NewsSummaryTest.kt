@@ -23,7 +23,7 @@ class NewsSummaryTest {
         val summary = NewsSummary.create(
             keyword = AiKeyword.of("NVIDIA"),
             sourceNewsIds = listOf(newsId, newsId),
-            sourceWindowHash = "hash",
+            newsHash = "hash",
             title = " NVIDIA 요약 ",
             content = " 실적 발표 요약 ",
             sentiment = NewsSummarySentiment.POSITIVE,
@@ -47,7 +47,7 @@ class NewsSummaryTest {
             NewsSummary.create(
                 keyword = AiKeyword.of("NVIDIA"),
                 sourceNewsIds = emptyList(),
-                sourceWindowHash = "hash",
+                newsHash = "hash",
                 title = "요약",
                 content = "본문",
                 sentiment = NewsSummarySentiment.NEUTRAL,
