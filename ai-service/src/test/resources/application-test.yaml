@@ -1,0 +1,45 @@
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/kachi_ai_test
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
+
+kachi:
+  ai:
+    scheduler:
+      news-summary:
+        enabled: false
+    clients:
+      user-service:
+        base-url: http://localhost:8080
+      collector-service:
+        base-url: http://localhost:8082
+    providers:
+      mode: single-random
+      openrouter:
+        enabled: true
+        api-key: test-openrouter-key
+        model: test-openrouter-model
+      groq:
+        enabled: true
+        api-key: test-groq-key
+        model: test-groq-model
+      together:
+        enabled: true
+        api-key: test-together-key
+        model: test-together-model
+      cerebras:
+        enabled: true
+        api-key: test-cerebras-key
+        model: test-cerebras-model
+      mistral:
+        enabled: true
+        api-key: test-mistral-key
+        model: test-mistral-model
+      gemini:
+        enabled: false
+        api-key: test-gemini-key
+        model: test-gemini-model

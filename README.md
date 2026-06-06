@@ -79,7 +79,7 @@ user-service
 | --- | --- | --- |
 | `user-service` | 사용자, 키워드, OAuth2/JWT, refresh token, MySQL/Redis 저장소 기본 흐름 구현 | [user-service README](./user-service/README.md) |
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
-| `ai-service` | 미구현 | - |
+| `ai-service` | 설계 착수: 키워드 확장, 뉴스 요약, AI 실행 기록, MongoDB 저장, LLM provider 연동 기준 정의 | [ai-service README](./ai-service/README.md) |
 | `notification-service` | 미구현 | - |
 | `history-service` | 미구현 | - |
 
@@ -131,3 +131,4 @@ set +a
 | [007. user-service 운영성 기본 설정](./docs/decisions/007-user-service-운영성-기본설정.md) | health endpoint, graceful shutdown 기본 설정 |
 | [008. collector-service 뉴스 수집 실행 모델](./docs/decisions/008-collector-service-뉴스-수집-실행-모델.md) | scheduler/internal API 진입점과 단일 인스턴스 lock 결정 |
 | [009. 외부 뉴스 provider 연동 기준](./docs/decisions/009-외부-뉴스-provider-연동-기준.md) | Google RSS, Naver, Finnhub provider 설정과 credential 기본 정책 |
+| [010. ai-service 초기 설계](./docs/decisions/010-ai-service-초기-설계.md) | 키워드 단위 AI 처리, 실행 모델, 저장 정책, LLM provider 연동 기준 |

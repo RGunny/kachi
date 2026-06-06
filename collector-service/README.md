@@ -121,6 +121,34 @@ POST /api/v1/internal/collections/news
 
 이미 수집이 실행 중이면 `409 CONFLICT`를 반환한다.
 
+저장 뉴스 조회:
+
+```http
+GET /api/v1/internal/news?keyword=NVIDIA&from=2026-06-01T00:00:00Z&to=2026-06-02T00:00:00Z&limit=20
+```
+
+이 API는 `ai-service`가 요약 대상 뉴스를 읽기 위한 내부 계약이다.
+`keyword`는 필수이고, `from`, `to`, `limit`은 선택값이다.
+응답은 AI 요약 입력에 필요한 최소 필드를 반환한다.
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "018f...",
+      "source": "GOOGLE",
+      "title": "NVIDIA ...",
+      "url": "https://news.google.com/...",
+      "publishedAt": "2026-06-01T10:00:00Z",
+      "collectedAt": "2026-06-01T10:05:00Z",
+      "matchedKeywords": ["NVIDIA"]
+    }
+  ],
+  "error": null
+}
+```
+
 ## Scheduler
 
 뉴스 수집 scheduler 설정:

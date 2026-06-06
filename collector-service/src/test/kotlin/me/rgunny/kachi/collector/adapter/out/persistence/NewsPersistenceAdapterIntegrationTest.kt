@@ -107,13 +107,70 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         }
     }
 
+    @Nested
+    @DisplayName("findByKeyword()")
+    inner class FindByKeyword {
+
+        @Test
+        @DisplayName("키워드가 매칭된 뉴스를 수집 시각 내림차순으로 조회한다")
+        fun findByKeyword() = runBlocking {
+            val older = news(
+                url = "https://kachi.com/news/1",
+                title = "NVIDIA 이전 뉴스",
+                collectedAt = Instant.parse("2026-06-01T00:00:00Z")
+            )
+            val newer = news(
+                url = "https://kachi.com/news/2",
+                title = "NVIDIA 최신 뉴스",
+                collectedAt = Instant.parse("2026-06-02T00:00:00Z")
+            )
+            val otherKeyword = news(
+                url = "https://kachi.com/news/3",
+                title = "TESLA 뉴스",
+                keyword = CollectedKeyword.of("TESLA"),
+                collectedAt = Instant.parse("2026-06-02T01:00:00Z")
+            )
+            adapter.save(older)
+            adapter.save(newer)
+            adapter.save(otherKeyword)
+
+            val found = adapter.findByKeyword(
+                keyword = keyword,
+                from = Instant.parse("2026-06-01T00:00:00Z"),
+                to = Instant.parse("2026-06-02T00:00:00Z"),
+                limit = 20
+            )
+
+            assertEquals(listOf("NVIDIA 최신 뉴스", "NVIDIA 이전 뉴스"), found.map { it.title.value })
+        }
+
+        @Test
+        @DisplayName("limit만큼만 조회한다")
+        fun limitResults() = runBlocking {
+            adapter.save(news(url = "https://kachi.com/news/1"))
+            adapter.save(news(url = "https://kachi.com/news/2"))
+
+            val found = adapter.findByKeyword(
+                keyword = keyword,
+                from = null,
+                to = null,
+                limit = 1
+            )
+
+            assertEquals(1, found.size)
+        }
+    }
+
     private fun news(
         url: String,
-        source: NewsSource = NewsSource.GOOGLE
+        source: NewsSource = NewsSource.GOOGLE,
+        title: String = "NVIDIA 뉴스",
+        keyword: CollectedKeyword = this.keyword,
+        collectedAt: Instant = this.collectedAt
     ): News {
         return News.create(
             source = source,
-            title = NewsTitle.of("NVIDIA 뉴스"),
+            title = NewsTitle.of(title),
             url = NewsUrl.of(url),
             publishedAt = publishedAt,
             collectedAt = collectedAt,

@@ -1,0 +1,4 @@
+generated/
+results/*.log
+results/*-case-rows.tmp
+results/*-case-jsons.tmp

@@ -1,0 +1,9 @@
+{
+  "case": "sourceNewsIds_array_unique",
+  "collection": "news_summaries_source_news_ids_array_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":6000},
+  "secondRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":10000},
+  "addedNewsRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":9000},
+  "stats": {"count":100000,"storageSize":28528640,"totalIndexSize":25923584}
+}

@@ -1,0 +1,9 @@
+{
+  "case": "keyword_newsHash_prompt_model_unique",
+  "collection": "news_summaries_news_hash_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "secondRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":9000},
+  "addedNewsRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "stats": {"count":200000,"storageSize":57352192,"totalIndexSize":45322240}
+}

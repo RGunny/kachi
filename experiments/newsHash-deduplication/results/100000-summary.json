@@ -1,0 +1,45 @@
+{
+  "rows": 100000,
+  "cases": [
+{
+  "case": "no_unique",
+  "collection": "news_summaries_no_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":4000},
+  "secondRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":4000},
+  "addedNewsRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "stats": {"count":300000,"storageSize":81772544,"totalIndexSize":12283904}
+}
+,
+{
+  "case": "sourceNewsIds_array_unique",
+  "collection": "news_summaries_source_news_ids_array_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":6000},
+  "secondRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":10000},
+  "addedNewsRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":9000},
+  "stats": {"count":100000,"storageSize":28528640,"totalIndexSize":25923584}
+}
+,
+{
+  "case": "sourceNewsIds_canonical_unique",
+  "collection": "news_summaries_source_news_ids_canonical_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "secondRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":10000},
+  "addedNewsRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":6000},
+  "stats": {"count":200000,"storageSize":57483264,"totalIndexSize":39624704}
+}
+,
+{
+  "case": "keyword_newsHash_prompt_model_unique",
+  "collection": "news_summaries_news_hash_unique",
+  "rows": 100000,
+  "firstRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "secondRun": {"status":0,"inserted":0,"failed":100000,"elapsedMillis":9000},
+  "addedNewsRun": {"status":0,"inserted":100000,"failed":0,"elapsedMillis":5000},
+  "stats": {"count":200000,"storageSize":57352192,"totalIndexSize":45322240}
+}
+
+  ]
+}

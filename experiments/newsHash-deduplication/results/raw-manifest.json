@@ -1,0 +1,14 @@
+{
+  "collectedAt": "2026-06-04T12:14:33.754067Z",
+  "keywords": ["브로드컴 실적", "SPACE-X IPO"],
+  "promptVersion": "news-summary-v1",
+  "callsPerProvider": 2,
+  "providers": [
+    {"provider":"groq","model":"llama-3.3-70b-versatile","callIndex":1,"status":200,"elapsedMillis":866,"file":"raw/groq-llama-3_3-70b-versatile-call-1.json","parsed":true},
+    {"provider":"groq","model":"llama-3.3-70b-versatile","callIndex":2,"status":200,"elapsedMillis":637,"file":"raw/groq-llama-3_3-70b-versatile-call-2.json","parsed":true},
+    {"provider":"cerebras","model":"gpt-oss-120b","callIndex":1,"status":200,"elapsedMillis":557,"file":"raw/cerebras-gpt-oss-120b-call-1.json","parsed":true},
+    {"provider":"cerebras","model":"gpt-oss-120b","callIndex":2,"status":200,"elapsedMillis":765,"file":"raw/cerebras-gpt-oss-120b-call-2.json","parsed":true},
+    {"provider":"mistral","model":"mistral-small-latest","callIndex":1,"status":200,"elapsedMillis":2152,"file":"raw/mistral-mistral-small-latest-call-1.json","parsed":true},
+    {"provider":"mistral","model":"mistral-small-latest","callIndex":2,"status":200,"elapsedMillis":2086,"file":"raw/mistral-mistral-small-latest-call-2.json","parsed":true}
+  ]
+}
