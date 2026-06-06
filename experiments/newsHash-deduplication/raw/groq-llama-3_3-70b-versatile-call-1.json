@@ -1,0 +1,29 @@
+{
+  "provider": "groq",
+  "model": "llama-3.3-70b-versatile",
+  "promptVersion": "news-summary-v1",
+  "callIndex": 1,
+  "keywords": ["브로드컴 실적", "SPACE-X IPO"],
+  "status": 200,
+  "elapsedMillis": 866,
+  "parsedTitle": "브로드컴 실적과 스페이스X IPO 소식",
+  "parsedContent": "브로드컴의 분기 실적이 예상치를 상회하였으며, 이는 AI 인프라 수요 증가에 따른 것으로 분석되고 있습니다. 또한, 스페이스X는 스타링크의 IPO 시기를 고려하고 있는 것으로 보고되었습니다. 투자자들은 스페이스X의 상업용 발사 빈도와 위성 인터넷의 수익성을 주시하고 있습니다.",
+  "parsedSentiment": "POSITIVE",
+  "request": {
+  "model": "llama-3.3-70b-versatile",
+  "messages": [
+    {
+      "role": "system",
+      "content": "너는 금융/기술 뉴스 요약기다. 반드시 JSON 객체만 반환한다. 형식: {\"title\":\"...\",\"content\":\"...\",\"sentiment\":\"POSITIVE|NEUTRAL|NEGATIVE|UNKNOWN\"}"
+    },
+    {
+      "role": "user",
+      "content": "실험 호출 번호: 1\\n키워드: 브로드컴 실적, SPACE-X IPO\\n뉴스:\\n1. Broadcom quarterly earnings beat expectations as AI infrastructure demand increased.\\n2. Analysts discussed Broadcom guidance and custom AI accelerator revenue.\\n3. SpaceX is reportedly considering IPO timing for Starlink while SpaceX itself remains private.\\n4. Investors are watching commercial launch cadence and satellite internet profitability."
+    }
+  ],
+  "max_tokens": 512,
+  "temperature": 0.2
+}
+,
+  "rawResponseText": "{\"id\":\"chatcmpl-9ab7b99d-e5a6-4c51-99a0-34ff6f96cba1\",\"object\":\"chat.completion\",\"created\":1780575266,\"model\":\"llama-3.3-70b-versatile\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"title\\\":\\\"브로드컴 실적과 스페이스X IPO 소식\\\",\\\"content\\\":\\\"브로드컴의 분기 실적이 예상치를 상회하였으며, 이는 AI 인프라 수요 증가에 따른 것으로 분석되고 있습니다. 또한, 스페이스X는 스타링크의 IPO 시기를 고려하고 있는 것으로 보고되었습니다. 투자자들은 스페이스X의 상업용 발사 빈도와 위성 인터넷의 수익성을 주시하고 있습니다.\\\",\\\"sentiment\\\":\\\"POSITIVE\\\"}\"},\"logprobs\":null,\"finish_reason\":\"stop\"}],\"usage\":{\"queue_time\":0.02330667,\"prompt_tokens\":172,\"prompt_time\":0.00895821,\"completion_tokens\":116,\"completion_time\":0.586837305,\"total_tokens\":288,\"total_time\":0.595795515},\"usage_breakdown\":null,\"system_fingerprint\":\"fp_0761e44d7b\",\"x_groq\":{\"id\":\"req_01kt98ws9rfpgvbp334g8qany6\",\"seed\":427520361},\"service_tier\":\"on_demand\"}\n"
+}

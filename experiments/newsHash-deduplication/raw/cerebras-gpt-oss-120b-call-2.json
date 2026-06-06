@@ -1,0 +1,29 @@
+{
+  "provider": "cerebras",
+  "model": "gpt-oss-120b",
+  "promptVersion": "news-summary-v1",
+  "callIndex": 2,
+  "keywords": ["브로드컴 실적", "SPACE-X IPO"],
+  "status": 200,
+  "elapsedMillis": 765,
+  "parsedTitle": "Broadcom Beats Earnings Estimates on AI Demand; SpaceX Mulls Starlink IPO Timing",
+  "parsedContent": "Broadcom reported quarterly earnings that surpassed expectations, driven by rising demand for AI infrastructure and strong custom AI accelerator revenue, prompting analysts to discuss its guidance. Meanwhile, SpaceX remains private but is reportedly evaluating the timing of an IPO for its Starlink satellite internet service, with investors closely monitoring the company's launch cadence and the profitability of its satellite internet operations.",
+  "parsedSentiment": "POSITIVE",
+  "request": {
+  "model": "gpt-oss-120b",
+  "messages": [
+    {
+      "role": "system",
+      "content": "너는 금융/기술 뉴스 요약기다. 반드시 JSON 객체만 반환한다. 형식: {\"title\":\"...\",\"content\":\"...\",\"sentiment\":\"POSITIVE|NEUTRAL|NEGATIVE|UNKNOWN\"}"
+    },
+    {
+      "role": "user",
+      "content": "실험 호출 번호: 2\\n키워드: 브로드컴 실적, SPACE-X IPO\\n뉴스:\\n1. Broadcom quarterly earnings beat expectations as AI infrastructure demand increased.\\n2. Analysts discussed Broadcom guidance and custom AI accelerator revenue.\\n3. SpaceX is reportedly considering IPO timing for Starlink while SpaceX itself remains private.\\n4. Investors are watching commercial launch cadence and satellite internet profitability."
+    }
+  ],
+  "max_tokens": 512,
+  "temperature": 0.2
+}
+,
+  "rawResponseText": "{\"id\":\"chatcmpl-783556d3-bec3-4baf-bbec-ac365771b57f\",\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"{\\\"title\\\":\\\"Broadcom Beats Earnings Estimates on AI Demand; SpaceX Mulls Starlink IPO Timing\\\",\\\"content\\\":\\\"Broadcom reported quarterly earnings that surpassed expectations, driven by rising demand for AI infrastructure and strong custom AI accelerator revenue, prompting analysts to discuss its guidance. Meanwhile, SpaceX remains private but is reportedly evaluating the timing of an IPO for its Starlink satellite internet service, with investors closely monitoring the company's launch cadence and the profitability of its satellite internet operations.\\\",\\\"sentiment\\\":\\\"POSITIVE\\\"}\",\"reasoning\":\"The user wants a JSON object with title, content, sentiment. We need to summarize the news. Title likely a concise headline covering both topics. Content should summarize key points. Sentiment: likely neutral or positive? Broadcom earnings beat expectations => positive. SpaceX IPO speculation maybe neutral. Overall sentiment maybe POSITIVE? Could be mixed. Might choose NEUTRAL? The instruction: sentiment must be one of POSITIVE|NEUTRAL|NEGATIVE|UNKNOWN. Since there is positive news for Broadcom and speculative for SpaceX, overall could be POSITIVE? I'd choose POSITIVE because earnings beat is positive and IPO speculation is neutral but not negative. So overall positive.\\n\\nReturn JSON only.\",\"role\":\"assistant\"}}],\"created\":1780575268,\"model\":\"gpt-oss-120b\",\"system_fingerprint\":\"fp_46358675aa6b1ba4d98d\",\"object\":\"chat.completion\",\"usage\":{\"total_tokens\":456,\"completion_tokens\":249,\"completion_tokens_details\":{\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0,\"reasoning_tokens\":140},\"prompt_tokens\":207,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"time_info\":{\"created\":1780575268.9719188,\"queue_time\":0.238014305,\"prompt_time\":0.015863217999999984,\"completion_time\":0.162719098,\"total_time\":0.4187510013580322}}"
+}

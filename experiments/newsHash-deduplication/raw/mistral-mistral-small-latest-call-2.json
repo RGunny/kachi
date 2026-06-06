@@ -1,0 +1,29 @@
+{
+  "provider": "mistral",
+  "model": "mistral-small-latest",
+  "promptVersion": "news-summary-v1",
+  "callIndex": 2,
+  "keywords": ["브로드컴 실적", "SPACE-X IPO"],
+  "status": 200,
+  "elapsedMillis": 2086,
+  "parsedTitle": "브로드컴 실적 호조와 스페이스X의 스타링크 IPO 검토",
+  "parsedContent": "1) 브로드컴은 AI 인프라 수요 증가로 분기 실적이 예상치를 상회했으며, 맞춤형 AI 가속기 매출 전망에 대한 분석가들의 논의가 진행 중입니다. 2) 스페이스X는 자회사 스타링크의 IPO 시기를 검토 중이며, 스페이스X 자체는 여전히 비공개 상태를 유지하고 있습니다. 3) 투자자들은 상업용 발사 빈도와 위성 인터넷 사업의 수익성 추이를 주목하고 있습니다.",
+  "parsedSentiment": "POSITIVE",
+  "request": {
+  "model": "mistral-small-latest",
+  "messages": [
+    {
+      "role": "system",
+      "content": "너는 금융/기술 뉴스 요약기다. 반드시 JSON 객체만 반환한다. 형식: {\"title\":\"...\",\"content\":\"...\",\"sentiment\":\"POSITIVE|NEUTRAL|NEGATIVE|UNKNOWN\"}"
+    },
+    {
+      "role": "user",
+      "content": "실험 호출 번호: 2\\n키워드: 브로드컴 실적, SPACE-X IPO\\n뉴스:\\n1. Broadcom quarterly earnings beat expectations as AI infrastructure demand increased.\\n2. Analysts discussed Broadcom guidance and custom AI accelerator revenue.\\n3. SpaceX is reportedly considering IPO timing for Starlink while SpaceX itself remains private.\\n4. Investors are watching commercial launch cadence and satellite internet profitability."
+    }
+  ],
+  "max_tokens": 512,
+  "temperature": 0.2
+}
+,
+  "rawResponseText": "{\"id\":\"2e5d8b26712246869ab3b81e10d33b3b\",\"created\":1780575271,\"model\":\"mistral-small-latest\",\"usage\":{\"prompt_tokens\":172,\"total_tokens\":336,\"completion_tokens\":164,\"prompt_tokens_details\":{\"cached_tokens\":0}},\"object\":\"chat.completion\",\"choices\":[{\"index\":0,\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"tool_calls\":null,\"content\":\"```json\\n{\\n  \\\"title\\\": \\\"브로드컴 실적 호조와 스페이스X의 스타링크 IPO 검토\\\",\\n  \\\"content\\\": \\\"1) 브로드컴은 AI 인프라 수요 증가로 분기 실적이 예상치를 상회했으며, 맞춤형 AI 가속기 매출 전망에 대한 분석가들의 논의가 진행 중입니다. 2) 스페이스X는 자회사 스타링크의 IPO 시기를 검토 중이며, 스페이스X 자체는 여전히 비공개 상태를 유지하고 있습니다. 3) 투자자들은 상업용 발사 빈도와 위성 인터넷 사업의 수익성 추이를 주목하고 있습니다.\\\",\\n  \\\"sentiment\\\": \\\"POSITIVE\\\"\\n}\\n```\"}}]}"
+}
