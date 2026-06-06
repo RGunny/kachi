@@ -61,6 +61,9 @@ class SummarizeNewsServiceTest {
         assertEquals(1, result.requestedKeywords)
         assertEquals(1, result.succeededCount)
         assertEquals(0, result.failureCount)
+        assertEquals(1, result.summaries.size)
+        assertEquals("NVIDIA 요약", result.summaries.first().title)
+        assertEquals(false, result.summaries.first().reused)
         assertEquals(1, newsSummaryPersistence.savedSummaries.size)
         assertEquals("NVIDIA 요약", newsSummaryPersistence.savedSummaries.first().title)
         assertEquals(2, aiRunPersistence.savedRuns.size)
@@ -96,6 +99,9 @@ class SummarizeNewsServiceTest {
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(1, result.summaries.size)
+        assertEquals("NVIDIA 기존 요약", result.summaries.first().title)
+        assertEquals(true, result.summaries.first().reused)
         assertEquals(0, llmProvider.summarizeCallCount)
         assertEquals(0, newsSummaryPersistence.savedSummaries.size)
     }
@@ -107,8 +113,10 @@ class SummarizeNewsServiceTest {
         newsReader.articlesByKeyword = mapOf(keyword to listOf(newsArticle()))
         val service = service()
 
-        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), from = null, to = null))
+        val result = service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), from = null, to = null))
 
+        assertEquals(1, result.summaries.size)
+        assertEquals(false, result.summaries.first().reused)
         assertEquals(1, llmProvider.summarizeCallCount)
         assertEquals(1, newsSummaryPersistence.savedSummaries.size)
     }
@@ -136,6 +144,8 @@ class SummarizeNewsServiceTest {
         val result = service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), from = null, to = null))
 
         assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(1, result.summaries.size)
+        assertEquals(true, result.summaries.first().reused)
         assertEquals(1, llmProvider.summarizeCallCount)
         assertEquals(1, newsSummaryPersistence.saveOrFindExistingCallCount)
     }

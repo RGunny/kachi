@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.application.service
 
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
+import me.rgunny.kachi.ai.application.port.`in`.news.SummarizedNewsResult
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
 import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
@@ -48,6 +49,7 @@ class SummarizeNewsService(
         var failureCount = 0
         var failureReason: AiFailureReason? = null
         var generationMetadata: LlmGenerationMetadata? = null
+        val summaries = mutableListOf<SummarizedNewsResult>()
 
         // 3. 키워드별로 수집 뉴스를 읽고, 같은 입력 요약이 있으면 LLM 호출 전에 재사용한다.
         for (keyword in keywords) {
@@ -77,13 +79,14 @@ class SummarizeNewsService(
                 )
 
                 if (existingSummary != null) {
-                    // 재사용된 요약은 이번 실행에서 token을 쓰지 않았으므로 run metadata용 token은 0으로 기록한다.
+                    // 기존 요약을 재사용하면 이번 실행에서는 LLM을 호출하지 않는다.
                     generationMetadata = generationMetadata ?: LlmGenerationMetadata(
                         provider = existingSummary.provider,
                         model = existingSummary.model,
                         promptVersion = existingSummary.promptVersion,
                         tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
                     )
+                    summaries += SummarizedNewsResult.from(existingSummary, reused = true)
                     return@runCatching
                 }
 
@@ -104,8 +107,9 @@ class SummarizeNewsService(
                     tokenUsage = llmResult.metadata.tokenUsage,
                     createdAt = Instant.now(clock)
                 )
-                // 선조회 이후 동시 요청이 먼저 저장한 경우에도 duplicate를 성공으로 흡수한다.
-                newsSummaryPersistencePort.saveOrFindExisting(summary)
+                // 선조회 이후 다른 요청이 먼저 저장했으면, 새로 저장하지 않고 기존 요약을 사용한다.
+                val savedSummary = newsSummaryPersistencePort.saveOrFindExisting(summary)
+                summaries += SummarizedNewsResult.from(savedSummary, reused = savedSummary.id != summary.id)
                 generationMetadata = generationMetadata ?: llmResult.metadata
             }.onSuccess {
                 succeededCount += 1
@@ -128,7 +132,7 @@ class SummarizeNewsService(
             )
         )
 
-        return SummarizeNewsResult.from(completedRun)
+        return SummarizeNewsResult.from(completedRun, summaries = summaries)
     }
 
     private fun failureReasonOf(error: Throwable): AiFailureReason {

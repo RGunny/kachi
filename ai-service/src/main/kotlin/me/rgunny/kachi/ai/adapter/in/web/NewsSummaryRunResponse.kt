@@ -11,7 +11,8 @@ data class NewsSummaryRunResponse(
     val finishedAt: Instant?,
     val requestedKeywords: Int,
     val succeededCount: Int,
-    val failureCount: Int
+    val failureCount: Int,
+    val summaries: List<NewsSummaryResponse>
 ) {
     companion object {
         fun from(result: SummarizeNewsResult): NewsSummaryRunResponse {
@@ -23,10 +24,27 @@ data class NewsSummaryRunResponse(
                 finishedAt = result.finishedAt,
                 requestedKeywords = result.requestedKeywords,
                 succeededCount = result.succeededCount,
-                failureCount = result.failureCount
+                failureCount = result.failureCount,
+                summaries = result.summaries.map {
+                    NewsSummaryResponse(
+                        id = it.id.value.toString(),
+                        keyword = it.keyword.value,
+                        title = it.title,
+                        sentiment = it.sentiment.name,
+                        reused = it.reused
+                    )
+                }
             )
         }
 
         private const val NEWS_SUMMARY_TARGET_TYPE = "NEWS_SUMMARY"
     }
 }
+
+data class NewsSummaryResponse(
+    val id: String,
+    val keyword: String,
+    val title: String,
+    val sentiment: String,
+    val reused: Boolean
+)
