@@ -151,7 +151,15 @@ POST /api/v1/internal/ai/news-summaries
     "requestedKeywords": 1,
     "succeededCount": 1,
     "failureCount": 0,
-    "failureReason": null
+    "summaries": [
+      {
+        "id": "018f...",
+        "keyword": "NVIDIA",
+        "title": "엔비디아 관련 뉴스 요약",
+        "sentiment": "NEUTRAL",
+        "reused": false
+      }
+    ]
   },
   "error": null
 }
