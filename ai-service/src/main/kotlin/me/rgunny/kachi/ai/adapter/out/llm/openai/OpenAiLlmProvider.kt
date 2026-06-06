@@ -1,6 +1,7 @@
 package me.rgunny.kachi.ai.adapter.out.llm.openai
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
@@ -17,6 +18,7 @@ import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
+import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import org.springframework.web.reactive.function.client.WebClient
 
 /**
@@ -86,7 +88,21 @@ class OpenAiLlmProvider(
         keyword: AiKeyword,
         articles: List<NewsArticle>
     ): LlmNewsSummaryResult {
-        throw UnsupportedOperationException("news summary is not implemented yet")
+        require(articles.isNotEmpty()) { "news summary articles are required" }
+
+        val response = requestChatCompletion(
+            systemPrompt = NEWS_SUMMARY_SYSTEM_PROMPT,
+            userPrompt = newsSummaryUserPrompt(keyword, articles),
+            maxTokens = NEWS_SUMMARY_MAX_TOKENS
+        )
+        val parsed = parseNewsSummary(response.firstContent())
+
+        return LlmNewsSummaryResult(
+            title = parsed.title.trim(),
+            content = parsed.content.trim(),
+            sentiment = parsed.sentiment(),
+            metadata = metadata(response, newsSummaryPromptVersion)
+        )
     }
 
     private suspend fun requestChatCompletion(
@@ -144,6 +160,60 @@ class OpenAiLlmProvider(
         return content.substring(startIndex, endIndex + 1)
     }
 
+    private fun newsSummaryUserPrompt(
+        keyword: AiKeyword,
+        articles: List<NewsArticle>
+    ): String {
+        val articleLines = articles.mapIndexed { index, article ->
+            """
+            ${index + 1}. id=${article.id}
+               source=${article.source}
+               title=${article.title}
+               url=${article.url}
+               publishedAt=${article.publishedAt?.toString().orEmpty()}
+            """.trimIndent()
+        }.joinToString(separator = "\n")
+
+        return """
+            키워드: ${keyword.value}
+
+            뉴스 목록:
+            $articleLines
+
+            응답 JSON 형식:
+            {
+              "title": "요약 제목",
+              "content": "3~5문장 요약 본문",
+              "sentiment": "POSITIVE|NEUTRAL|NEGATIVE|UNKNOWN"
+            }
+        """.trimIndent()
+    }
+
+    private fun parseNewsSummary(content: String): ParsedNewsSummary {
+        val jsonObject = extractJsonObject(content)
+        val parsed = objectMapper.readValue(jsonObject, ParsedNewsSummary::class.java)
+
+        require(parsed.title.isNotBlank()) { "LLM news summary title is empty" }
+        require(parsed.content.isNotBlank()) { "LLM news summary content is empty" }
+
+        return parsed
+    }
+
+    /**
+     * 일부 provider는 JSON 객체만 요청해도 markdown code fence나 설명 문장을 덧붙인다.
+     * 파싱 안정성을 위해 전체 content에서 첫 `{`부터 마지막 `}`까지만 JSON 객체로 사용한다.
+     */
+    private fun extractJsonObject(content: String): String {
+        val startIndex = content.indexOf('{')
+        val endIndex = content.lastIndexOf('}')
+
+        require(startIndex >= 0 && endIndex > startIndex) {
+            "LLM news summary response must contain a JSON object"
+        }
+
+        return content.substring(startIndex, endIndex + 1)
+    }
+
     private fun metadata(
         response: OpenAiChatResponse,
         promptVersion: PromptVersion
@@ -163,6 +233,21 @@ class OpenAiLlmProvider(
         const val AUTHORIZATION_HEADER = "Authorization"
         const val KEYWORD_EXPANSION_SYSTEM_PROMPT =
             "너는 뉴스 검색 키워드 확장기다. 응답은 한국어 또는 영어 키워드 문자열 JSON 배열만 반환한다."
+        const val NEWS_SUMMARY_SYSTEM_PROMPT =
+            "너는 뉴스 요약기다. 응답은 title, content, sentiment 필드를 가진 JSON 객체만 반환한다."
+        const val NEWS_SUMMARY_MAX_TOKENS = 768
         val STRING_LIST_TYPE = object : TypeReference<List<String>>() {}
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class ParsedNewsSummary(
+        val title: String = "",
+        val content: String = "",
+        val sentiment: String = NewsSummarySentiment.UNKNOWN.name
+    ) {
+        fun sentiment(): NewsSummarySentiment {
+            return runCatching { NewsSummarySentiment.valueOf(sentiment.trim().uppercase()) }
+                .getOrDefault(NewsSummarySentiment.UNKNOWN)
+        }
     }
 }
