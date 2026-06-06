@@ -3,8 +3,10 @@ package me.rgunny.kachi.ai.adapter.out.llm
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
 import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
@@ -77,6 +79,23 @@ class RoutingLlmProviderTest {
         val provider: String
     ) : LlmProviderPort {
         var expandCallCount: Int = 0
+
+        override fun prepareNewsSummary(): PreparedLlmNewsSummary {
+            return object : PreparedLlmNewsSummary {
+                override val plan: LlmNewsSummaryPlan = LlmNewsSummaryPlan(
+                    provider = LlmProviderName.of(provider),
+                    model = LlmModelName.of("test-model"),
+                    promptVersion = PromptVersion.of("news-summary-v1")
+                )
+
+                override suspend fun summarize(
+                    keyword: AiKeyword,
+                    articles: List<NewsArticle>
+                ): LlmNewsSummaryResult {
+                    return this@FakeLlmProviderPort.summarizeNews(keyword, articles)
+                }
+            }
+        }
 
         override suspend fun expandKeyword(
             keyword: AiKeyword,

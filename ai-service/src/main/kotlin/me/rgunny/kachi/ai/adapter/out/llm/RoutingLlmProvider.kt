@@ -3,6 +3,7 @@ package me.rgunny.kachi.ai.adapter.out.llm
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
@@ -19,6 +20,13 @@ class RoutingLlmProvider(
 
     init {
         require(providers.isNotEmpty()) { "At least one LLM provider must be enabled" }
+    }
+
+    override fun prepareNewsSummary(): PreparedLlmNewsSummary {
+        return when (mode) {
+            LlmProviderMode.SINGLE_RANDOM -> randomProvider().prepareNewsSummary()
+            LlmProviderMode.AGGREGATE -> throw UnsupportedOperationException("aggregate LLM provider mode is not implemented yet")
+        }
     }
 
     override suspend fun expandKeyword(

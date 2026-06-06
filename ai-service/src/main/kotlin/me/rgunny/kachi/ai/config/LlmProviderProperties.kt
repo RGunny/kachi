@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class LlmProviderProperties(
     val mode: String = LlmProviderMode.SINGLE_RANDOM.value,
     val keywordExpansionPromptVersion: String = "keyword-expansion-v1",
+    val newsSummaryPromptVersion: String = "news-summary-v1",
     val openrouter: OpenAiProviderProperties = OpenAiProviderProperties(),
     val groq: OpenAiProviderProperties = OpenAiProviderProperties(),
     val together: OpenAiProviderProperties = OpenAiProviderProperties(),

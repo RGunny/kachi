@@ -5,8 +5,10 @@ import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
 import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.application.port.out.persistence.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.out.persistence.KeywordExpansionPersistencePort
@@ -126,6 +128,23 @@ class ExpandKeywordsServiceTest {
 
     private class FakeLlmProviderPort : LlmProviderPort {
         var failedKeywords: Set<AiKeyword> = emptySet()
+
+        override fun prepareNewsSummary(): PreparedLlmNewsSummary {
+            return object : PreparedLlmNewsSummary {
+                override val plan: LlmNewsSummaryPlan = LlmNewsSummaryPlan(
+                    provider = LlmProviderName.of("openrouter"),
+                    model = LlmModelName.of("test-model"),
+                    promptVersion = PromptVersion.of("news-summary-v1")
+                )
+
+                override suspend fun summarize(
+                    keyword: AiKeyword,
+                    articles: List<NewsArticle>
+                ): LlmNewsSummaryResult {
+                    return this@FakeLlmProviderPort.summarizeNews(keyword, articles)
+                }
+            }
+        }
 
         override suspend fun expandKeyword(
             keyword: AiKeyword,

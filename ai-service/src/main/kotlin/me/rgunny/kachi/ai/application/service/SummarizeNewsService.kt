@@ -12,8 +12,9 @@ import me.rgunny.kachi.ai.application.port.out.persistence.NewsSummaryPersistenc
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
-import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsHash
+import me.rgunny.kachi.ai.domain.summary.NewsSummary
+import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Instant
@@ -48,7 +49,7 @@ class SummarizeNewsService(
         var failureReason: AiFailureReason? = null
         var generationMetadata: LlmGenerationMetadata? = null
 
-        // 3. 키워드별로 수집 뉴스를 읽고 LLM 요약에 성공한 결과만 저장한다.
+        // 3. 키워드별로 수집 뉴스를 읽고, 같은 입력 요약이 있으면 LLM 호출 전에 재사용한다.
         for (keyword in keywords) {
             runCatching {
                 val articles = newsReaderPort.findNews(
@@ -59,19 +60,41 @@ class SummarizeNewsService(
                 )
                 require(articles.isNotEmpty()) { "news summary input articles are empty" }
 
-                val llmResult = llmProviderPort.summarizeNews(
+                val sourceNewsIds = articles.map { it.id }
+                // newsHash는 같은 keyword/from/to/news id 묶음을 식별하는 LLM 호출 전 cache key다.
+                val newsHash = NewsHash.calculate(
+                    keyword = keyword,
+                    from = command.from,
+                    to = command.to,
+                    sourceNewsIds = sourceNewsIds
+                )
+                val preparedLlm = llmProviderPort.prepareNewsSummary()
+                val existingSummary = newsSummaryPersistencePort.findByUniqueKey(
+                    keyword = keyword,
+                    newsHash = newsHash,
+                    promptVersion = preparedLlm.plan.promptVersion,
+                    model = preparedLlm.plan.model
+                )
+
+                if (existingSummary != null) {
+                    // 재사용된 요약은 이번 실행에서 token을 쓰지 않았으므로 run metadata용 token은 0으로 기록한다.
+                    generationMetadata = generationMetadata ?: LlmGenerationMetadata(
+                        provider = existingSummary.provider,
+                        model = existingSummary.model,
+                        promptVersion = existingSummary.promptVersion,
+                        tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
+                    )
+                    return@runCatching
+                }
+
+                val llmResult = preparedLlm.summarize(
                     keyword = keyword,
                     articles = articles
                 )
                 val summary = NewsSummary.create(
                     keyword = keyword,
-                    sourceNewsIds = articles.map { it.id },
-                    newsHash = NewsHash.calculate(
-                        keyword = keyword,
-                        from = command.from,
-                        to = command.to,
-                        sourceNewsIds = articles.map { it.id }
-                    ),
+                    sourceNewsIds = sourceNewsIds,
+                    newsHash = newsHash,
                     title = llmResult.title,
                     content = llmResult.content,
                     sentiment = llmResult.sentiment,
@@ -81,7 +104,8 @@ class SummarizeNewsService(
                     tokenUsage = llmResult.metadata.tokenUsage,
                     createdAt = Instant.now(clock)
                 )
-                newsSummaryPersistencePort.save(summary)
+                // 선조회 이후 동시 요청이 먼저 저장한 경우에도 duplicate를 성공으로 흡수한다.
+                newsSummaryPersistencePort.saveOrFindExisting(summary)
                 generationMetadata = generationMetadata ?: llmResult.metadata
             }.onSuccess {
                 succeededCount += 1

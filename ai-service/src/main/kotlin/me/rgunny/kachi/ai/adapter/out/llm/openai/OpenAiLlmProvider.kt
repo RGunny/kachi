@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
 import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
@@ -28,8 +30,28 @@ class OpenAiLlmProvider(
     private val objectMapper: ObjectMapper,
     private val providerType: OpenAiProviderType,
     private val properties: OpenAiProviderProperties,
-    private val keywordExpansionPromptVersion: PromptVersion
+    private val keywordExpansionPromptVersion: PromptVersion,
+    private val newsSummaryPromptVersion: PromptVersion
 ) : LlmProviderPort {
+
+    override fun prepareNewsSummary(): PreparedLlmNewsSummary {
+        val preparedPlan = LlmNewsSummaryPlan(
+            provider = LlmProviderName.of(providerType.value),
+            model = LlmModelName.of(properties.model),
+            promptVersion = newsSummaryPromptVersion
+        )
+
+        return object : PreparedLlmNewsSummary {
+            override val plan: LlmNewsSummaryPlan = preparedPlan
+
+            override suspend fun summarize(
+                keyword: AiKeyword,
+                articles: List<NewsArticle>
+            ): LlmNewsSummaryResult {
+                return this@OpenAiLlmProvider.summarizeNews(keyword, articles)
+            }
+        }
+    }
 
     override suspend fun expandKeyword(
         keyword: AiKeyword,

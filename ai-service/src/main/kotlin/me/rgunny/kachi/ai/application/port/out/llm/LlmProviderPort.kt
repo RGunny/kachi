@@ -8,6 +8,8 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
  */
 interface LlmProviderPort {
 
+    fun prepareNewsSummary(): PreparedLlmNewsSummary
+
     suspend fun expandKeyword(
         keyword: AiKeyword,
         maxExpansions: Int

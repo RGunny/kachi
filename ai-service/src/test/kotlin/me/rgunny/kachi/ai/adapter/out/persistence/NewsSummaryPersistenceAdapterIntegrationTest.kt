@@ -72,6 +72,33 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
                 adapter.save(newsSummary())
             }
         }
+
+        @Test
+        @DisplayName("같은 keyword, newsHash, promptVersion, model 조합으로 기존 요약을 조회한다")
+        fun findByUniqueKey() = runBlocking {
+            adapter.save(newsSummary())
+
+            val found = adapter.findByUniqueKey(
+                keyword = AiKeyword.of("NVIDIA"),
+                newsHash = "news-hash",
+                promptVersion = PromptVersion.of("news-summary-v1"),
+                model = LlmModelName.of("openai/gpt-4o-mini")
+            )
+
+            assertNotNull(found)
+            assertEquals("summary title", found.title)
+        }
+
+        @Test
+        @DisplayName("중복 저장이 발생하면 기존 요약을 반환한다")
+        fun returnExistingSummaryOnDuplicateSave() = runBlocking {
+            val first = adapter.save(newsSummary())
+
+            val second = adapter.saveOrFindExisting(newsSummary())
+
+            assertEquals(first.id, second.id)
+            assertEquals(1, repository.count().block())
+        }
     }
 
     private fun newsSummary(): NewsSummary {

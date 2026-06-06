@@ -106,7 +106,8 @@ class OpenAiLlmProviderTest {
             objectMapper = jacksonObjectMapper(),
             providerType = OpenAiProviderType.OPENROUTER,
             properties = properties,
-            keywordExpansionPromptVersion = PromptVersion.of("keyword-expansion-v1")
+            keywordExpansionPromptVersion = PromptVersion.of("keyword-expansion-v1"),
+            newsSummaryPromptVersion = PromptVersion.of("news-summary-v1")
         )
     }
 

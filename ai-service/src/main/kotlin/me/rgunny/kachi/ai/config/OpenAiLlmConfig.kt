@@ -137,7 +137,8 @@ class OpenAiLlmConfig {
             objectMapper = objectMapper,
             providerType = providerType,
             properties = providerProperties,
-            keywordExpansionPromptVersion = PromptVersion.of(properties.keywordExpansionPromptVersion)
+            keywordExpansionPromptVersion = PromptVersion.of(properties.keywordExpansionPromptVersion),
+            newsSummaryPromptVersion = PromptVersion.of(properties.newsSummaryPromptVersion)
         )
     }
 

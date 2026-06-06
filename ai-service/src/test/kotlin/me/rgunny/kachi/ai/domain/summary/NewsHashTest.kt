@@ -63,6 +63,25 @@ class NewsHashTest {
     }
 
     @Test
+    @DisplayName("뉴스 id가 추가되면 다른 hash를 반환한다")
+    fun returnDifferentHashWhenNewsIdIsAdded() {
+        val base = NewsHash.calculate(
+            keyword = AiKeyword.of("NVIDIA"),
+            from = from,
+            to = to,
+            sourceNewsIds = listOf(firstNewsId)
+        )
+        val added = NewsHash.calculate(
+            keyword = AiKeyword.of("NVIDIA"),
+            from = from,
+            to = to,
+            sourceNewsIds = listOf(firstNewsId, secondNewsId)
+        )
+
+        assertNotEquals(base, added)
+    }
+
+    @Test
     @DisplayName("뉴스 id가 없으면 hash를 계산할 수 없다")
     fun rejectEmptyNewsIds() {
         assertFailsWith<IllegalArgumentException> {

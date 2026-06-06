@@ -5,8 +5,10 @@ import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
 import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.application.port.out.news.NewsReaderPort
 import me.rgunny.kachi.ai.application.port.out.persistence.AiRunPersistencePort
@@ -20,6 +22,7 @@ import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunId
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
+import me.rgunny.kachi.ai.domain.summary.NewsHash
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import org.junit.jupiter.api.DisplayName
@@ -64,6 +67,77 @@ class SummarizeNewsServiceTest {
         assertEquals(LlmProviderName.of("openrouter"), aiRunPersistence.savedRuns.last().provider)
         assertEquals(LlmModelName.of("test-model"), aiRunPersistence.savedRuns.last().model)
         assertEquals(PromptVersion.of("news-summary-v1"), aiRunPersistence.savedRuns.last().promptVersion)
+    }
+
+    @Test
+    @DisplayName("같은 입력의 기존 요약이 있으면 LLM을 호출하지 않고 성공 처리한다")
+    fun reuseExistingSummaryBeforeLlmCall() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val article = newsArticle()
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(article))
+        newsSummaryPersistence.existingSummaries += newsSummary(
+            keyword = keyword,
+            sourceNewsIds = listOf(article.id),
+            newsHash = NewsHash.calculate(
+                keyword = keyword,
+                from = Instant.parse("2026-06-02T00:00:00Z"),
+                to = Instant.parse("2026-06-03T00:00:00Z"),
+                sourceNewsIds = listOf(article.id)
+            )
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(
+                keywords = listOf(keyword),
+                from = Instant.parse("2026-06-02T00:00:00Z"),
+                to = Instant.parse("2026-06-03T00:00:00Z")
+            )
+        )
+
+        assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(0, llmProvider.summarizeCallCount)
+        assertEquals(0, newsSummaryPersistence.savedSummaries.size)
+    }
+
+    @Test
+    @DisplayName("기존 요약이 없으면 LLM 호출 후 저장한다")
+    fun callLlmAndSaveWhenSummaryDoesNotExist() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(newsArticle()))
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), from = null, to = null))
+
+        assertEquals(1, llmProvider.summarizeCallCount)
+        assertEquals(1, newsSummaryPersistence.savedSummaries.size)
+    }
+
+    @Test
+    @DisplayName("저장 중 중복이 발생하면 기존 요약을 반환해 idempotent하게 처리한다")
+    fun handleDuplicateOnSaveIdempotently() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val article = newsArticle()
+        val newsHash = NewsHash.calculate(
+            keyword = keyword,
+            from = null,
+            to = null,
+            sourceNewsIds = listOf(article.id)
+        )
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(article))
+        newsSummaryPersistence.duplicateOnSave = true
+        newsSummaryPersistence.existingAfterDuplicate = newsSummary(
+            keyword = keyword,
+            sourceNewsIds = listOf(article.id),
+            newsHash = newsHash
+        )
+        val service = service()
+
+        val result = service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), from = null, to = null))
+
+        assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(1, llmProvider.summarizeCallCount)
+        assertEquals(1, newsSummaryPersistence.saveOrFindExistingCallCount)
     }
 
     @Test
@@ -124,6 +198,26 @@ class SummarizeNewsServiceTest {
         )
     }
 
+    private fun newsSummary(
+        keyword: AiKeyword = AiKeyword.of("NVIDIA"),
+        sourceNewsIds: List<UUID> = listOf(UUID.fromString("018f0000-0000-7000-8000-000000000001")),
+        newsHash: String = "news-hash"
+    ): NewsSummary {
+        return NewsSummary.create(
+            keyword = keyword,
+            sourceNewsIds = sourceNewsIds,
+            newsHash = newsHash,
+            title = "${keyword.value} 기존 요약",
+            content = "기존 요약 본문",
+            sentiment = NewsSummarySentiment.NEUTRAL,
+            provider = LlmProviderName.of("openrouter"),
+            model = LlmModelName.of("test-model"),
+            promptVersion = PromptVersion.of("news-summary-v1"),
+            tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20),
+            createdAt = clock.instant()
+        )
+    }
+
     private class FakeKeywordReaderPort : KeywordReaderPort {
         var keywords: List<AiKeyword> = emptyList()
         var readCount: Int = 0
@@ -148,6 +242,25 @@ class SummarizeNewsServiceTest {
     }
 
     private class FakeLlmProviderPort : LlmProviderPort {
+        var summarizeCallCount: Int = 0
+
+        override fun prepareNewsSummary(): PreparedLlmNewsSummary {
+            return object : PreparedLlmNewsSummary {
+                override val plan: LlmNewsSummaryPlan = LlmNewsSummaryPlan(
+                    provider = LlmProviderName.of("openrouter"),
+                    model = LlmModelName.of("test-model"),
+                    promptVersion = PromptVersion.of("news-summary-v1")
+                )
+
+                override suspend fun summarize(
+                    keyword: AiKeyword,
+                    articles: List<NewsArticle>
+                ): LlmNewsSummaryResult {
+                    return this@FakeLlmProviderPort.summarizeNews(keyword, articles)
+                }
+            }
+        }
+
         override suspend fun expandKeyword(
             keyword: AiKeyword,
             maxExpansions: Int
@@ -159,6 +272,8 @@ class SummarizeNewsServiceTest {
             keyword: AiKeyword,
             articles: List<NewsArticle>
         ): LlmNewsSummaryResult {
+            summarizeCallCount += 1
+
             return LlmNewsSummaryResult(
                 title = "${keyword.value} 요약",
                 content = "요약 본문",
@@ -175,10 +290,38 @@ class SummarizeNewsServiceTest {
 
     private class FakeNewsSummaryPersistencePort : NewsSummaryPersistencePort {
         val savedSummaries: MutableList<NewsSummary> = mutableListOf()
+        val existingSummaries: MutableList<NewsSummary> = mutableListOf()
+        var duplicateOnSave: Boolean = false
+        var existingAfterDuplicate: NewsSummary? = null
+        var saveOrFindExistingCallCount: Int = 0
+
+        override suspend fun findByUniqueKey(
+            keyword: AiKeyword,
+            newsHash: String,
+            promptVersion: PromptVersion,
+            model: LlmModelName
+        ): NewsSummary? {
+            return existingSummaries.firstOrNull {
+                it.keyword == keyword &&
+                    it.newsHash == newsHash &&
+                    it.promptVersion == promptVersion &&
+                    it.model == model
+            }
+        }
 
         override suspend fun save(newsSummary: NewsSummary): NewsSummary {
             savedSummaries.add(newsSummary)
             return newsSummary
+        }
+
+        override suspend fun saveOrFindExisting(newsSummary: NewsSummary): NewsSummary {
+            saveOrFindExistingCallCount += 1
+
+            if (duplicateOnSave) {
+                return existingAfterDuplicate ?: newsSummary
+            }
+
+            return save(newsSummary)
         }
     }
 
