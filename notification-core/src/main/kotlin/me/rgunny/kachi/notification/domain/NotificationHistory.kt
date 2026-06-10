@@ -11,8 +11,8 @@ class NotificationHistory private constructor(
     val notificationId: NotificationId,
     val fromStatus: NotificationStatus,
     val toStatus: NotificationStatus,
-    var reason: String? = null,
-    var createdAt: Instant? = null
+    val reason: String? = null,
+    val createdAt: Instant
 ){
 
     companion object {

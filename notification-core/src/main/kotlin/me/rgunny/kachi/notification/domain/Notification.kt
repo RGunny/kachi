@@ -10,14 +10,29 @@ class Notification private constructor(
     val channel: NotificationChannel,
     val recipient: String,
     val message: String?,
-    var status: NotificationStatus,
-    var failureReason: String? = null,
-    var requestedAt: Instant? = null,
-    var updatedAt: Instant? = null,
-    var lastTransitionAt: Instant? = null,
-    var dispatchAttempts: Int = 0,
+    val requestedAt: Instant,
+    status: NotificationStatus,
+    failureReason: String? = null,
+    updatedAt: Instant = requestedAt,
+    lastTransitionAt: Instant = requestedAt,
+    dispatchAttempts: Int = 0,
     histories: List<NotificationHistory> = emptyList(),
 ) {
+    var status: NotificationStatus = status
+        private set
+
+    var failureReason: String? = failureReason
+        private set
+
+    var updatedAt: Instant = updatedAt
+        private set
+
+    var lastTransitionAt: Instant = lastTransitionAt
+        private set
+
+    var dispatchAttempts: Int = dispatchAttempts
+        private set
+
     private val _histories = histories.toMutableList()
     val histories: List<NotificationHistory>
         get() = _histories.toList()
@@ -36,6 +51,11 @@ class Notification private constructor(
             message: String?,
             now: Instant
         ): Notification {
+            require(requestId.isNotBlank()) { "requestId must not be blank" }
+            require(requester.isNotBlank()) { "requester must not be blank" }
+            require(recipient.isNotBlank()) { "recipient must not be blank" }
+            require(message == null || message.isNotBlank()) { "message must not be blank" }
+
             return Notification(
                 id = NotificationId.newId(),
                 requestId = requestId,
@@ -43,9 +63,8 @@ class Notification private constructor(
                 channel = channel,
                 recipient = recipient,
                 message = message,
-                status = NotificationStatus.REQUESTED,
                 requestedAt = now,
-                updatedAt = now
+                status = NotificationStatus.REQUESTED,
             )
         }
     }
@@ -90,6 +109,7 @@ class Notification private constructor(
         if (this.status == NotificationStatus.PROCESSING) {
             return
         }
+        this.dispatchAttempts += 1
         transition(NotificationStatus.PUBLISHED, NotificationStatus.PROCESSING, now)
     }
 
