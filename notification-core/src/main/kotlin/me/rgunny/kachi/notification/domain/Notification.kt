@@ -10,10 +10,19 @@ class Notification private constructor(
     val channel: NotificationChannel,
     val recipient: String,
     val message: String?,
+    /**
+     * 외부 요청을 알림으로 최초 접수한 시각.
+     */
     val requestedAt: Instant,
     status: NotificationStatus,
     failureReason: String? = null,
+    /**
+     * 알림 row가 마지막으로 변경된 시각.
+     */
     updatedAt: Instant = requestedAt,
+    /**
+     * 알림 상태가 마지막으로 전이된 시각.
+     */
     lastTransitionAt: Instant = requestedAt,
     dispatchAttempts: Int = 0,
     histories: List<NotificationHistory> = emptyList(),
@@ -80,11 +89,11 @@ class Notification private constructor(
         }
 
         // REQUESTED 가 아니면 잘못된 상태에서의 전이요청으로 예외 처리
-        if (this.status != NotificationStatus.REQUESTED) {
-            throw IllegalStateException("markPublished requires status REQUESTED, current= ${this.status}")
+        if (this.status != NotificationStatus.REQUESTED && this.status != NotificationStatus.PUBLISH_FAILED) {
+            throw IllegalStateException("markPublished requires REQUESTED or PUBLISH_FAILED, current= ${this.status}")
         }
 
-        transition(NotificationStatus.REQUESTED, NotificationStatus.PUBLISHED, now)
+        transition(this.status, NotificationStatus.PUBLISHED, now)
     }
 
     /**
@@ -109,8 +118,10 @@ class Notification private constructor(
         if (this.status == NotificationStatus.PROCESSING) {
             return
         }
-        this.dispatchAttempts += 1
-        transition(NotificationStatus.PUBLISHED, NotificationStatus.PROCESSING, now)
+        if (this.status != NotificationStatus.PUBLISHED && this.status != NotificationStatus.RETRY_WAIT) {
+            throw IllegalStateException("markProcessing requires PUBLISHED or RETRY_WAIT, current= ${this.status}")
+        }
+        transition(this.status, NotificationStatus.PROCESSING, now)
     }
 
     /**
@@ -119,6 +130,7 @@ class Notification private constructor(
      */
     fun markSent(now: Instant) {
         transition(NotificationStatus.PROCESSING, NotificationStatus.SENT, now)
+        this.dispatchAttempts += 1
     }
 
     /**
@@ -126,14 +138,43 @@ class Notification private constructor(
      * NotificationStatus: [PROCESSING --> FAILED]
      */
     fun markFailed(now: Instant, reason: String) {
+        require(reason.isNotBlank()) { "reason must not be blank" }
         transition(NotificationStatus.PROCESSING, NotificationStatus.FAILED, now, reason)
+        this.dispatchAttempts += 1
     }
 
     /**
-     * 도메인 상태 전이 — 3차 도메인 상태 가드.
-     * expected 와 현재 상태가 다르면 IllegalStateException.
-     * 1,2차 가드(Redis SETNX, DB UNIQUE)를 통과해도 같은 row 에 잘못된 상태 변경을 차단
-     * (예: 이미 PUBLISHED 인 row 에 markPublished 재호출, 이미 SENT 인 row 에 markSent 재호출).
+     * 자동 재시도 대기 처리.
+     * NotificationStatus: [FAILED --> RETRY_WAIT]
+     */
+    fun markRetryWait(now: Instant, reason: String) {
+        require(reason.isNotBlank()) { "reason must not be blank" }
+        transition(NotificationStatus.FAILED, NotificationStatus.RETRY_WAIT, now, reason)
+    }
+
+    /**
+     * 자동 재시도 종료 처리.
+     * NotificationStatus: [FAILED --> DEAD]
+     */
+    fun markDead(now: Instant, reason: String) {
+        require(reason.isNotBlank()) { "reason must not be blank" }
+
+        if (this.status == NotificationStatus.DEAD) {
+            return
+        }
+
+        transition(NotificationStatus.FAILED, NotificationStatus.DEAD, now, reason)
+    }
+
+    fun canRetry(maxAttempts: Int): Boolean {
+        require(maxAttempts > 0) { "maxAttempts must be positive" }
+        return this.dispatchAttempts < maxAttempts
+    }
+
+    /**
+     * 상태 전이의 최종 가드.
+     *
+     * 멱등 마커와 저장소 유니크 제약을 통과해도 같은 알림 row에서 허용되지 않는 상태 변경은 여기서 차단한다.
      */
     private fun transition(
         expected: NotificationStatus, next: NotificationStatus,

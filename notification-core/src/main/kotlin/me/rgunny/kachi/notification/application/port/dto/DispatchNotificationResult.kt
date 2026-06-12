@@ -11,6 +11,14 @@ data class DispatchNotificationResult(
     val notificationId: NotificationId,
     val status: NotificationStatus,
     val duplicated: Boolean,
-    val attempted: Boolean,
-    val occurredAt: Instant
+    /**
+     * 외부 채널 sender 호출까지 진행했는지 여부.
+     *
+     * 중복 메시지나 이미 종결된 알림처럼 상태 확인 후 skip한 경우에는 false다.
+     */
+    val dispatchAttempted: Boolean,
+    /**
+     * dispatch command 처리를 마치고 이 결과를 만든 시각.
+     */
+    val handledAt: Instant
 )

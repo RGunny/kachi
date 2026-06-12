@@ -9,5 +9,8 @@ data class PublishNotificationDispatchResult(
     val processed: Int,
     val published: Int,
     val failed: Int,
-    val occurredAt: Instant
+    /**
+     * outbox 발행 주기를 처리하고 이 결과를 만든 시각.
+     */
+    val handledAt: Instant
 )

@@ -86,7 +86,7 @@ class PublishNotificationDispatchService(
             processed = processed + staleOutboxes.size,
             published = published,
             failed = failed,
-            occurredAt = now,
+            handledAt = now,
         )
     }
 

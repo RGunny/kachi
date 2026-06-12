@@ -29,11 +29,11 @@ class RequestNotificationService(
         // 1. requestId를 멱등키로 사용해 중복 요청을 판별한다.
         val dedupeKey = requestDedupeKey(command.requestId)
 
-        // 2. Redis SETNX로 1차 멱등 마커를 선점해 동시 요청을 걸러낸다.
-        val hasDedupeKey = deduplicationPort.markIfAbsent(dedupeKey, policy.dedupeTtl)
+        // 2. 멱등 마커를 선점해 같은 요청의 동시 처리를 먼저 걸러낸다.
+        val isDuplicateDispatch = !deduplicationPort.acquire(dedupeKey, policy.dedupeTtl)
 
         // 3. 중복요청일 경우, 이미 접수된 알림을 찾아 같은 결과로 응답한다.
-        if (!hasDedupeKey) {
+        if (isDuplicateDispatch) {
             val notification = notificationPersistencePort.findByRequestId(command.requestId)
                 ?: throw IllegalStateException("dedupe marker exists but notification not found. requestId=${command.requestId}")
             return RequestNotificationResult(

@@ -11,5 +11,10 @@ data class RequestNotificationResult(
     val notificationId: NotificationId,
     val status: NotificationStatus,
     val duplicated: Boolean,
+    /**
+     * 알림 요청이 REQUESTED 상태로 최초 접수된 시각.
+     *
+     * 중복 요청이면 기존 알림의 최초 접수 시각을 반환한다.
+     */
     val acceptedAt: Instant
 )
