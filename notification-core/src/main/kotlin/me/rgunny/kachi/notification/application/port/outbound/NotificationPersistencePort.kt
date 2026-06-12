@@ -19,10 +19,10 @@ interface NotificationPersistencePort {
     suspend fun findByRequestId(requestId: String): Notification?
 
     /**
-     * worker 정상 진입 claim.
+     * PUBLISHED 상태의 알림을 처리 중 상태로 claim한다.
      *
-     * 저장소 구현체는 현재 상태가 PUBLISHED일 때만 PROCESSING으로 전이되도록
-     * CAS 조건을 적용해야 한다.
+     * 구현체는 현재 상태가 PUBLISHED인 경우에만 PROCESSING으로 전이되도록 CAS 조건을 적용해야 한다.
+     * claim에 성공하면 PROCESSING으로 전이된 Notification을 반환하고, 이미 선점됐거나 상태가 변경된 경우 null을 반환한다.
      */
     suspend fun claimFromPublished(
         notificationId: NotificationId,
@@ -31,10 +31,10 @@ interface NotificationPersistencePort {
     ): Notification?
 
     /**
-     * worker 재시도 진입 claim.
+     * RETRY_WAIT 상태의 알림을 처리 중 상태로 claim한다.
      *
-     * 저장소 구현체는 현재 상태가 RETRY_WAIT일 때만 PROCESSING으로 전이되도록
-     * CAS 조건을 적용해야 한다.
+     * 구현체는 현재 상태가 RETRY_WAIT인 경우에만 PROCESSING으로 전이되도록 CAS 조건을 적용해야 한다.
+     * claim에 성공하면 PROCESSING으로 전이된 Notification을 반환하고, 이미 선점됐거나 상태가 변경된 경우 null을 반환한다.
      */
     suspend fun claimFromRetryWait(
         notificationId: NotificationId,
