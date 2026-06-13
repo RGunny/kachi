@@ -1,12 +1,19 @@
 package me.rgunny.kachi.notification.application.service
 
+import me.rgunny.kachi.notification.retry.FailureCategory
+import me.rgunny.kachi.notification.retry.FailureSource
+import me.rgunny.kachi.notification.retry.RetryFailure
+import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.retry.RetryPolicy
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.domain.RetryPolicy
+import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
+import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
+import me.rgunny.kachi.notification.exception.sender.RetryableSendException
 import me.rgunny.kachi.notification.fake.FakeDeduplicationPort
 import me.rgunny.kachi.notification.fake.FakeIdempotencyKeyPort
 import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
@@ -22,7 +29,6 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -153,7 +159,7 @@ class DispatchNotificationServiceTest {
         val deduplication = FakeDeduplicationPort()
         val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), FakeSender())
 
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<DispatchNotReadyException> {
             runSuspend { service.dispatch(command(notification.id)) }
         }
 
@@ -174,6 +180,48 @@ class DispatchNotificationServiceTest {
         }
 
         assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("sender가 retryable 예외를 던지면 RETRY_WAIT로 완료한다")
+    fun senderRetryableException() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val sender = FakeSender(
+            failure = RetryableSendException(
+                notificationId = notification.id,
+                channel = NotificationChannel.SLACK,
+                failure = RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT),
+            )
+        )
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), sender)
+
+        val result = service.dispatch(command(notification.id))
+
+        assertEquals(NotificationStatus.RETRY_WAIT, result.status)
+        assertEquals("vendor timeout", persistence.saved.last().failureReason)
+        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("sender가 non-retryable 예외를 던지면 DEAD로 완료한다")
+    fun senderNonRetryableException() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val sender = FakeSender(
+            failure = NonRetryableSendException(
+                notificationId = notification.id,
+                channel = NotificationChannel.SLACK,
+                failure = RetryFailure.of(RetryFailureCode.INVALID_RECIPIENT),
+            )
+        )
+        val service = service(persistence, FakeDeduplicationPort(), FakeIdempotencyKeyPort(), sender)
+
+        val result = service.dispatch(command(notification.id))
+
+        assertEquals(NotificationStatus.DEAD, result.status)
+        assertEquals("invalid recipient", persistence.saved.last().failureReason)
     }
 
     private fun service(

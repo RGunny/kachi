@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
+import me.rgunny.kachi.notification.retry.FailureCategory
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationResult
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
@@ -11,6 +12,10 @@ import me.rgunny.kachi.notification.application.port.outbound.NotificationPersis
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
+import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
+import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
+import me.rgunny.kachi.notification.exception.NotificationNotFoundException
+import me.rgunny.kachi.notification.exception.sender.RetryableSendException
 import java.time.Clock
 import java.time.Instant
 
@@ -38,7 +43,7 @@ class DispatchNotificationService(
         // 3. 이미 선점된 메시지는 처리 중이거나 처리된 것으로 보고 현재 상태를 조회해 중복 결과를 반환한다.
         if (isDuplicateDispatch) {
             val notification = notificationPersistencePort.findById(command.notificationId)
-                ?: throw IllegalStateException("dedupe marker exists but notification not found. notificationId=${command.notificationId}")
+                ?: throw NotificationNotFoundException(command.notificationId)
             return DispatchNotificationResult(
                 notificationId = notification.id,
                 status = notification.status,
@@ -64,13 +69,11 @@ class DispatchNotificationService(
         // REQUESTED면 아직 dispatch 발행 완료 반영 전이므로 재시도 신호를 내고, 종착/처리 중 상태면 skip한다.
         if (claimedNotification == null) {
             val notification = notificationPersistencePort.findById(command.notificationId)
-                ?: throw IllegalStateException("notification not found. notificationId=${command.notificationId}")
+                ?: throw NotificationNotFoundException(command.notificationId)
 
             if (notification.status == NotificationStatus.REQUESTED) {
                 deduplicationPort.release(dedupeKey)
-                throw IllegalStateException(
-                    "notification is not published yet. notificationId=${command.notificationId}"
-                )
+                throw DispatchNotReadyException(command.notificationId, notification.status)
             }
             return DispatchNotificationResult(
                 notificationId = notification.id,
@@ -99,6 +102,10 @@ class DispatchNotificationService(
                     idempotencyKey = idempotencyKey,
                 )
             )
+        } catch (e: RetryableSendException) {
+            toRetryableResult(e)
+        } catch (e: NonRetryableSendException) {
+            SendNotificationResult.PermanentFailure(e.failure.message)
         } catch (e: Exception) {
             // TODO: PROCESSING 상태가 이미 확정된 뒤의 장애까지 내부 회수하려면 stale PROCESSING recovery use case를 별도로 둔다.
             deduplicationPort.release(dedupeKey)
@@ -125,6 +132,13 @@ class DispatchNotificationService(
                 reason = sendResult.reason,
                 now = now,
             )
+        }
+    }
+
+    private fun toRetryableResult(exception: RetryableSendException): SendNotificationResult {
+        return when (exception.failure.category) {
+            FailureCategory.RATE_LIMITED -> SendNotificationResult.RateLimited(exception.failure.message)
+            else -> SendNotificationResult.TransientFailure(exception.failure.message)
         }
     }
 

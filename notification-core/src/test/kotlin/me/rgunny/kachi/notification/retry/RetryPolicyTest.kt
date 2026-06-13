@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.domain
+package me.rgunny.kachi.notification.retry
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -52,5 +52,22 @@ class RetryPolicyTest {
         assertEquals(Duration.ofSeconds(4), policy.backoff(2))
         assertEquals(Duration.ofSeconds(8), policy.backoff(3))
         assertEquals(Duration.ofSeconds(10), policy.backoff(4))
+    }
+
+    @Test
+    @DisplayName("실패 분류와 시도 횟수로 재시도 결정을 내린다")
+    fun decideRetry() {
+        val policy = RetryPolicy(
+            maxAttempts = 3,
+            baseDelay = Duration.ofSeconds(1),
+            maxDelay = Duration.ofSeconds(10),
+        )
+
+        val retryableFailure = RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT)
+        val permanentFailure = retryableFailure.copy(category = FailureCategory.VALIDATION_ERROR)
+
+        assertEquals(RetryDecision.Retry(Duration.ofSeconds(1), retryableFailure), policy.decide(retryableFailure, 1))
+        assertEquals(RetryDecision.GiveUp(retryableFailure, exhausted = true), policy.decide(retryableFailure, 3))
+        assertEquals(RetryDecision.GiveUp(permanentFailure, exhausted = false), policy.decide(permanentFailure, 1))
     }
 }

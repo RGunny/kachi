@@ -1,6 +1,8 @@
 package me.rgunny.kachi.notification.application.service
 
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.exception.sender.MultipleNotificationSendersFoundException
+import me.rgunny.kachi.notification.exception.sender.NotificationSenderNotFoundException
 import me.rgunny.kachi.notification.fake.FakeSender
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -25,7 +27,7 @@ class NotificationSenderRouterTest {
     fun rejectMissingSender() {
         val router = NotificationSenderRouter(listOf(FakeSender(NotificationChannel.EMAIL)))
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<NotificationSenderNotFoundException> {
             router.route(NotificationChannel.SLACK)
         }
     }
@@ -37,7 +39,7 @@ class NotificationSenderRouterTest {
             listOf(FakeSender(NotificationChannel.SLACK), FakeSender(NotificationChannel.SLACK))
         )
 
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<MultipleNotificationSendersFoundException> {
             router.route(NotificationChannel.SLACK)
         }
     }

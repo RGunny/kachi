@@ -1,12 +1,12 @@
 package me.rgunny.kachi.notification.application.service
 
+import me.rgunny.kachi.notification.retry.RetryPolicy
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.domain.NotificationOutboxStatus
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.domain.RetryPolicy
 import me.rgunny.kachi.notification.fake.FakeDispatchPublisher
 import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
 import me.rgunny.kachi.notification.fake.FakeOutboxPersistencePort
