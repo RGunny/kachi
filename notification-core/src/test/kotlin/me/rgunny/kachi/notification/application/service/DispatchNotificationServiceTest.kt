@@ -137,7 +137,7 @@ class DispatchNotificationServiceTest {
 
         assertEquals(NotificationStatus.DEAD, result.status)
         assertEquals("vendor timeout", persistence.saved.last().failureReason)
-        assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
+        assertEquals(DispatchFailureClassification.NON_RETRYABLE, result.failureClassification)
         assertEquals(RetryFailureCode.VENDOR_TIMEOUT.code, result.failure?.code)
         assertTrue(deduplication.releasedKeys.isEmpty())
     }

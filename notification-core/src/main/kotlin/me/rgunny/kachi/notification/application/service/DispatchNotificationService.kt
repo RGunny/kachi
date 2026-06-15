@@ -175,13 +175,17 @@ class DispatchNotificationService(
         val reason = failure.message
 
         notification.markFailed(now, reason)
-        when (decision) {
+        val failureClassification = when (decision) {
             is RetryDecision.Retry -> {
                 notification.markRetryWait(now, reason)
                 // 재시도 가능한 실패는 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
                 deduplicationPort.release(dedupeKey)
+                DispatchFailureClassification.RETRYABLE
             }
-            is RetryDecision.GiveUp -> notification.markDead(now, reason)
+            is RetryDecision.GiveUp -> {
+                notification.markDead(now, reason)
+                DispatchFailureClassification.NON_RETRYABLE
+            }
         }
 
         val savedNotification = notificationPersistencePort.save(notification)
@@ -191,7 +195,7 @@ class DispatchNotificationService(
             duplicated = false,
             dispatchAttempted = true,
             handledAt = now,
-            failureClassification = DispatchFailureClassification.RETRYABLE,
+            failureClassification = failureClassification,
             failure = failure,
         )
     }
