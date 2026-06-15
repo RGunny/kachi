@@ -84,31 +84,31 @@ notification-core
     Notification
     NotificationStatus
     NotificationHistory
-    NotificationDlt
     NotificationOutbox
+    NotificationOutboxStatus
+    RetryFailure
     RetryPolicy
-    SenderRouter
+    RetryDecision
 
   application
     port
       in
         RequestNotificationUseCase
+        PublishNotificationDispatchUseCase
         DispatchNotificationUseCase
-        ReprocessDltUseCase
-        NotificationQueryUseCase
       out
-        NotificationRepository
-        OutboxRepository
-        DltRepository
-        NotificationPublisher
+        NotificationPersistencePort
+        NotificationOutboxPersistencePort
+        NotificationDispatchPublisher
+        NotificationEventSerializer
         NotificationSender
-        DeduplicationMarker
-        IdempotencyKeyTracker
+        NotificationDeduplicationPort
+        NotificationIdempotencyKeyPort
     service
       RequestNotificationService
+      PublishNotificationDispatchService
       DispatchNotificationService
-      DltReprocessService
-      NotificationQueryService
+      NotificationSenderRouter
 ```
 
 `notification-core`는 다음 규칙을 지킨다.
@@ -144,6 +144,7 @@ notification-service
 초기 책임:
 
 - 내부/운영 HTTP API 제공
+- HTTP request 또는 Kafka `notification.requested` event 수신
 - 알림 요청을 받는 경우 Redis/DB 멱등 처리
 - Notification 저장
 - Outbox 저장
@@ -178,7 +179,7 @@ notification-worker
 
 초기 책임:
 
-- `notification.requested` consume
+- `notification.dispatch` consume
 - Redis `SETNX` 기반 중복 방지
 - DB unique key / 상태 전이 가드 기반 멱등 보장
 - `PUBLISHED` 또는 `RETRY_WAIT` 알림 claim
@@ -214,9 +215,9 @@ External Actor
 HTTP request
   -> notification-service Controller
   -> core RequestNotificationUseCase
-  -> core OutboxRepository port
+  -> core NotificationOutboxPersistencePort
   -> service persistence adapter
-  -> core NotificationPublisher port
+  -> core NotificationDispatchPublisher
   -> service Kafka adapter
 ```
 
@@ -339,17 +340,22 @@ NotificationSender
 
 ## 처리 흐름
 
-### Kafka 직접 인입
+### Kafka 요청 인입
 
 `kachi` 내부 서비스의 기본 알림 요청 흐름이다.
 
 ```text
 user-service / collector-service / ai-service
   -> Kafka topic: notification.requested
+  -> notification-service consume
+  -> Redis request dedupe
+  -> Notification REQUESTED 저장
+  -> NotificationOutbox PENDING 저장
+  -> notification.dispatch publish
+  -> Notification PUBLISHED
   -> notification-worker consume
-  -> Redis dedupe
-  -> Notification 저장 또는 기존 건 조회
-  -> PROCESSING claim
+  -> Redis dispatch dedupe
+  -> PUBLISHED 또는 RETRY_WAIT claim
   -> SenderRouter
   -> Slack/Telegram/Discord/SMS sender
   -> SENT / RETRY_WAIT / DEAD
@@ -360,8 +366,9 @@ user-service / collector-service / ai-service
 
 ```text
 notification.requested
-notification.requested.retry
-notification.requested.dlt
+notification.dispatch
+notification.dispatch.retry
+notification.dispatch.dlt
 ```
 
 partition key:
@@ -371,6 +378,9 @@ recipient 또는 userId
 ```
 
 같은 수신자 단위 순서를 보장하고, 전체 처리량은 partition과 consumer 수로 확장한다.
+
+요청 접수 topic과 발송 실행 topic은 분리한다.
+`notification.requested`는 notification-service가 접수하고, worker는 service가 outbox를 통해 발행한 `notification.dispatch`만 처리한다.
 
 ### HTTP 보조 인입
 
@@ -382,19 +392,20 @@ HTTP request
   -> Redis SETNX
   -> Notification 저장
   -> Outbox 저장
-  -> Kafka publish
+  -> notification.dispatch publish
   -> notification-worker consume
 ```
 
-outbox는 HTTP 요청을 받은 뒤 Kafka에 발행하는 구간의 유실을 막기 위한 장치다. 반면 Kafka 직접 인입에서는 요청 접수 보장이 Kafka offset/ack와 consumer 처리 정책의 문제이므로, worker 경로의 핵심은 outbox가 아니라 at-least-once 처리와 멱등성이다.
+outbox는 요청을 받은 뒤 worker용 dispatch topic에 발행하는 구간의 유실을 막기 위한 장치다.
+따라서 HTTP 인입뿐 아니라 Kafka `notification.requested` 인입도 notification-service가 접수하면 같은 outbox 흐름을 탄다.
+worker 경로의 핵심은 dispatch message에 대한 at-least-once 처리와 멱등성이다.
 
 ### 발송 상태 흐름
 
 ```text
-notification.requested
-  -> Redis dedupe
-  -> Notification 저장 또는 기존 건 조회
-  -> PROCESSING claim
+notification.dispatch
+  -> Redis dispatch dedupe
+  -> PUBLISHED 또는 RETRY_WAIT에서 PROCESSING claim
   -> channel sender 호출
      -> 성공: SENT
      -> retryable 실패: RETRY_WAIT
@@ -406,14 +417,14 @@ Kafka offset은 처리 완료 이후 commit한다. 이 방식은 장애 시 중�
 
 ### Outbox 흐름
 
-HTTP 인입 또는 운영자 재처리처럼 DB 상태 변경과 Kafka publish가 함께 필요한 경우 outbox를 사용한다.
+HTTP 인입, Kafka `notification.requested` 인입, 운영자 재처리처럼 DB 상태 변경과 Kafka publish가 함께 필요한 경우 outbox를 사용한다.
 
 ```text
-HTTP/Admin request
+HTTP/Kafka/Admin request
   -> Notification 저장
   -> Outbox PENDING 저장
   -> transaction commit
-  -> Kafka publish
+  -> notification.dispatch publish
   -> 성공: Outbox PUBLISHED
   -> 실패: Outbox PENDING 유지, nextRetryAt 갱신
   -> scheduler가 재발행
@@ -421,6 +432,10 @@ HTTP/Admin request
 ```
 
 Outbox는 worker 발송 재시도와 목적이 다르다. Outbox는 DB commit 이후 Kafka publish 유실을 막기 위한 발행 보장 장치이고, worker retry는 Kafka 메시지를 받은 뒤 외부 vendor 발송 실패를 복구하기 위한 장치다.
+
+요청 접수와 dispatch 발행 흐름의 세부 결정은 [013. notification 요청 접수와 dispatch 발행 흐름](./013-notification-request-service-outbox-dispatch-flow.md)을 따른다.
+dispatch 실패 분류와 Kafka retry 연결은 [014. notification dispatch 실패 분류와 Kafka retry 연결](./014-notification-dispatch-retry-classification.md)을 따른다.
+outbox claim, stale recovery, retry 정책은 [015. notification outbox 발행 보장과 recovery 정책](./015-notification-outbox-publish-runtime.md)을 따른다.
 
 ## WebFlux/Kotlin 구현 기준
 
@@ -447,7 +462,7 @@ Outbox는 worker 발송 재시도와 목적이 다르다. Outbox는 DB commit �
 - API와 worker를 별도 런타임으로 분리해 부하 특성, 장애 격리, 스케일링 단위를 다르게 가져갈 수 있다.
 - 알림 도메인 규칙은 `notification-core`에 모아 상태 전이와 멱등 규칙의 중복 구현을 줄인다.
 - `notification-contract`를 분리해 다른 서비스가 알림 이벤트를 명시적인 계약으로 발행할 수 있다.
-- HTTP/outbox와 Kafka 직접 인입을 모두 지원해 운영 도구와 EDA 흐름을 함께 가져갈 수 있다.
+- HTTP/outbox와 Kafka 요청 인입을 모두 지원해 운영 도구와 EDA 흐름을 함께 가져갈 수 있다.
 - Avro 도입 시 contract 모듈을 schema-first 계약 모듈로 자연스럽게 전환할 수 있다.
 
 ### 단점
