@@ -1,5 +1,7 @@
 package me.rgunny.kachi.notification.application.port.dto
 
+import me.rgunny.kachi.notification.retry.RetryFailure
+
 /**
  * 외부 채널 발송 결과.
  *
@@ -12,14 +14,14 @@ sealed interface SendNotificationResult {
     ) : SendNotificationResult
 
     data class RateLimited(
-        val reason: String,
+        val failure: RetryFailure,
     ) : SendNotificationResult
 
     data class TransientFailure(
-        val reason: String,
+        val failure: RetryFailure,
     ) : SendNotificationResult
 
     data class PermanentFailure(
-        val reason: String,
+        val failure: RetryFailure,
     ) : SendNotificationResult
 }

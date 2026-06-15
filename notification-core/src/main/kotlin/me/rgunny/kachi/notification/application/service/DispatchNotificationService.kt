@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.retry.FailureCategory
+import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationResult
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
@@ -16,6 +16,9 @@ import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
 import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
 import me.rgunny.kachi.notification.exception.sender.RetryableSendException
+import me.rgunny.kachi.notification.retry.FailureCategory
+import me.rgunny.kachi.notification.retry.RetryDecision
+import me.rgunny.kachi.notification.retry.RetryFailure
 import java.time.Clock
 import java.time.Instant
 
@@ -105,7 +108,7 @@ class DispatchNotificationService(
         } catch (e: RetryableSendException) {
             toRetryableResult(e)
         } catch (e: NonRetryableSendException) {
-            SendNotificationResult.PermanentFailure(e.failure.message)
+            SendNotificationResult.PermanentFailure(e.failure)
         } catch (e: Exception) {
             // TODO: PROCESSING 상태가 이미 확정된 뒤의 장애까지 내부 회수하려면 stale PROCESSING recovery use case를 별도로 둔다.
             deduplicationPort.release(dedupeKey)
@@ -117,19 +120,19 @@ class DispatchNotificationService(
             is SendNotificationResult.Success -> completeAsSent(claimedNotification, now)
             is SendNotificationResult.RateLimited -> completeAsRetryableFailure(
                 notification = claimedNotification,
-                reason = sendResult.reason,
+                failure = sendResult.failure,
                 dedupeKey = dedupeKey,
                 now = now,
             )
             is SendNotificationResult.TransientFailure -> completeAsRetryableFailure(
                 notification = claimedNotification,
-                reason = sendResult.reason,
+                failure = sendResult.failure,
                 dedupeKey = dedupeKey,
                 now = now,
             )
             is SendNotificationResult.PermanentFailure -> completeAsDead(
                 notification = claimedNotification,
-                reason = sendResult.reason,
+                failure = sendResult.failure,
                 now = now,
             )
         }
@@ -137,8 +140,8 @@ class DispatchNotificationService(
 
     private fun toRetryableResult(exception: RetryableSendException): SendNotificationResult {
         return when (exception.failure.category) {
-            FailureCategory.RATE_LIMITED -> SendNotificationResult.RateLimited(exception.failure.message)
-            else -> SendNotificationResult.TransientFailure(exception.failure.message)
+            FailureCategory.RATE_LIMITED -> SendNotificationResult.RateLimited(exception.failure)
+            else -> SendNotificationResult.TransientFailure(exception.failure)
         }
     }
 
@@ -163,17 +166,22 @@ class DispatchNotificationService(
 
     private suspend fun completeAsRetryableFailure(
         notification: Notification,
-        reason: String,
+        failure: RetryFailure,
         dedupeKey: String,
         now: Instant,
     ): DispatchNotificationResult {
+        val nextAttempts = notification.dispatchAttempts + 1
+        val decision = policy.retryPolicy.decide(failure, nextAttempts)
+        val reason = failure.message
+
         notification.markFailed(now, reason)
-        if (notification.canRetry(policy.retryPolicy.maxAttempts)) {
-            notification.markRetryWait(now, reason)
-            // 재시도 가능한 실패는 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
-            deduplicationPort.release(dedupeKey)
-        } else {
-            notification.markDead(now, reason)
+        when (decision) {
+            is RetryDecision.Retry -> {
+                notification.markRetryWait(now, reason)
+                // 재시도 가능한 실패는 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
+                deduplicationPort.release(dedupeKey)
+            }
+            is RetryDecision.GiveUp -> notification.markDead(now, reason)
         }
 
         val savedNotification = notificationPersistencePort.save(notification)
@@ -183,14 +191,17 @@ class DispatchNotificationService(
             duplicated = false,
             dispatchAttempted = true,
             handledAt = now,
+            failureClassification = DispatchFailureClassification.RETRYABLE,
+            failure = failure,
         )
     }
 
     private suspend fun completeAsDead(
         notification: Notification,
-        reason: String,
+        failure: RetryFailure,
         now: Instant,
     ): DispatchNotificationResult {
+        val reason = failure.message
         notification.markFailed(now, reason)
         notification.markDead(now, reason)
         val savedNotification = notificationPersistencePort.save(notification)
@@ -200,6 +211,8 @@ class DispatchNotificationService(
             duplicated = false,
             dispatchAttempted = true,
             handledAt = now,
+            failureClassification = DispatchFailureClassification.NON_RETRYABLE,
+            failure = failure,
         )
     }
 }

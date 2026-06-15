@@ -2,6 +2,7 @@ package me.rgunny.kachi.notification.application.port.dto
 
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
+import me.rgunny.kachi.notification.retry.RetryFailure
 import java.time.Instant
 
 /**
@@ -20,5 +21,13 @@ data class DispatchNotificationResult(
     /**
      * dispatch command 처리를 마치고 이 결과를 만든 시각.
      */
-    val handledAt: Instant
+    val handledAt: Instant,
+    /**
+     * Kafka retry, ack 같은 런타임 처리는 이 분류를 바탕으로 core 밖에서 결정한다.
+     */
+    val failureClassification: DispatchFailureClassification = DispatchFailureClassification.NONE,
+    /**
+     * 실패 처리 방향을 판단할 때 사용한 분류 정보.
+     */
+    val failure: RetryFailure? = null,
 )

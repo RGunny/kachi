@@ -1,10 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.retry.FailureCategory
-import me.rgunny.kachi.notification.retry.FailureSource
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryFailureCode
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.domain.Notification
@@ -26,6 +22,9 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
+import me.rgunny.kachi.notification.retry.RetryFailure
+import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.retry.RetryPolicy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -53,6 +52,7 @@ class DispatchNotificationServiceTest {
         assertEquals(NotificationStatus.PUBLISHED, result.status)
         assertTrue(result.duplicated)
         assertFalse(result.dispatchAttempted)
+        assertEquals(DispatchFailureClassification.NONE, result.failureClassification)
         assertEquals(0, sender.sendCount)
     }
 
@@ -69,6 +69,7 @@ class DispatchNotificationServiceTest {
         assertEquals(NotificationStatus.SENT, result.status)
         assertFalse(result.duplicated)
         assertTrue(result.dispatchAttempted)
+        assertEquals(DispatchFailureClassification.NONE, result.failureClassification)
         assertEquals(NotificationStatus.SENT, persistence.saved.last().status)
         assertEquals(1, persistence.saved.last().dispatchAttempts)
         assertEquals(1, sender.sendCount)
@@ -98,7 +99,7 @@ class DispatchNotificationServiceTest {
         val notification = publishedNotification()
         val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
         val deduplication = FakeDeduplicationPort()
-        val sender = FakeSender(result = SendNotificationResult.RateLimited("rate-limited"))
+        val sender = FakeSender(result = SendNotificationResult.RateLimited(rateLimitedFailure()))
         val service = service(
             persistence = persistence,
             deduplication = deduplication,
@@ -110,7 +111,9 @@ class DispatchNotificationServiceTest {
         val result = service.dispatch(command(notification.id))
 
         assertEquals(NotificationStatus.RETRY_WAIT, result.status)
-        assertEquals("rate-limited", persistence.saved.last().failureReason)
+        assertEquals("vendor rate limited", persistence.saved.last().failureReason)
+        assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
+        assertEquals(RetryFailureCode.VENDOR_RATE_LIMITED.code, result.failure?.code)
         assertEquals(1, persistence.saved.last().dispatchAttempts)
         assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
     }
@@ -121,7 +124,7 @@ class DispatchNotificationServiceTest {
         val notification = publishedNotification()
         val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
         val deduplication = FakeDeduplicationPort()
-        val sender = FakeSender(result = SendNotificationResult.TransientFailure("vendor-timeout"))
+        val sender = FakeSender(result = SendNotificationResult.TransientFailure(timeoutFailure()))
         val service = service(
             persistence = persistence,
             deduplication = deduplication,
@@ -133,7 +136,9 @@ class DispatchNotificationServiceTest {
         val result = service.dispatch(command(notification.id))
 
         assertEquals(NotificationStatus.DEAD, result.status)
-        assertEquals("vendor-timeout", persistence.saved.last().failureReason)
+        assertEquals("vendor timeout", persistence.saved.last().failureReason)
+        assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
+        assertEquals(RetryFailureCode.VENDOR_TIMEOUT.code, result.failure?.code)
         assertTrue(deduplication.releasedKeys.isEmpty())
     }
 
@@ -142,13 +147,15 @@ class DispatchNotificationServiceTest {
     fun permanentFailure() = runSuspend {
         val notification = publishedNotification()
         val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
-        val sender = FakeSender(result = SendNotificationResult.PermanentFailure("invalid-recipient"))
+        val sender = FakeSender(result = SendNotificationResult.PermanentFailure(invalidRecipientFailure()))
         val service = service(persistence, FakeDeduplicationPort(), FakeIdempotencyKeyPort(), sender)
 
         val result = service.dispatch(command(notification.id))
 
         assertEquals(NotificationStatus.DEAD, result.status)
-        assertEquals("invalid-recipient", persistence.saved.last().failureReason)
+        assertEquals("invalid recipient", persistence.saved.last().failureReason)
+        assertEquals(DispatchFailureClassification.NON_RETRYABLE, result.failureClassification)
+        assertEquals(RetryFailureCode.INVALID_RECIPIENT.code, result.failure?.code)
     }
 
     @Test
@@ -192,7 +199,7 @@ class DispatchNotificationServiceTest {
             failure = RetryableSendException(
                 notificationId = notification.id,
                 channel = NotificationChannel.SLACK,
-                failure = RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT),
+                failure = timeoutFailure(),
             )
         )
         val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), sender)
@@ -201,6 +208,7 @@ class DispatchNotificationServiceTest {
 
         assertEquals(NotificationStatus.RETRY_WAIT, result.status)
         assertEquals("vendor timeout", persistence.saved.last().failureReason)
+        assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
         assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
     }
 
@@ -213,7 +221,7 @@ class DispatchNotificationServiceTest {
             failure = NonRetryableSendException(
                 notificationId = notification.id,
                 channel = NotificationChannel.SLACK,
-                failure = RetryFailure.of(RetryFailureCode.INVALID_RECIPIENT),
+                failure = invalidRecipientFailure(),
             )
         )
         val service = service(persistence, FakeDeduplicationPort(), FakeIdempotencyKeyPort(), sender)
@@ -222,6 +230,7 @@ class DispatchNotificationServiceTest {
 
         assertEquals(NotificationStatus.DEAD, result.status)
         assertEquals("invalid recipient", persistence.saved.last().failureReason)
+        assertEquals(DispatchFailureClassification.NON_RETRYABLE, result.failureClassification)
     }
 
     private fun service(
@@ -271,6 +280,18 @@ class DispatchNotificationServiceTest {
             it.markFailed(now.minusSeconds(3), "rate-limited")
             it.markRetryWait(now.minusSeconds(2), "rate-limited")
         }
+    }
+
+    private fun timeoutFailure(): RetryFailure {
+        return RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT)
+    }
+
+    private fun rateLimitedFailure(): RetryFailure {
+        return RetryFailure.of(RetryFailureCode.VENDOR_RATE_LIMITED)
+    }
+
+    private fun invalidRecipientFailure(): RetryFailure {
+        return RetryFailure.of(RetryFailureCode.INVALID_RECIPIENT)
     }
 
     private fun command(notificationId: NotificationId): DispatchNotificationCommand {
