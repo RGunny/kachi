@@ -30,7 +30,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     // Messaging
-    implementation("org.springframework.kafka:spring-kafka")
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
 
     // Resilience
     implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
@@ -42,7 +42,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-webflux-test")
     testImplementation("org.springframework.boot:spring-boot-data-mongodb-test")
     testImplementation("org.springframework.boot:spring-boot-data-redis-test")
-    testImplementation("org.springframework.kafka:spring-kafka-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("io.projectreactor:reactor-test")
