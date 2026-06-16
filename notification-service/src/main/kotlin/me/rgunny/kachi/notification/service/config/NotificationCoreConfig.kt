@@ -1,7 +1,16 @@
 package me.rgunny.kachi.notification.service.config
 
+import me.rgunny.kachi.notification.application.port.inbound.PublishNotificationDispatchUseCase
+import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPublisher
+import me.rgunny.kachi.notification.application.port.outbound.NotificationEventSerializer
+import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
 import me.rgunny.kachi.notification.application.service.OutboxPublishPolicy
+import me.rgunny.kachi.notification.application.service.PublishNotificationDispatchService
 import me.rgunny.kachi.notification.application.service.RequestNotificationPolicy
+import me.rgunny.kachi.notification.application.service.RequestNotificationService
 import me.rgunny.kachi.notification.retry.RetryPolicy
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -48,6 +57,42 @@ class NotificationCoreConfig {
             publisherId = properties.outbox.publisherId,
             retryPolicy = outboxRetryPolicy,
             publishingVisibilityTimeout = properties.outbox.publishingVisibilityTimeout,
+        )
+    }
+
+    @Bean
+    fun requestNotificationUseCase(
+        notificationPersistencePort: NotificationPersistencePort,
+        outboxPersistencePort: NotificationOutboxPersistencePort,
+        deduplicationPort: NotificationDeduplicationPort,
+        eventSerializer: NotificationEventSerializer,
+        requestNotificationPolicy: RequestNotificationPolicy,
+        clock: Clock,
+    ): RequestNotificationUseCase {
+        return RequestNotificationService(
+            notificationPersistencePort = notificationPersistencePort,
+            outboxPersistencePort = outboxPersistencePort,
+            deduplicationPort = deduplicationPort,
+            eventSerializer = eventSerializer,
+            policy = requestNotificationPolicy,
+            clock = clock,
+        )
+    }
+
+    @Bean
+    fun publishNotificationDispatchUseCase(
+        notificationPersistencePort: NotificationPersistencePort,
+        outboxPersistencePort: NotificationOutboxPersistencePort,
+        dispatchPublisher: NotificationDispatchPublisher,
+        outboxPublishPolicy: OutboxPublishPolicy,
+        clock: Clock,
+    ): PublishNotificationDispatchUseCase {
+        return PublishNotificationDispatchService(
+            notificationPersistencePort = notificationPersistencePort,
+            outboxPersistencePort = outboxPersistencePort,
+            dispatchPublisher = dispatchPublisher,
+            policy = outboxPublishPolicy,
+            clock = clock,
         )
     }
 
