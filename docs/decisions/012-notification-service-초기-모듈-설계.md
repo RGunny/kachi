@@ -114,9 +114,11 @@ notification-core
 `notification-core`는 다음 규칙을 지킨다.
 
 - domain은 Spring, Kafka, Redis, WebClient, persistence entity에 의존하지 않는다.
+- application service도 Spring stereotype annotation에 의존하지 않는다.
 - application은 port를 통해 외부 시스템을 추상화한다.
 - adapter 구현체는 `notification-service` 또는 `notification-worker`에 둔다.
 - contract event와 domain/application command는 분리한다.
+- `notification-core`는 `kotlin("jvm")` 기반 POJO 모듈로 유지하고, Spring Boot plugin이나 Spring component scan 대상이 되지 않는다.
 
 `core`에 domain만 두지 않고 application까지 두는 이유는 알림 도메인의 핵심이 단순 데이터 모델이 아니라 처리 규칙이기 때문이다. 
 멱등, 상태 전이, retry, DLT, vendor idempotency key, claim, 재처리 규칙이 api/worker/admin에 흩어지면 같은 알림에 대해 서로 다른 상태 전이가 생길 수 있다.
@@ -197,6 +199,34 @@ worker는 API와 부하 특성이 다르다.
 헥사고날 아키텍처를 kachi 프로젝트와 동일하게 설계하려면, notification-service, notification-worker 모듈 모두 domain/application/adapter 를 포함해야하나 고민했다.
 하지만 이전 알림시스템 구현 경험에서 위 방식을 채택했을 때, 도메인 중복/비즈니스 중복이 빈번하게 발생하고 동일 내용의 분리된 소스를 관리하기 어려움이 있었다.
 **따라서 핵심 도메인 규칙과 애플리케이션 비즈니스는 notification-core에 모아 중복 구현을 방지하고, 외부 연동 adapter는 별도 런타임 모듈로 분리해 장애 격리, 독립 확장, 운영 안정성을 확보한다.**
+
+`notification-core`는 Spring-free POJO 스타일로 유지한다.
+따라서 core의 application service에는 `@Service`, `@Component`, `@Transactional` 같은 Spring annotation을 붙이지 않는다.
+core service는 생성자 주입을 받는 일반 Kotlin class이며, Spring bean 등록은 각 runtime의 `config` 패키지에서 composition root 역할로 수행한다.
+
+```text
+notification-core
+  RequestNotificationService      (Spring annotation 없음)
+  PublishNotificationDispatchService
+  DispatchNotificationService
+
+notification-service
+  config
+    -> RequestNotificationService를 RequestNotificationUseCase bean으로 조립
+    -> PublishNotificationDispatchService를 PublishNotificationDispatchUseCase bean으로 조립
+
+notification-worker
+  config
+    -> DispatchNotificationService를 DispatchNotificationUseCase bean으로 조립
+```
+
+runtime adapter 구현체는 Spring stereotype을 사용할 수 있다.
+예를 들어 web controller, Kafka listener, Mongo persistence adapter, Redis adapter, Kafka publisher는 `@RestController`, `@Component`, `@Repository` 같은 Spring annotation으로 등록한다.
+반면 core service는 runtime framework를 모르는 순수 객체로 유지한다.
+
+이 방식은 과거 XML 빈 설정 방식처럼 레거시 스타일로 회귀하는 것이 아니라, 헥사고날 아키텍처의 composition root를 명시하기 위한 선택이다.
+Spring Boot 자동 component scan은 runtime adapter를 발견하는 데 사용하고, core use case 조립은 runtime별 configuration에서 명시한다.
+service와 worker가 같은 core service를 서로 다른 adapter/policy 조합으로 사용할 수 있기 때문이다.
 
 ```text
 External Actor
@@ -432,6 +462,7 @@ HTTP/Kafka/Admin request
 ```
 
 Outbox는 worker 발송 재시도와 목적이 다르다. Outbox는 DB commit 이후 Kafka publish 유실을 막기 위한 발행 보장 장치이고, worker retry는 Kafka 메시지를 받은 뒤 외부 vendor 발송 실패를 복구하기 위한 장치다.
+초기 outbox publish retry는 실패 3회 누적 시 `DEAD`로 전이한다.
 
 요청 접수와 dispatch 발행 흐름의 세부 결정은 [013. notification 요청 접수와 dispatch 발행 흐름](./013-notification-request-service-outbox-dispatch-flow.md)을 따른다.
 dispatch 실패 분류와 Kafka retry 연결은 [014. notification dispatch 실패 분류와 Kafka retry 연결](./014-notification-dispatch-retry-classification.md)을 따른다.

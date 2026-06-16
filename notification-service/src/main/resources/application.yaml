@@ -29,3 +29,21 @@ management:
     web:
       exposure:
         include: health
+
+kachi:
+  notification:
+    request:
+      dedupe-ttl: ${KACHI_NOTIFICATION_REQUEST_DEDUPE_TTL:PT24H}
+    dispatch:
+      topic: ${KACHI_NOTIFICATION_DISPATCH_TOPIC:notification.dispatch}
+    outbox:
+      publisher-id: ${KACHI_NOTIFICATION_OUTBOX_PUBLISHER_ID:notification-service-local}
+      batch-size: ${KACHI_NOTIFICATION_OUTBOX_BATCH_SIZE:100}
+      poll-interval: ${KACHI_NOTIFICATION_OUTBOX_POLL_INTERVAL:PT1S}
+      publishing-visibility-timeout: ${KACHI_NOTIFICATION_OUTBOX_PUBLISHING_VISIBILITY_TIMEOUT:PT30S}
+      scheduler:
+        enabled: ${KACHI_NOTIFICATION_OUTBOX_SCHEDULER_ENABLED:true}
+      retry:
+        max-attempts: ${KACHI_NOTIFICATION_OUTBOX_RETRY_MAX_ATTEMPTS:3}
+        base-delay: ${KACHI_NOTIFICATION_OUTBOX_RETRY_BASE_DELAY:PT1S}
+        max-delay: ${KACHI_NOTIFICATION_OUTBOX_RETRY_MAX_DELAY:PT1M}

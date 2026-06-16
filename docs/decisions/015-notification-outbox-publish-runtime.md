@@ -126,6 +126,10 @@ outbox retry는 `RetryPolicy`의 backoff와 max attempts를 사용한다.
 한도 안이면 `PENDING`으로 되돌리고 `nextRetryAt`을 갱신한다.
 한도에 도달하면 `DEAD`로 전이한다.
 
+초기 outbox publish retry는 `maxAttempts=3`, `baseDelay=PT1S`, `maxDelay=PT1M`으로 둔다.
+이는 publish 실패가 3회 누적되면 `DEAD`로 전이한다는 뜻이며, 최초 실패 후 자동 재발행 기회는 최대 2번이다.
+Kafka broker 장기 장애는 긴 자동 재시도로 붙잡기보다 outbox `DEAD` 운영 큐와 알람으로 전환한다.
+
 모든 발행 실패를 retryable로 보지는 않는다.
 Kafka broker 일시 장애, timeout, network 오류는 retryable 실패로 기록한다.
 반면 outbox payload 역직렬화 실패, 필수 필드 누락, topic 계약 오류처럼 같은 payload를 다시 발행해도 성공하기 어려운 오류는 즉시 `DEAD`로 전이한다.
