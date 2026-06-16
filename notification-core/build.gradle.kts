@@ -11,10 +11,6 @@ java {
 }
 
 dependencies {
-    // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-
     // UUID v7
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
 

@@ -1,8 +1,5 @@
 package me.rgunny.kachi.ai.adapter.out.llm.openai
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
@@ -20,6 +17,9 @@ import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import org.springframework.web.reactive.function.client.WebClient
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * OpenAI 계열 chat completions API를 사용하는 LLM provider adapter.
@@ -29,7 +29,7 @@ import org.springframework.web.reactive.function.client.WebClient
  */
 class OpenAiLlmProvider(
     private val webClient: WebClient,
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
     private val providerType: OpenAiProviderType,
     private val properties: OpenAiProviderProperties,
     private val keywordExpansionPromptVersion: PromptVersion,
@@ -140,7 +140,7 @@ class OpenAiLlmProvider(
     private fun parseJsonStringArray(content: String): List<String> {
         val jsonArray = extractJsonArray(content)
 
-        return objectMapper.readValue(jsonArray, STRING_LIST_TYPE)
+        return jsonMapper.readValue(jsonArray, STRING_LIST_TYPE)
             .map { it.trim() }
             .filter { it.isNotBlank() }
     }
@@ -191,7 +191,10 @@ class OpenAiLlmProvider(
 
     private fun parseNewsSummary(content: String): ParsedNewsSummary {
         val jsonObject = extractJsonObject(content)
-        val parsed = objectMapper.readValue(jsonObject, ParsedNewsSummary::class.java)
+        val parsed = jsonMapper
+            .readerFor(ParsedNewsSummary::class.java)
+            .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .readValue<ParsedNewsSummary>(jsonObject)
 
         require(parsed.title.isNotBlank()) { "LLM news summary title is empty" }
         require(parsed.content.isNotBlank()) { "LLM news summary content is empty" }
@@ -239,7 +242,6 @@ class OpenAiLlmProvider(
         val STRING_LIST_TYPE = object : TypeReference<List<String>>() {}
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     private data class ParsedNewsSummary(
         val title: String = "",
         val content: String = "",

@@ -1,6 +1,5 @@
 package me.rgunny.kachi.ai.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
@@ -15,6 +14,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
+import tools.jackson.databind.json.JsonMapper
 import java.util.concurrent.TimeUnit
 
 @Configuration
@@ -42,13 +42,13 @@ class OpenAiLlmConfig {
     )
     fun openrouterLlmProvider(
         properties: LlmProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.OPENROUTER,
             properties = properties,
             providerProperties = properties.openrouter,
-            objectMapper = objectMapper
+            jsonMapper = jsonMapper
         )
     }
 
@@ -60,13 +60,13 @@ class OpenAiLlmConfig {
     )
     fun groqLlmProvider(
         properties: LlmProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.GROQ,
             properties = properties,
             providerProperties = properties.groq,
-            objectMapper = objectMapper
+            jsonMapper = jsonMapper
         )
     }
 
@@ -78,13 +78,13 @@ class OpenAiLlmConfig {
     )
     fun togetherLlmProvider(
         properties: LlmProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.TOGETHER,
             properties = properties,
             providerProperties = properties.together,
-            objectMapper = objectMapper
+            jsonMapper = jsonMapper
         )
     }
 
@@ -96,13 +96,13 @@ class OpenAiLlmConfig {
     )
     fun cerebrasLlmProvider(
         properties: LlmProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.CEREBRAS,
             properties = properties,
             providerProperties = properties.cerebras,
-            objectMapper = objectMapper
+            jsonMapper = jsonMapper
         )
     }
 
@@ -114,13 +114,13 @@ class OpenAiLlmConfig {
     )
     fun mistralLlmProvider(
         properties: LlmProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.MISTRAL,
             properties = properties,
             providerProperties = properties.mistral,
-            objectMapper = objectMapper
+            jsonMapper = jsonMapper
         )
     }
 
@@ -128,13 +128,13 @@ class OpenAiLlmConfig {
         providerType: OpenAiProviderType,
         properties: LlmProviderProperties,
         providerProperties: OpenAiProviderProperties,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         validateProvider(providerType, providerProperties)
 
         return OpenAiLlmProvider(
             webClient = webClient(providerProperties),
-            objectMapper = objectMapper,
+            jsonMapper = jsonMapper,
             providerType = providerType,
             properties = providerProperties,
             keywordExpansionPromptVersion = PromptVersion.of(properties.keywordExpansionPromptVersion),

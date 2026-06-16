@@ -11,10 +11,6 @@ java {
 }
 
 dependencies {
-    // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-
     // Test
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 }
