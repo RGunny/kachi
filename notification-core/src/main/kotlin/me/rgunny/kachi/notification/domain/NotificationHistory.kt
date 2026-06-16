@@ -33,6 +33,27 @@ class NotificationHistory private constructor(
                 reason = reason,
             )
         }
+
+        /**
+         * 저장된 상태 전이 이력 snapshot을 복원한다.
+         */
+        fun restore(
+            id: NotificationHistoryId,
+            notificationId: NotificationId,
+            fromStatus: NotificationStatus,
+            toStatus: NotificationStatus,
+            createdAt: Instant,
+            reason: String?,
+        ): NotificationHistory {
+            return NotificationHistory(
+                id = id,
+                notificationId = notificationId,
+                fromStatus = fromStatus,
+                toStatus = toStatus,
+                createdAt = createdAt,
+                reason = reason,
+            )
+        }
     }
 
 }

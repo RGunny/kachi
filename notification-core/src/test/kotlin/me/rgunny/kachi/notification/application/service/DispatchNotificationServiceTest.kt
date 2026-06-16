@@ -276,7 +276,7 @@ class DispatchNotificationServiceTest {
 
     private fun retryWaitNotification(): Notification {
         return publishedNotification().also {
-            it.markProcessing(now.minusSeconds(4))
+            it.markProcessing(now.minusSeconds(4), "worker-1")
             it.markFailed(now.minusSeconds(3), "rate-limited")
             it.markRetryWait(now.minusSeconds(2), "rate-limited")
         }

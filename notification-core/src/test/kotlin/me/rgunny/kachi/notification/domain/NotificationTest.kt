@@ -77,11 +77,16 @@ class NotificationTest {
         val processedAt = now.plusSeconds(1)
         val sentAt = now.plusSeconds(2)
 
-        notification.markProcessing(processedAt)
+        notification.markProcessing(processedAt, "worker-1")
+        assertEquals(processedAt, notification.claimedAt)
+        assertEquals("worker-1", notification.claimedBy)
+
         notification.markSent(sentAt)
 
         assertEquals(NotificationStatus.SENT, notification.status)
         assertEquals(1, notification.dispatchAttempts)
+        assertNull(notification.claimedAt)
+        assertNull(notification.claimedBy)
         assertEquals(sentAt, notification.updatedAt)
         assertEquals(
             listOf(NotificationStatus.REQUESTED, NotificationStatus.PUBLISHED, NotificationStatus.PROCESSING),
@@ -98,12 +103,14 @@ class NotificationTest {
     fun retryWaitTransition() {
         val notification = publishedNotification()
 
-        notification.markProcessing(now.plusSeconds(1))
+        notification.markProcessing(now.plusSeconds(1), "worker-1")
         notification.markFailed(now.plusSeconds(2), "rate-limited")
 
         assertEquals(NotificationStatus.FAILED, notification.status)
         assertEquals(1, notification.dispatchAttempts)
         assertEquals("rate-limited", notification.failureReason)
+        assertNull(notification.claimedAt)
+        assertNull(notification.claimedBy)
         assertTrue(notification.canRetry(maxAttempts = 2))
 
         notification.markRetryWait(now.plusSeconds(3), "rate-limited")
@@ -118,7 +125,7 @@ class NotificationTest {
     fun deadTransition() {
         val notification = publishedNotification()
 
-        notification.markProcessing(now.plusSeconds(1))
+        notification.markProcessing(now.plusSeconds(1), "worker-1")
         notification.markFailed(now.plusSeconds(2), "invalid-recipient")
 
         assertFalse(notification.canRetry(maxAttempts = 1))
@@ -137,7 +144,7 @@ class NotificationTest {
         val notification = notification()
 
         assertFailsWith<IllegalStateException> {
-            notification.markProcessing(now.plusSeconds(1))
+            notification.markProcessing(now.plusSeconds(1), "worker-1")
         }
         assertFailsWith<IllegalStateException> {
             notification.markSent(now.plusSeconds(1))

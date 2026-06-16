@@ -46,7 +46,7 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         if (notification.status != NotificationStatus.PUBLISHED) {
             return null
         }
-        notification.markProcessing(now)
+        notification.markProcessing(now, workerId)
         return notification
     }
 
@@ -60,7 +60,7 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         if (notification.status != NotificationStatus.RETRY_WAIT) {
             return null
         }
-        notification.markProcessing(now)
+        notification.markProcessing(now, workerId)
         return notification
     }
 }

@@ -81,6 +81,60 @@ class NotificationOutbox private constructor(
         private fun requireNonBlankForCreate(value: String, name: String) {
             require(value.isNotBlank()) { "$name must not be blank" }
         }
+
+        /**
+         * 저장소에 보관된 NotificationOutbox aggregate snapshot을 복원한다.
+         */
+        fun restore(
+            id: NotificationOutboxId,
+            notificationId: NotificationId,
+            topic: String,
+            partitionKey: String,
+            eventPayload: String,
+            createdAt: Instant,
+            outboxStatus: NotificationOutboxStatus,
+            retryCount: Int,
+            nextRetryAt: Instant,
+            lastError: String?,
+            publishedAt: Instant?,
+            claimedAt: Instant?,
+            claimedBy: String?,
+        ): NotificationOutbox {
+            requireNonBlankForCreate(topic, "topic")
+            requireNonBlankForCreate(partitionKey, "partitionKey")
+            requireNonBlankForCreate(eventPayload, "eventPayload")
+            require(retryCount >= 0) { "retryCount must not be negative" }
+            require(claimedBy == null || claimedBy.isNotBlank()) { "claimedBy must not be blank" }
+            require(lastError == null || lastError.isNotBlank()) { "lastError must not be blank" }
+            require((claimedAt == null) == (claimedBy == null)) {
+                "claimedAt and claimedBy must be both null or both non-null"
+            }
+            if (outboxStatus == NotificationOutboxStatus.PUBLISHING) {
+                require(claimedAt != null && claimedBy != null) {
+                    "PUBLISHING outbox must have claim information"
+                }
+            } else {
+                require(claimedAt == null && claimedBy == null) {
+                    "non-PUBLISHING outbox must not have claim information"
+                }
+            }
+
+            return NotificationOutbox(
+                id = id,
+                notificationId = notificationId,
+                topic = topic,
+                partitionKey = partitionKey,
+                eventPayload = eventPayload,
+                createdAt = createdAt,
+                outboxStatus = outboxStatus,
+                retryCount = retryCount,
+                nextRetryAt = nextRetryAt,
+                lastError = lastError,
+                publishedAt = publishedAt,
+                claimedAt = claimedAt,
+                claimedBy = claimedBy,
+            )
+        }
     }
 
     /**

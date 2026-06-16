@@ -9,6 +9,8 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+    mongodb:
+      auto-index-creation: false
   mongodb:
     uri: mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}
     representation:
