@@ -11,6 +11,8 @@ data class NotificationServiceProperties(
 ){
 
     data class Request(
+        val topic: String = "notification.requested",
+        val groupId: String = "notification-service",
         val dedupeTtl: Duration = Duration.ofHours(24)
     )
 

@@ -35,6 +35,8 @@ management:
 kachi:
   notification:
     request:
+      topic: ${KACHI_NOTIFICATION_REQUEST_TOPIC:notification.requested}
+      group-id: ${KACHI_NOTIFICATION_REQUEST_GROUP_ID:notification-service}
       dedupe-ttl: ${KACHI_NOTIFICATION_REQUEST_DEDUPE_TTL:PT24H}
     dispatch:
       topic: ${KACHI_NOTIFICATION_DISPATCH_TOPIC:notification.dispatch}
