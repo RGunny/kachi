@@ -13,8 +13,20 @@ data class NotificationServiceProperties(
     data class Request(
         val topic: String = "notification.requested",
         val groupId: String = "notification-service",
-        val dedupeTtl: Duration = Duration.ofHours(24)
-    )
+        val dedupeTtl: Duration = Duration.ofHours(24),
+        val dlt: Dlt = Dlt(),
+        val retry: Retry = Retry(),
+    ) {
+
+        data class Dlt(
+            val topic: String = "notification.requested.dlt",
+        )
+
+        data class Retry(
+            val maxAttempts: Long = 3,
+            val backoff: Duration = Duration.ofSeconds(1),
+        )
+    }
 
     data class Dispatch(
         val topic: String = "notification.dispatch"

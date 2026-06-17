@@ -15,12 +15,17 @@ spring:
     uri: mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}
     representation:
       uuid: standard
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      properties:
-        enable.idempotence: true
-        acks: all
+    kafka:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      consumer:
+        key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        properties:
+          enable.idempotence: true
+          acks: all
 
 server:
   port: 8084
@@ -38,6 +43,11 @@ kachi:
       topic: ${KACHI_NOTIFICATION_REQUEST_TOPIC:notification.requested}
       group-id: ${KACHI_NOTIFICATION_REQUEST_GROUP_ID:notification-service}
       dedupe-ttl: ${KACHI_NOTIFICATION_REQUEST_DEDUPE_TTL:PT24H}
+      dlt:
+        topic: ${KACHI_NOTIFICATION_REQUEST_DLT_TOPIC:notification.requested.dlt}
+      retry:
+        max-attempts: ${KACHI_NOTIFICATION_REQUEST_RETRY_MAX_ATTEMPTS:3}
+        backoff: ${KACHI_NOTIFICATION_REQUEST_RETRY_BACKOFF:PT1S}
     dispatch:
       topic: ${KACHI_NOTIFICATION_DISPATCH_TOPIC:notification.dispatch}
     outbox:

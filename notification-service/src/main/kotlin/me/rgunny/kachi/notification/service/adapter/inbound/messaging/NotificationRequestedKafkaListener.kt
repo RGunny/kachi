@@ -23,10 +23,20 @@ class NotificationRequestedKafkaListener(
     @KafkaListener(
         topics = ["\${kachi.notification.request.topic}"],
         groupId = "\${kachi.notification.request.group-id}",
+        containerFactory = "notificationRequestedKafkaListenerContainerFactory",
     )
     fun consume(@Payload payload: String) = runBlocking {
-        val event = jsonMapper.readValue(payload, NotificationRequestedEvent::class.java)
-        val result = requestNotificationUseCase.request(NotificationRequestedEventMapper.toCommand(event))
+        val event = readEvent(payload)
+        val command = try {
+            NotificationRequestedEventMapper.toCommand(event)
+        } catch (exception: IllegalArgumentException) {
+            throw InvalidNotificationRequestedMessageException(
+                message = "invalid notification requested event. requestId=${event.requestId}",
+                cause = exception,
+            )
+        }
+
+        val result = requestNotificationUseCase.request(command)
 
         log.info(
             "notification requested event consumed requestId={} notificationId={} status={} duplicated={}",
@@ -35,6 +45,17 @@ class NotificationRequestedKafkaListener(
             result.status,
             result.duplicated,
         )
+    }
+
+    private fun readEvent(payload: String): NotificationRequestedEvent {
+        return try {
+            jsonMapper.readValue(payload, NotificationRequestedEvent::class.java)
+        } catch (exception: Exception) {
+            throw InvalidNotificationRequestedMessageException(
+                message = "invalid notification requested payload",
+                cause = exception,
+            )
+        }
     }
 
     private companion object {
