@@ -51,3 +51,8 @@ kachi:
           backoff: ${KACHI_NOTIFICATION_DISPATCH_RETRY_BACKOFF:PT1S}
         dlt:
           topic: ${KACHI_NOTIFICATION_DISPATCH_DLT_TOPIC:notification.dispatch.dlt}
+      sender:
+        mock:
+          enabled: ${KACHI_NOTIFICATION_MOCK_SENDER_ENABLED:true}
+          channels: ${KACHI_NOTIFICATION_MOCK_SENDER_CHANNELS:SLACK,DISCORD,TELEGRAM,SMS,KAKAO,EMAIL}
+          mode: ${KACHI_NOTIFICATION_MOCK_SENDER_MODE:SUCCESS}

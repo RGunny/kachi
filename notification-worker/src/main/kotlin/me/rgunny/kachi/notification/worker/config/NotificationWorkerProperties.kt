@@ -13,6 +13,7 @@ data class NotificationWorkerProperties(
      */
     val workerId: String = "notification-worker-local",
     val dispatch: Dispatch = Dispatch(),
+    val sender: Sender = Sender(),
 ) {
 
     data class Dispatch(
@@ -62,6 +63,30 @@ data class NotificationWorkerProperties(
              * DLT 영속화/운영자 재처리는 후속 admin/service 기능에서 담당한다.
              */
             val topic: String = "notification.dispatch.dlt",
+        )
+    }
+
+    data class Sender(
+        val mock: Mock = Mock(),
+    ) {
+
+        data class Mock(
+            /**
+             * 실제 vendor adapter가 붙기 전 worker dispatch 흐름을 검증하기 위한 mock sender 활성화 여부.
+             * 운영 환경에서는 false로 두고 실제 채널 sender bean만 사용해야 한다.
+             */
+            val enabled: Boolean = true,
+
+            /**
+             * mock sender가 지원할 채널 목록.
+             */
+            val channels: List<String> = listOf("SLACK", "DISCORD", "TELEGRAM", "SMS", "KAKAO", "EMAIL"),
+
+            /**
+             * mock sender 결과 모드.
+             * SUCCESS, TRANSIENT_FAILURE, RATE_LIMITED, PERMANENT_FAILURE 중 하나를 사용한다.
+             */
+            val mode: String = "SUCCESS",
         )
     }
 }
