@@ -68,6 +68,7 @@ data class NotificationWorkerProperties(
 
     data class Sender(
         val mock: Mock = Mock(),
+        val slack: Slack = Slack(),
     ) {
 
         data class Mock(
@@ -87,6 +88,25 @@ data class NotificationWorkerProperties(
              * SUCCESS, TRANSIENT_FAILURE, RATE_LIMITED, PERMANENT_FAILURE 중 하나를 사용한다.
              */
             val mode: String = "SUCCESS",
+        )
+
+        data class Slack(
+            /**
+             * Slack incoming webhook sender 활성화 여부.
+             * true이면 mock sender가 SLACK을 지원하도록 설정되어 있어도 worker config가 mock SLACK 지원을 자동 제외한다.
+             */
+            val enabled: Boolean = false,
+
+            /**
+             * Slack incoming webhook URL.
+             * secret 성격의 값이므로 운영에서는 환경변수나 secret manager로 주입한다.
+             */
+            val webhookUrl: String = "",
+
+            /**
+             * Slack webhook 호출 timeout.
+             */
+            val timeout: Duration = Duration.ofSeconds(3),
         )
     }
 }
