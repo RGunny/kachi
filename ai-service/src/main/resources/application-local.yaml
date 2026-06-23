@@ -1,6 +1,6 @@
 spring:
   mongodb:
-    uri: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DATABASE:kachi_ai}
+    uri: mongodb://localhost:27017/kachi_ai
     representation:
       uuid: standard
   data:
@@ -11,23 +11,28 @@ kachi:
   ai:
     scheduler:
       news-summary:
-        enabled: ${KACHI_AI_NEWS_SUMMARY_SCHEDULER_ENABLED:false}
+        enabled: false
     clients:
       user-service:
-        base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8080}
+        base-url: http://localhost:8080
       collector-service:
-        base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL:http://localhost:8082}
+        base-url: http://localhost:8082
     providers:
-      mode: ${KACHI_AI_LLM_PROVIDER_MODE:single-random}
+      mode: single-random
       openrouter:
-        enabled: ${KACHI_AI_OPENROUTER_ENABLED:true}
+        enabled: true
+        api-key: ${OPENROUTER_API_KEY}
       groq:
-        enabled: ${KACHI_AI_GROQ_ENABLED:true}
+        enabled: true
+        api-key: ${GROQ_API_KEY}
       together:
-        enabled: ${KACHI_AI_TOGETHER_ENABLED:true}
+        enabled: true
+        api-key: ${TOGETHER_API_KEY}
       cerebras:
-        enabled: ${KACHI_AI_CEREBRAS_ENABLED:true}
+        enabled: true
+        api-key: ${CEREBRAS_API_KEY}
       mistral:
-        enabled: ${KACHI_AI_MISTRAL_ENABLED:true}
+        enabled: true
+        api-key: ${MISTRAL_API_KEY}
       gemini:
-        enabled: ${KACHI_AI_GEMINI_ENABLED:false}
+        enabled: false
