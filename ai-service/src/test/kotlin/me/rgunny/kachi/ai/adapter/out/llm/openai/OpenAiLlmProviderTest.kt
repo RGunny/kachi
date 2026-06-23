@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import tools.jackson.databind.json.JsonMapper
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -27,7 +28,13 @@ class OpenAiLlmProviderTest {
         enabled = true,
         apiKey = "api-key",
         baseUrl = "https://llm.example.com/v1",
-        model = "test-model"
+        chatCompletionsPath = "/chat/completions",
+        model = "test-model",
+        connectTimeout = Duration.ofSeconds(2),
+        responseTimeout = Duration.ofSeconds(10),
+        readTimeout = Duration.ofSeconds(10),
+        writeTimeout = Duration.ofSeconds(10),
+        maxInMemorySize = 512 * 1024,
     )
 
     @Test

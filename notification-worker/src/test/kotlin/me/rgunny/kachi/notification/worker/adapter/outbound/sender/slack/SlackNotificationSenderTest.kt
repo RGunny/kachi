@@ -16,7 +16,6 @@ import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -112,7 +111,6 @@ class SlackNotificationSenderTest {
                 .exchangeFunction(exchangeFunction)
                 .build(),
             webhookUrl = "https://hooks.slack.test/services/test",
-            timeout = Duration.ofSeconds(1),
         )
     }
 

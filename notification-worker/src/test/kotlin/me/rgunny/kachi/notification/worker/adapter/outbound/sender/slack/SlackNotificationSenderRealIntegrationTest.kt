@@ -10,7 +10,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.springframework.web.reactive.function.client.WebClient
-import java.time.Duration
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -30,7 +29,6 @@ class SlackNotificationSenderRealIntegrationTest {
             val sender = SlackNotificationSender(
                 webClient = WebClient.builder().build(),
                 webhookUrl = configuredWebhookUrl,
-                timeout = Duration.ofSeconds(5),
             )
 
             val result = sender.send(

@@ -12,6 +12,7 @@ import me.rgunny.kachi.collector.domain.CollectionTargetType
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
@@ -26,7 +27,7 @@ class NewsCollectionSchedulerTest {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, clock),
-            properties = NewsCollectionSchedulerProperties(enabled = false)
+            properties = schedulerProperties(enabled = false)
         )
 
         scheduler.collectNews()
@@ -40,7 +41,7 @@ class NewsCollectionSchedulerTest {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, clock),
-            properties = NewsCollectionSchedulerProperties(enabled = true)
+            properties = schedulerProperties(enabled = true)
         )
 
         scheduler.collectNews()
@@ -56,7 +57,7 @@ class NewsCollectionSchedulerTest {
         val useCase = FailingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, clock),
-            properties = NewsCollectionSchedulerProperties(enabled = true)
+            properties = schedulerProperties(enabled = true)
         )
 
         scheduler.collectNews()
@@ -86,6 +87,14 @@ class NewsCollectionSchedulerTest {
     }
 
     private companion object {
+        fun schedulerProperties(enabled: Boolean): NewsCollectionSchedulerProperties {
+            return NewsCollectionSchedulerProperties(
+                enabled = enabled,
+                fixedDelay = Duration.ofMinutes(10),
+                initialDelay = Duration.ofSeconds(30),
+            )
+        }
+
         fun result(): CollectionRunResult {
             val now = Instant.parse("2026-05-30T00:00:00Z")
 

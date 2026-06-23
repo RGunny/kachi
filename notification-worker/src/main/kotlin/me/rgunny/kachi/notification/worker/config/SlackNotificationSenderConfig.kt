@@ -1,16 +1,43 @@
 package me.rgunny.kachi.notification.worker.config
 
+import io.netty.channel.ChannelOption
+import io.netty.handler.timeout.ReadTimeoutHandler
+import io.netty.handler.timeout.WriteTimeoutHandler
 import me.rgunny.kachi.notification.worker.adapter.outbound.sender.slack.SlackNotificationSender
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.netty.http.client.HttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * Slack sender adapter 설정.
  */
 @Configuration
 class SlackNotificationSenderConfig {
+
+    /**
+     * Slack webhook 호출 전용 WebClient.
+     */
+    @Bean(SLACK_WEB_CLIENT)
+    @ConditionalOnProperty(
+        prefix = "kachi.notification.worker.sender.slack",
+        name = ["enabled"],
+        havingValue = "true",
+        matchIfMissing = false,
+    )
+    fun slackWebClient(properties: NotificationWorkerProperties): WebClient {
+        val slack = properties.sender.slack
+        validateSlackHttpProperties(slack)
+
+        return WebClient.builder()
+            .clientConnector(ReactorClientHttpConnector(slackHttpClient(slack)))
+            .codecs { it.defaultCodecs().maxInMemorySize(slack.maxInMemorySize) }
+            .build()
+    }
 
     /**
      * application.yaml의 kachi.notification.worker.sender.slack.enabled=true일 때만 실제 Slack sender bean을 등록한다.
@@ -26,21 +53,54 @@ class SlackNotificationSenderConfig {
         matchIfMissing = false,
     )
     fun slackNotificationSender(
-        webClientBuilder: WebClient.Builder,
+        @Qualifier(SLACK_WEB_CLIENT) webClient: WebClient,
         properties: NotificationWorkerProperties,
     ): SlackNotificationSender {
         val slack = properties.sender.slack
+        validateSlackSenderProperties(slack)
+
+        return SlackNotificationSender(
+            webClient = webClient,
+            webhookUrl = slack.webhookUrl,
+        )
+    }
+
+    private fun validateSlackSenderProperties(slack: NotificationWorkerProperties.Sender.Slack) {
         require(slack.webhookUrl.isNotBlank()) {
             "slack webhookUrl must not be blank when slack sender is enabled"
         }
-        require(!slack.timeout.isZero && !slack.timeout.isNegative) {
-            "slack timeout must be positive"
-        }
+    }
 
-        return SlackNotificationSender(
-            webClient = webClientBuilder.build(),
-            webhookUrl = slack.webhookUrl,
-            timeout = slack.timeout,
-        )
+    private fun validateSlackHttpProperties(slack: NotificationWorkerProperties.Sender.Slack) {
+        require(!slack.connectTimeout.isZero && !slack.connectTimeout.isNegative) {
+            "slack connectTimeout must be positive"
+        }
+        require(!slack.responseTimeout.isZero && !slack.responseTimeout.isNegative) {
+            "slack responseTimeout must be positive"
+        }
+        require(!slack.readTimeout.isZero && !slack.readTimeout.isNegative) {
+            "slack readTimeout must be positive"
+        }
+        require(!slack.writeTimeout.isZero && !slack.writeTimeout.isNegative) {
+            "slack writeTimeout must be positive"
+        }
+        require(slack.maxInMemorySize > 0) {
+            "slack maxInMemorySize must be positive"
+        }
+    }
+
+    private fun slackHttpClient(slack: NotificationWorkerProperties.Sender.Slack): HttpClient {
+        return HttpClient.create()
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, slack.connectTimeout.toMillis().toInt())
+            .responseTimeout(slack.responseTimeout)
+            .doOnConnected { connection ->
+                connection
+                    .addHandlerLast(ReadTimeoutHandler(slack.readTimeout.toMillis(), TimeUnit.MILLISECONDS))
+                    .addHandlerLast(WriteTimeoutHandler(slack.writeTimeout.toMillis(), TimeUnit.MILLISECONDS))
+            }
+    }
+
+    private companion object {
+        const val SLACK_WEB_CLIENT = "slackWebClient"
     }
 }

@@ -116,7 +116,9 @@ class UserServiceKeywordReaderAdapterTest {
                 .build(),
             properties = UserServiceKeywordProperties(
                 baseUrl = "http://user-service",
-                timeout = Duration.ofSeconds(1)
+                activeKeywordsPath = "/api/v1/internal/keywords/active",
+                timeout = Duration.ofSeconds(1),
+                maxInMemorySize = 256 * 1024,
             )
         )
     }

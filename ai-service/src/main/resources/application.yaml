@@ -3,10 +3,7 @@ spring:
     name: ai-service
   lifecycle:
     timeout-per-shutdown-phase: 30s
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   mongodb:
-    uri: mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}
     representation:
       uuid: standard
 
@@ -24,56 +21,80 @@ kachi:
   ai:
     scheduler:
       news-summary:
-        enabled: ${KACHI_AI_NEWS_SUMMARY_SCHEDULER_ENABLED:true}
-        fixed-delay: ${KACHI_AI_NEWS_SUMMARY_SCHEDULER_FIXED_DELAY:10m}
-        initial-delay: ${KACHI_AI_NEWS_SUMMARY_SCHEDULER_INITIAL_DELAY:30s}
+        enabled: true
+        fixed-delay: 10m
+        initial-delay: 30s
     clients:
       user-service:
-        base-url: ${KACHI_USER_SERVICE_BASE_URL}
-        active-keywords-path: ${KACHI_USER_SERVICE_ACTIVE_KEYWORDS_PATH:/api/v1/internal/keywords/active}
-        timeout: ${KACHI_USER_SERVICE_TIMEOUT:3s}
-        max-in-memory-size: ${KACHI_USER_SERVICE_MAX_IN_MEMORY_SIZE:262144}
+        active-keywords-path: /api/v1/internal/keywords/active
+        timeout: 3s
+        max-in-memory-size: 262144
       collector-service:
-        base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL}
-        news-path: ${KACHI_COLLECTOR_SERVICE_NEWS_PATH:/api/v1/internal/news}
-        timeout: ${KACHI_COLLECTOR_SERVICE_TIMEOUT:3s}
-        max-in-memory-size: ${KACHI_COLLECTOR_SERVICE_MAX_IN_MEMORY_SIZE:262144}
+        news-path: /api/v1/internal/news
+        timeout: 3s
+        max-in-memory-size: 262144
     providers:
-      mode: ${KACHI_AI_LLM_PROVIDER_MODE:single-random}
-      keyword-expansion-prompt-version: ${KACHI_AI_KEYWORD_EXPANSION_PROMPT_VERSION:keyword-expansion-v1}
+      mode: single-random
+      keyword-expansion-prompt-version: keyword-expansion-v1
+      news-summary-prompt-version: news-summary-v1
       openrouter:
-        enabled: ${KACHI_AI_OPENROUTER_ENABLED:false}
-        api-key: ${OPENROUTER_API_KEY:}
-        base-url: ${KACHI_AI_OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
-        chat-completions-path: ${KACHI_AI_OPENROUTER_CHAT_COMPLETIONS_PATH:/chat/completions}
-        model: ${KACHI_AI_OPENROUTER_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://openrouter.ai/api/v1
+        chat-completions-path: /chat/completions
+        model: openai/gpt-4o-mini
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       groq:
-        enabled: ${KACHI_AI_GROQ_ENABLED:false}
-        api-key: ${GROQ_API_KEY:}
-        base-url: ${KACHI_AI_GROQ_BASE_URL:https://api.groq.com/openai/v1}
-        chat-completions-path: ${KACHI_AI_GROQ_CHAT_COMPLETIONS_PATH:/chat/completions}
-        model: ${KACHI_AI_GROQ_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://api.groq.com/openai/v1
+        chat-completions-path: /chat/completions
+        model: llama-3.3-70b-versatile
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       together:
-        enabled: ${KACHI_AI_TOGETHER_ENABLED:false}
-        api-key: ${TOGETHER_API_KEY:}
-        base-url: ${KACHI_AI_TOGETHER_BASE_URL:https://api.together.xyz/v1}
-        chat-completions-path: ${KACHI_AI_TOGETHER_CHAT_COMPLETIONS_PATH:/chat/completions}
-        model: ${KACHI_AI_TOGETHER_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://api.together.xyz/v1
+        chat-completions-path: /chat/completions
+        model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       cerebras:
-        enabled: ${KACHI_AI_CEREBRAS_ENABLED:false}
-        api-key: ${CEREBRAS_API_KEY:}
-        base-url: ${KACHI_AI_CEREBRAS_BASE_URL:https://api.cerebras.ai/v1}
-        chat-completions-path: ${KACHI_AI_CEREBRAS_CHAT_COMPLETIONS_PATH:/chat/completions}
-        model: ${KACHI_AI_CEREBRAS_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://api.cerebras.ai/v1
+        chat-completions-path: /chat/completions
+        model: gpt-oss-120b
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       mistral:
-        enabled: ${KACHI_AI_MISTRAL_ENABLED:false}
-        api-key: ${MISTRAL_API_KEY:}
-        base-url: ${KACHI_AI_MISTRAL_BASE_URL:https://api.mistral.ai/v1}
-        chat-completions-path: ${KACHI_AI_MISTRAL_CHAT_COMPLETIONS_PATH:/chat/completions}
-        model: ${KACHI_AI_MISTRAL_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://api.mistral.ai/v1
+        chat-completions-path: /chat/completions
+        model: mistral-small-latest
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       gemini:
-        enabled: ${KACHI_AI_GEMINI_ENABLED:false}
-        api-key: ${GEMINI_API_KEY:}
-        base-url: ${KACHI_AI_GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
-        generate-content-path: ${KACHI_AI_GEMINI_GENERATE_CONTENT_PATH:/v1beta/models/{model}:generateContent}
-        model: ${KACHI_AI_GEMINI_MODEL:}
+        enabled: false
+        api-key: ""
+        base-url: https://generativelanguage.googleapis.com
+        generate-content-path: /v1beta/models/{model}:generateContent
+        model: gemini-2.0-flash

@@ -21,9 +21,18 @@ class NaverNewsSearchProviderTest {
 
     private val properties = NaverNewsProperties(
         enabled = true,
+        baseUrl = "https://openapi.naver.com",
+        newsSearchPath = "/v1/search/news.json",
         clientId = "client-id",
         clientSecret = "client-secret",
-        display = 100
+        display = 100,
+        start = 1,
+        sort = "date",
+        connectTimeout = java.time.Duration.ofSeconds(2),
+        responseTimeout = java.time.Duration.ofSeconds(5),
+        readTimeout = java.time.Duration.ofSeconds(5),
+        writeTimeout = java.time.Duration.ofSeconds(5),
+        maxInMemorySize = 512 * 1024,
     )
 
     private val keyword = CollectedKeyword.of("NVIDIA")

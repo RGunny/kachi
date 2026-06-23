@@ -3,10 +3,7 @@ spring:
     name: collector-service
   lifecycle:
     timeout-per-shutdown-phase: 30s
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   mongodb:
-    uri: mongodb://${MONGO_HOST}:${MONGO_PORT}/${MONGO_DATABASE}
     representation:
       uuid: standard
 
@@ -24,49 +21,48 @@ kachi:
   collector:
     scheduler:
       news:
-        enabled: ${KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED:true}
-        fixed-delay: ${KACHI_COLLECTOR_NEWS_SCHEDULER_FIXED_DELAY:10m}
-        initial-delay: ${KACHI_COLLECTOR_NEWS_SCHEDULER_INITIAL_DELAY:30s}
+        enabled: true
+        fixed-delay: 10m
+        initial-delay: 30s
     clients:
       user-service:
-        base-url: ${KACHI_USER_SERVICE_BASE_URL}
-        active-keywords-path: ${KACHI_USER_SERVICE_ACTIVE_KEYWORDS_PATH:/api/v1/internal/keywords/active}
-        timeout: ${KACHI_USER_SERVICE_TIMEOUT:3s}
-        max-in-memory-size: ${KACHI_USER_SERVICE_MAX_IN_MEMORY_SIZE:262144}
+        active-keywords-path: /api/v1/internal/keywords/active
+        timeout: 3s
+        max-in-memory-size: 262144
     providers:
       google:
-        enabled: ${KACHI_COLLECTOR_GOOGLE_ENABLED:true}
-        base-url: ${KACHI_COLLECTOR_GOOGLE_BASE_URL:https://news.google.com}
-        rss-search-path: ${KACHI_COLLECTOR_GOOGLE_RSS_SEARCH_PATH:/rss/search}
-        language-code: ${KACHI_COLLECTOR_GOOGLE_LANGUAGE_CODE:ko}
-        country-code: ${KACHI_COLLECTOR_GOOGLE_COUNTRY_CODE:KR}
-        connect-timeout: ${KACHI_COLLECTOR_GOOGLE_CONNECT_TIMEOUT:2s}
-        response-timeout: ${KACHI_COLLECTOR_GOOGLE_RESPONSE_TIMEOUT:5s}
-        read-timeout: ${KACHI_COLLECTOR_GOOGLE_READ_TIMEOUT:5s}
-        write-timeout: ${KACHI_COLLECTOR_GOOGLE_WRITE_TIMEOUT:5s}
-        max-in-memory-size: ${KACHI_COLLECTOR_GOOGLE_MAX_IN_MEMORY_SIZE:524288}
+        enabled: true
+        base-url: https://news.google.com
+        rss-search-path: /rss/search
+        language-code: ko
+        country-code: KR
+        connect-timeout: 2s
+        response-timeout: 5s
+        read-timeout: 5s
+        write-timeout: 5s
+        max-in-memory-size: 524288
       naver:
-        enabled: ${KACHI_COLLECTOR_NAVER_ENABLED:false}
-        base-url: ${KACHI_COLLECTOR_NAVER_BASE_URL:https://openapi.naver.com}
-        news-search-path: ${KACHI_COLLECTOR_NAVER_NEWS_SEARCH_PATH:/v1/search/news.json}
-        client-id: ${NAVER_CLIENT_ID:}
-        client-secret: ${NAVER_CLIENT_SECRET:}
-        display: ${KACHI_COLLECTOR_NAVER_DISPLAY:100}
-        start: ${KACHI_COLLECTOR_NAVER_START:1}
-        sort: ${KACHI_COLLECTOR_NAVER_SORT:date}
-        connect-timeout: ${KACHI_COLLECTOR_NAVER_CONNECT_TIMEOUT:2s}
-        response-timeout: ${KACHI_COLLECTOR_NAVER_RESPONSE_TIMEOUT:5s}
-        read-timeout: ${KACHI_COLLECTOR_NAVER_READ_TIMEOUT:5s}
-        write-timeout: ${KACHI_COLLECTOR_NAVER_WRITE_TIMEOUT:5s}
-        max-in-memory-size: ${KACHI_COLLECTOR_NAVER_MAX_IN_MEMORY_SIZE:524288}
+        enabled: false
+        base-url: https://openapi.naver.com
+        news-search-path: /v1/search/news.json
+        client-id: ""
+        client-secret: ""
+        display: 100
+        start: 1
+        sort: date
+        connect-timeout: 2s
+        response-timeout: 5s
+        read-timeout: 5s
+        write-timeout: 5s
+        max-in-memory-size: 524288
       finnhub:
-        enabled: ${KACHI_COLLECTOR_FINNHUB_ENABLED:false}
-        base-url: ${KACHI_COLLECTOR_FINNHUB_BASE_URL:https://finnhub.io}
-        company-news-path: ${KACHI_COLLECTOR_FINNHUB_COMPANY_NEWS_PATH:/api/v1/company-news}
-        api-key: ${FINNHUB_API_KEY:}
-        lookback-days: ${KACHI_COLLECTOR_FINNHUB_LOOKBACK_DAYS:7}
-        connect-timeout: ${KACHI_COLLECTOR_FINNHUB_CONNECT_TIMEOUT:2s}
-        response-timeout: ${KACHI_COLLECTOR_FINNHUB_RESPONSE_TIMEOUT:5s}
-        read-timeout: ${KACHI_COLLECTOR_FINNHUB_READ_TIMEOUT:5s}
-        write-timeout: ${KACHI_COLLECTOR_FINNHUB_WRITE_TIMEOUT:5s}
-        max-in-memory-size: ${KACHI_COLLECTOR_FINNHUB_MAX_IN_MEMORY_SIZE:524288}
+        enabled: false
+        base-url: https://finnhub.io
+        company-news-path: /api/v1/company-news
+        api-key: ""
+        lookback-days: 7
+        connect-timeout: 2s
+        response-timeout: 5s
+        read-timeout: 5s
+        write-timeout: 5s
+        max-in-memory-size: 524288

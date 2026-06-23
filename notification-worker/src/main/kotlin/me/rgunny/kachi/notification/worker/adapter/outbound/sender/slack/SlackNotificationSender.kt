@@ -9,6 +9,7 @@ import me.rgunny.kachi.notification.retry.FailureCategory
 import me.rgunny.kachi.notification.retry.FailureSource
 import me.rgunny.kachi.notification.retry.RetryFailure
 import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.worker.adapter.outbound.sender.VendorHttpExceptionClassifier
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -16,8 +17,6 @@ import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientRequestException
 import reactor.core.publisher.Mono
-import java.time.Duration
-import java.util.concurrent.TimeoutException
 
 /**
  * Slack incoming webhook 기반 NotificationSender adapter.
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeoutException
 class SlackNotificationSender(
     private val webClient: WebClient,
     private val webhookUrl: String,
-    private val timeout: Duration,
 ) : NotificationSender {
 
     override fun supports(channel: NotificationChannel): Boolean {
@@ -55,16 +53,17 @@ class SlackNotificationSender(
                         )
                     )
                 }
-                .timeout(timeout)
                 .awaitSingle()
 
             // 2. HTTP status를 core의 표준 sender 결과로 분류한다.
             classify(response)
-        } catch (exception: TimeoutException) {
-            SendNotificationResult.TransientFailure(
-                RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT, "slack webhook timeout"),
-            )
         } catch (exception: WebClientRequestException) {
+            if (VendorHttpExceptionClassifier.isTimeout(exception)) {
+                return SendNotificationResult.TransientFailure(
+                    RetryFailure.of(RetryFailureCode.VENDOR_TIMEOUT, "slack webhook timeout"),
+                )
+            }
+
             SendNotificationResult.TransientFailure(
                 RetryFailure.external(
                     code = "SLACK_WEBHOOK_REQUEST_FAILED",

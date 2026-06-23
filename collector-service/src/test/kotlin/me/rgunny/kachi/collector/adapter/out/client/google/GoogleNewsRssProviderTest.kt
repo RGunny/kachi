@@ -19,8 +19,16 @@ import kotlin.test.assertNull
 class GoogleNewsRssProviderTest {
 
     private val properties = GoogleNewsProperties(
+        enabled = true,
         baseUrl = "https://news.google.com",
-        rssSearchPath = "/rss/search"
+        rssSearchPath = "/rss/search",
+        languageCode = "ko",
+        countryCode = "KR",
+        connectTimeout = java.time.Duration.ofSeconds(2),
+        responseTimeout = java.time.Duration.ofSeconds(5),
+        readTimeout = java.time.Duration.ofSeconds(5),
+        writeTimeout = java.time.Duration.ofSeconds(5),
+        maxInMemorySize = 512 * 1024,
     )
 
     private val keyword = CollectedKeyword.of("NVIDIA")

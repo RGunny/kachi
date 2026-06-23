@@ -12,34 +12,81 @@ kachi:
     scheduler:
       news-summary:
         enabled: false
+        fixed-delay: 10m
+        initial-delay: 30s
     clients:
       user-service:
-        base-url: http://localhost:8080
+        base-url: http://user-service-test
+        active-keywords-path: /api/v1/internal/keywords/active
+        timeout: 3s
+        max-in-memory-size: 262144
       collector-service:
-        base-url: http://localhost:8082
+        base-url: http://collector-service-test
+        news-path: /api/v1/internal/news
+        timeout: 3s
+        max-in-memory-size: 262144
     providers:
       mode: single-random
+      keyword-expansion-prompt-version: keyword-expansion-v1
+      news-summary-prompt-version: news-summary-v1
       openrouter:
         enabled: true
         api-key: test-openrouter-key
+        base-url: https://openrouter.ai/api/v1
+        chat-completions-path: /chat/completions
         model: test-openrouter-model
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       groq:
         enabled: true
         api-key: test-groq-key
+        base-url: https://api.groq.com/openai/v1
+        chat-completions-path: /chat/completions
         model: test-groq-model
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       together:
         enabled: true
         api-key: test-together-key
+        base-url: https://api.together.xyz/v1
+        chat-completions-path: /chat/completions
         model: test-together-model
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       cerebras:
         enabled: true
         api-key: test-cerebras-key
+        base-url: https://api.cerebras.ai/v1
+        chat-completions-path: /chat/completions
         model: test-cerebras-model
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       mistral:
         enabled: true
         api-key: test-mistral-key
+        base-url: https://api.mistral.ai/v1
+        chat-completions-path: /chat/completions
         model: test-mistral-model
+        connect-timeout: 2s
+        response-timeout: 10s
+        read-timeout: 10s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       gemini:
         enabled: false
         api-key: test-gemini-key
+        base-url: https://generativelanguage.googleapis.com
+        generate-content-path: /v1beta/models/{model}:generateContent
         model: test-gemini-model

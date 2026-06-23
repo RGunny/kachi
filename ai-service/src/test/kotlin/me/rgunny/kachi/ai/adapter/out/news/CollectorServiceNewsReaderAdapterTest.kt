@@ -112,7 +112,9 @@ class CollectorServiceNewsReaderAdapterTest {
                 .build(),
             properties = CollectorServiceNewsProperties(
                 baseUrl = "http://collector-service",
-                timeout = Duration.ofSeconds(1)
+                newsPath = "/api/v1/internal/news",
+                timeout = Duration.ofSeconds(1),
+                maxInMemorySize = 256 * 1024,
             )
         )
     }
