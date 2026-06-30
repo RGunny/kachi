@@ -70,6 +70,7 @@ data class NotificationWorkerProperties(
         val mock: Mock,
         val slack: Slack,
         val discord: Discord,
+        val telegram: Telegram,
     ) {
 
         data class Mock(
@@ -165,6 +166,55 @@ data class NotificationWorkerProperties(
 
             /**
              * Discord 응답 body 버퍼링 상한.
+             */
+            val maxInMemorySize: Int,
+        )
+
+        data class Telegram(
+            /**
+             * Telegram Bot API sender 활성화 여부.
+             * true이면 mock sender가 TELEGRAM을 지원하도록 설정되어 있어도 worker config가 mock TELEGRAM 지원을 자동 제외한다.
+             */
+            val enabled: Boolean,
+
+            /**
+             * Telegram Bot API base URL.
+             */
+            val baseUrl: String,
+
+            /**
+             * Telegram bot token.
+             * secret 성격의 값이므로 운영에서는 환경변수나 secret manager로 주입한다.
+             */
+            val botToken: String?,
+
+            /**
+             * Telegram sendMessage API path.
+             */
+            val sendMessagePath: String,
+
+            /**
+             * Telegram host와 TCP 연결을 맺을 때의 대기 상한.
+             */
+            val connectTimeout: Duration,
+
+            /**
+             * 요청을 보낸 뒤 첫 응답을 기다리는 대기 상한.
+             */
+            val responseTimeout: Duration,
+
+            /**
+             * 응답 body read가 멈췄을 때의 대기 상한.
+             */
+            val readTimeout: Duration,
+
+            /**
+             * sendMessage 요청 body write가 멈췄을 때의 대기 상한.
+             */
+            val writeTimeout: Duration,
+
+            /**
+             * Telegram 응답 body 버퍼링 상한.
              */
             val maxInMemorySize: Int,
         )

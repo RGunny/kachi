@@ -67,6 +67,10 @@ class MockNotificationSenderConfig {
             RealSenderBinding(
                 channel = NotificationChannel.DISCORD,
                 enabled = properties.sender.discord.enabled,
+            ),
+            RealSenderBinding(
+                channel = NotificationChannel.TELEGRAM,
+                enabled = properties.sender.telegram.enabled,
             )
         )
     }

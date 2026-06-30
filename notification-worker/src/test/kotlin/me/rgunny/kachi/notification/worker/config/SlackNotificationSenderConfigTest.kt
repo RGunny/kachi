@@ -156,6 +156,17 @@ class SlackNotificationSenderConfigTest {
                     writeTimeout = Duration.ofSeconds(5),
                     maxInMemorySize = 256 * 1024,
                 ),
+                telegram = NotificationWorkerProperties.Sender.Telegram(
+                    enabled = false,
+                    baseUrl = "https://api.telegram.test",
+                    botToken = null,
+                    sendMessagePath = "/sendMessage",
+                    connectTimeout = Duration.ofSeconds(2),
+                    responseTimeout = Duration.ofSeconds(5),
+                    readTimeout = Duration.ofSeconds(5),
+                    writeTimeout = Duration.ofSeconds(5),
+                    maxInMemorySize = 256 * 1024,
+                ),
             ),
         )
     }

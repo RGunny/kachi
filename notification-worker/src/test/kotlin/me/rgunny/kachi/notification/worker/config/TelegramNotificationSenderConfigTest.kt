@@ -7,50 +7,76 @@ import java.time.Duration
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-@DisplayName("DiscordNotificationSenderConfig")
-class DiscordNotificationSenderConfigTest {
+@DisplayName("TelegramNotificationSenderConfig")
+class TelegramNotificationSenderConfigTest {
 
-    private val config = DiscordNotificationSenderConfig()
+    private val config = TelegramNotificationSenderConfig()
 
     @Test
-    @DisplayName("Discord webhook 전용 WebClient를 생성한다")
-    fun discordWebClient() {
-        val webClient = config.discordWebClient(
-            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
+    @DisplayName("Telegram Bot API 전용 WebClient를 생성한다")
+    fun telegramWebClient() {
+        val webClient = config.telegramWebClient(
+            properties = properties(botToken = "telegram-bot-token"),
         )
 
         assertNotNull(webClient)
     }
 
     @Test
-    @DisplayName("enabled 상태에서 webhookUrl과 timeout이 유효하면 sender를 생성한다")
-    fun discordNotificationSender() {
-        val sender = config.discordNotificationSender(
+    @DisplayName("enabled 상태에서 botToken과 HTTP 설정이 유효하면 sender를 생성한다")
+    fun telegramNotificationSender() {
+        val sender = config.telegramNotificationSender(
             webClient = WebClient.builder().build(),
-            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
+            properties = properties(botToken = "telegram-bot-token"),
         )
 
         assertNotNull(sender)
     }
 
     @Test
-    @DisplayName("enabled 상태에서 webhookUrl이 null이면 거부한다")
-    fun rejectNullWebhookUrl() {
+    @DisplayName("enabled 상태에서 botToken이 null이면 거부한다")
+    fun rejectNullBotToken() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordNotificationSender(
+            config.telegramNotificationSender(
                 webClient = WebClient.builder().build(),
-                properties = properties(webhookUrl = null),
+                properties = properties(botToken = null),
             )
         }
     }
 
     @Test
-    @DisplayName("enabled 상태에서 webhookUrl이 비어 있으면 거부한다")
-    fun rejectBlankWebhookUrl() {
+    @DisplayName("enabled 상태에서 botToken이 비어 있으면 거부한다")
+    fun rejectBlankBotToken() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordNotificationSender(
+            config.telegramNotificationSender(
                 webClient = WebClient.builder().build(),
-                properties = properties(webhookUrl = ""),
+                properties = properties(botToken = ""),
+            )
+        }
+    }
+
+    @Test
+    @DisplayName("enabled 상태에서 baseUrl이 비어 있으면 거부한다")
+    fun rejectBlankBaseUrl() {
+        assertFailsWith<IllegalArgumentException> {
+            config.telegramWebClient(
+                properties = properties(
+                    botToken = "telegram-bot-token",
+                    baseUrl = "",
+                ),
+            )
+        }
+    }
+
+    @Test
+    @DisplayName("enabled 상태에서 sendMessagePath가 /로 시작하지 않으면 거부한다")
+    fun rejectInvalidSendMessagePath() {
+        assertFailsWith<IllegalArgumentException> {
+            config.telegramWebClient(
+                properties = properties(
+                    botToken = "telegram-bot-token",
+                    sendMessagePath = "sendMessage",
+                ),
             )
         }
     }
@@ -59,9 +85,9 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 connectTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidConnectTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordWebClient(
+            config.telegramWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
+                    botToken = "telegram-bot-token",
                     connectTimeout = Duration.ZERO,
                 ),
             )
@@ -72,9 +98,9 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 responseTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidResponseTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordWebClient(
+            config.telegramWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
+                    botToken = "telegram-bot-token",
                     responseTimeout = Duration.ZERO,
                 ),
             )
@@ -85,9 +111,9 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 readTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidReadTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordWebClient(
+            config.telegramWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
+                    botToken = "telegram-bot-token",
                     readTimeout = Duration.ZERO,
                 ),
             )
@@ -98,9 +124,9 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 writeTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidWriteTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordWebClient(
+            config.telegramWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
+                    botToken = "telegram-bot-token",
                     writeTimeout = Duration.ZERO,
                 ),
             )
@@ -111,9 +137,9 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 maxInMemorySize가 양수가 아니면 거부한다")
     fun rejectInvalidMaxInMemorySize() {
         assertFailsWith<IllegalArgumentException> {
-            config.discordWebClient(
+            config.telegramWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
+                    botToken = "telegram-bot-token",
                     maxInMemorySize = 0,
                 )
             )
@@ -121,7 +147,9 @@ class DiscordNotificationSenderConfigTest {
     }
 
     private fun properties(
-        webhookUrl: String?,
+        botToken: String?,
+        baseUrl: String = "https://api.telegram.test",
+        sendMessagePath: String = "/sendMessage",
         connectTimeout: Duration = Duration.ofSeconds(2),
         responseTimeout: Duration = Duration.ofSeconds(5),
         readTimeout: Duration = Duration.ofSeconds(5),
@@ -150,7 +178,7 @@ class DiscordNotificationSenderConfigTest {
                     mode = "SUCCESS",
                 ),
                 slack = NotificationWorkerProperties.Sender.Slack(
-                    enabled = true,
+                    enabled = false,
                     webhookUrl = "https://hooks.slack.test/services/test",
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
@@ -159,24 +187,24 @@ class DiscordNotificationSenderConfigTest {
                     maxInMemorySize = 256 * 1024,
                 ),
                 discord = NotificationWorkerProperties.Sender.Discord(
-                    enabled = true,
-                    webhookUrl = webhookUrl,
-                    connectTimeout = connectTimeout,
-                    responseTimeout = responseTimeout,
-                    readTimeout = readTimeout,
-                    writeTimeout = writeTimeout,
-                    maxInMemorySize = maxInMemorySize,
-                ),
-                telegram = NotificationWorkerProperties.Sender.Telegram(
                     enabled = false,
-                    baseUrl = "https://api.telegram.test",
-                    botToken = null,
-                    sendMessagePath = "/sendMessage",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),
                     writeTimeout = Duration.ofSeconds(5),
                     maxInMemorySize = 256 * 1024,
+                ),
+                telegram = NotificationWorkerProperties.Sender.Telegram(
+                    enabled = true,
+                    baseUrl = baseUrl,
+                    botToken = botToken,
+                    sendMessagePath = sendMessagePath,
+                    connectTimeout = connectTimeout,
+                    responseTimeout = responseTimeout,
+                    readTimeout = readTimeout,
+                    writeTimeout = writeTimeout,
+                    maxInMemorySize = maxInMemorySize,
                 ),
             ),
         )

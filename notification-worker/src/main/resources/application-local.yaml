@@ -16,3 +16,5 @@ kachi:
           webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL}
         discord:
           webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
+        telegram:
+          bot-token: ${KACHI_NOTIFICATION_TELEGRAM_BOT_TOKEN:}

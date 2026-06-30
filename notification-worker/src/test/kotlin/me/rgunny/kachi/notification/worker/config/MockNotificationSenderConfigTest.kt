@@ -79,6 +79,27 @@ class MockNotificationSenderConfigTest {
     }
 
     @Test
+    @DisplayName("실제 Telegram sender가 enabled이면 mock sender의 TELEGRAM 지원을 제외한다")
+    fun removeTelegramFromMockChannelsWhenTelegramSenderEnabled(output: CapturedOutput) {
+        val sender = config.mockNotificationSender(
+            properties(
+                mock = NotificationWorkerProperties.Sender.Mock(
+                    enabled = true,
+                    channels = listOf("TELEGRAM", "EMAIL"),
+                    mode = MockNotificationSenderMode.SUCCESS.name,
+                ),
+                telegram = telegram(enabled = true),
+            )
+        )
+
+        assertFalse(sender.supports(NotificationChannel.TELEGRAM))
+        assertTrue(sender.supports(NotificationChannel.EMAIL))
+        assertContains(output.out, "Real notification sender is enabled while mock sender also includes channels=[TELEGRAM]")
+        assertContains(output.out, "real sender will handle those channels and mock sender support has been disabled")
+        assertContains(output.out, "effectiveMockChannels=[EMAIL]")
+    }
+
+    @Test
     @DisplayName("지원하지 않는 channel 설정은 거부한다")
     fun rejectInvalidChannel() {
         assertFailsWith<IllegalArgumentException> {
@@ -98,6 +119,7 @@ class MockNotificationSenderConfigTest {
         mock: NotificationWorkerProperties.Sender.Mock,
         slack: NotificationWorkerProperties.Sender.Slack = slack(enabled = false),
         discord: NotificationWorkerProperties.Sender.Discord = discord(enabled = false),
+        telegram: NotificationWorkerProperties.Sender.Telegram = telegram(enabled = false),
     ): NotificationWorkerProperties {
         return NotificationWorkerProperties(
             workerId = "test-worker",
@@ -118,6 +140,7 @@ class MockNotificationSenderConfigTest {
                 mock = mock,
                 slack = slack,
                 discord = discord,
+                telegram = telegram,
             ),
         )
     }
@@ -138,6 +161,20 @@ class MockNotificationSenderConfigTest {
         return NotificationWorkerProperties.Sender.Discord(
             enabled = enabled,
             webhookUrl = "https://discord.test/api/webhooks/test",
+            connectTimeout = Duration.ofSeconds(2),
+            responseTimeout = Duration.ofSeconds(5),
+            readTimeout = Duration.ofSeconds(5),
+            writeTimeout = Duration.ofSeconds(5),
+            maxInMemorySize = 256 * 1024,
+        )
+    }
+
+    private fun telegram(enabled: Boolean): NotificationWorkerProperties.Sender.Telegram {
+        return NotificationWorkerProperties.Sender.Telegram(
+            enabled = enabled,
+            baseUrl = "https://api.telegram.test",
+            botToken = "telegram-bot-token",
+            sendMessagePath = "/sendMessage",
             connectTimeout = Duration.ofSeconds(2),
             responseTimeout = Duration.ofSeconds(5),
             readTimeout = Duration.ofSeconds(5),

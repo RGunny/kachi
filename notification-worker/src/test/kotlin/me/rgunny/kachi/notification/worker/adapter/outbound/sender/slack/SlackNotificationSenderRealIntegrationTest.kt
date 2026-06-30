@@ -12,6 +12,7 @@ import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.D
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Discord
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Mock
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Slack
+import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Telegram
 import me.rgunny.kachi.notification.worker.config.SlackNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.support.TestSecretEnvironment
 import org.junit.jupiter.api.DisplayName
@@ -94,6 +95,17 @@ class SlackNotificationSenderRealIntegrationTest {
                     discord = Discord(
                         enabled = false,
                         webhookUrl = null,
+                        connectTimeout = Duration.ofSeconds(2),
+                        responseTimeout = Duration.ofSeconds(5),
+                        readTimeout = Duration.ofSeconds(5),
+                        writeTimeout = Duration.ofSeconds(5),
+                        maxInMemorySize = 256 * 1024,
+                    ),
+                    telegram = Telegram(
+                        enabled = false,
+                        baseUrl = "https://api.telegram.test",
+                        botToken = null,
+                        sendMessagePath = "/sendMessage",
                         connectTimeout = Duration.ofSeconds(2),
                         responseTimeout = Duration.ofSeconds(5),
                         readTimeout = Duration.ofSeconds(5),
