@@ -69,6 +69,7 @@ data class NotificationWorkerProperties(
     data class Sender(
         val mock: Mock,
         val slack: Slack,
+        val discord: Discord,
     ) {
 
         data class Mock(
@@ -125,6 +126,45 @@ data class NotificationWorkerProperties(
 
             /**
              * Slack 응답 body 버퍼링 상한.
+             */
+            val maxInMemorySize: Int,
+        )
+
+        data class Discord(
+            /**
+             * Discord incoming webhook sender 활성화 여부.
+             * true이면 mock sender가 DISCORD를 지원하도록 설정되어 있어도 worker config가 mock DISCORD 지원을 자동 제외한다.
+             */
+            val enabled: Boolean,
+
+            /**
+             * Discord incoming webhook URL.
+             * secret 성격의 값이므로 운영에서는 환경변수나 secret manager로 주입한다.
+             */
+            val webhookUrl: String?,
+
+            /**
+             * Discord host와 TCP 연결을 맺을 때의 대기 상한.
+             */
+            val connectTimeout: Duration,
+
+            /**
+             * 요청을 보낸 뒤 첫 응답을 기다리는 대기 상한.
+             */
+            val responseTimeout: Duration,
+
+            /**
+             * 응답 body read가 멈췄을 때의 대기 상한.
+             */
+            val readTimeout: Duration,
+
+            /**
+             * webhook 요청 body write가 멈췄을 때의 대기 상한.
+             */
+            val writeTimeout: Duration,
+
+            /**
+             * Discord 응답 body 버퍼링 상한.
              */
             val maxInMemorySize: Int,
         )

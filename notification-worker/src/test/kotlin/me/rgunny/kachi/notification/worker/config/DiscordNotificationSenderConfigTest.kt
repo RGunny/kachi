@@ -7,16 +7,16 @@ import java.time.Duration
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-@DisplayName("SlackNotificationSenderConfig")
-class SlackNotificationSenderConfigTest {
+@DisplayName("DiscordNotificationSenderConfig")
+class DiscordNotificationSenderConfigTest {
 
-    private val config = SlackNotificationSenderConfig()
+    private val config = DiscordNotificationSenderConfig()
 
     @Test
-    @DisplayName("Slack webhook 전용 WebClient를 생성한다")
-    fun slackWebClient() {
-        val webClient = config.slackWebClient(
-            properties = properties(webhookUrl = "https://hooks.slack.test/services/test"),
+    @DisplayName("Discord webhook 전용 WebClient를 생성한다")
+    fun discordWebClient() {
+        val webClient = config.discordWebClient(
+            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
         )
 
         assertNotNull(webClient)
@@ -24,20 +24,31 @@ class SlackNotificationSenderConfigTest {
 
     @Test
     @DisplayName("enabled 상태에서 webhookUrl과 timeout이 유효하면 sender를 생성한다")
-    fun slackNotificationSender() {
-        val sender = config.slackNotificationSender(
+    fun discordNotificationSender() {
+        val sender = config.discordNotificationSender(
             webClient = WebClient.builder().build(),
-            properties = properties(webhookUrl = "https://hooks.slack.test/services/test"),
+            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
         )
 
         assertNotNull(sender)
     }
 
     @Test
+    @DisplayName("enabled 상태에서 webhookUrl이 null이면 거부한다")
+    fun rejectNullWebhookUrl() {
+        assertFailsWith<IllegalArgumentException> {
+            config.discordNotificationSender(
+                webClient = WebClient.builder().build(),
+                properties = properties(webhookUrl = null),
+            )
+        }
+    }
+
+    @Test
     @DisplayName("enabled 상태에서 webhookUrl이 비어 있으면 거부한다")
     fun rejectBlankWebhookUrl() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackNotificationSender(
+            config.discordNotificationSender(
                 webClient = WebClient.builder().build(),
                 properties = properties(webhookUrl = ""),
             )
@@ -48,9 +59,9 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 connectTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidConnectTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackWebClient(
+            config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     connectTimeout = Duration.ZERO,
                 ),
             )
@@ -61,9 +72,9 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 responseTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidResponseTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackWebClient(
+            config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     responseTimeout = Duration.ZERO,
                 ),
             )
@@ -74,9 +85,9 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 readTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidReadTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackWebClient(
+            config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     readTimeout = Duration.ZERO,
                 ),
             )
@@ -87,9 +98,9 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 writeTimeout이 양수가 아니면 거부한다")
     fun rejectInvalidWriteTimeout() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackWebClient(
+            config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     writeTimeout = Duration.ZERO,
                 ),
             )
@@ -100,9 +111,9 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("enabled 상태에서 maxInMemorySize가 양수가 아니면 거부한다")
     fun rejectInvalidMaxInMemorySize() {
         assertFailsWith<IllegalArgumentException> {
-            config.slackWebClient(
+            config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
+                    webhookUrl = "https://discord.test/api/webhooks/test",
                     maxInMemorySize = 0,
                 )
             )
@@ -110,7 +121,7 @@ class SlackNotificationSenderConfigTest {
     }
 
     private fun properties(
-        webhookUrl: String,
+        webhookUrl: String?,
         connectTimeout: Duration = Duration.ofSeconds(2),
         responseTimeout: Duration = Duration.ofSeconds(5),
         readTimeout: Duration = Duration.ofSeconds(5),
@@ -140,21 +151,21 @@ class SlackNotificationSenderConfigTest {
                 ),
                 slack = NotificationWorkerProperties.Sender.Slack(
                     enabled = true,
+                    webhookUrl = "https://hooks.slack.test/services/test",
+                    connectTimeout = Duration.ofSeconds(2),
+                    responseTimeout = Duration.ofSeconds(5),
+                    readTimeout = Duration.ofSeconds(5),
+                    writeTimeout = Duration.ofSeconds(5),
+                    maxInMemorySize = 256 * 1024,
+                ),
+                discord = NotificationWorkerProperties.Sender.Discord(
+                    enabled = true,
                     webhookUrl = webhookUrl,
                     connectTimeout = connectTimeout,
                     responseTimeout = responseTimeout,
                     readTimeout = readTimeout,
                     writeTimeout = writeTimeout,
                     maxInMemorySize = maxInMemorySize,
-                ),
-                discord = NotificationWorkerProperties.Sender.Discord(
-                    enabled = false,
-                    webhookUrl = null,
-                    connectTimeout = Duration.ofSeconds(2),
-                    responseTimeout = Duration.ofSeconds(5),
-                    readTimeout = Duration.ofSeconds(5),
-                    writeTimeout = Duration.ofSeconds(5),
-                    maxInMemorySize = 256 * 1024,
                 ),
             ),
         )

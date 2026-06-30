@@ -53,6 +53,27 @@ class MockNotificationSenderConfigTest {
         assertFalse(sender.supports(NotificationChannel.SLACK))
         assertTrue(sender.supports(NotificationChannel.EMAIL))
         assertContains(output.out, "Real notification sender is enabled while mock sender also includes channels=[SLACK]")
+         assertContains(output.out, "real sender will handle those channels and mock sender support has been disabled")
+        assertContains(output.out, "effectiveMockChannels=[EMAIL]")
+    }
+
+    @Test
+    @DisplayName("실제 Discord sender가 enabled이면 mock sender의 DISCORD 지원을 제외한다")
+    fun removeDiscordFromMockChannelsWhenDiscordSenderEnabled(output: CapturedOutput) {
+        val sender = config.mockNotificationSender(
+            properties(
+                mock = NotificationWorkerProperties.Sender.Mock(
+                    enabled = true,
+                    channels = listOf("DISCORD", "EMAIL"),
+                    mode = MockNotificationSenderMode.SUCCESS.name,
+                ),
+                discord = discord(enabled = true),
+            )
+        )
+
+        assertFalse(sender.supports(NotificationChannel.DISCORD))
+        assertTrue(sender.supports(NotificationChannel.EMAIL))
+        assertContains(output.out, "Real notification sender is enabled while mock sender also includes channels=[DISCORD]")
         assertContains(output.out, "real sender will handle those channels and mock sender support has been disabled")
         assertContains(output.out, "effectiveMockChannels=[EMAIL]")
     }
@@ -76,6 +97,7 @@ class MockNotificationSenderConfigTest {
     private fun properties(
         mock: NotificationWorkerProperties.Sender.Mock,
         slack: NotificationWorkerProperties.Sender.Slack = slack(enabled = false),
+        discord: NotificationWorkerProperties.Sender.Discord = discord(enabled = false),
     ): NotificationWorkerProperties {
         return NotificationWorkerProperties(
             workerId = "test-worker",
@@ -95,6 +117,7 @@ class MockNotificationSenderConfigTest {
             sender = NotificationWorkerProperties.Sender(
                 mock = mock,
                 slack = slack,
+                discord = discord,
             ),
         )
     }
@@ -103,6 +126,18 @@ class MockNotificationSenderConfigTest {
         return NotificationWorkerProperties.Sender.Slack(
             enabled = enabled,
             webhookUrl = "https://hooks.slack.test/services/test",
+            connectTimeout = Duration.ofSeconds(2),
+            responseTimeout = Duration.ofSeconds(5),
+            readTimeout = Duration.ofSeconds(5),
+            writeTimeout = Duration.ofSeconds(5),
+            maxInMemorySize = 256 * 1024,
+        )
+    }
+
+    private fun discord(enabled: Boolean): NotificationWorkerProperties.Sender.Discord {
+        return NotificationWorkerProperties.Sender.Discord(
+            enabled = enabled,
+            webhookUrl = "https://discord.test/api/webhooks/test",
             connectTimeout = Duration.ofSeconds(2),
             responseTimeout = Duration.ofSeconds(5),
             readTimeout = Duration.ofSeconds(5),

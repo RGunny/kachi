@@ -63,6 +63,10 @@ class MockNotificationSenderConfig {
             RealSenderBinding(
                 channel = NotificationChannel.SLACK,
                 enabled = properties.sender.slack.enabled,
+            ),
+            RealSenderBinding(
+                channel = NotificationChannel.DISCORD,
+                enabled = properties.sender.discord.enabled,
             )
         )
     }
