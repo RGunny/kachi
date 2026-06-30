@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord.DiscordNotificationSender
+import me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord.DiscordWebhookClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -54,8 +55,10 @@ class DiscordNotificationSenderConfig {
         val webhookUrl = validateDiscordSenderProperties(discord)
 
         return DiscordNotificationSender(
-            webClient = webClient,
-            webhookUrl = webhookUrl,
+            client = DiscordWebhookClient(
+                webClient = webClient,
+                webhookUrl = webhookUrl,
+            ),
         )
     }
 

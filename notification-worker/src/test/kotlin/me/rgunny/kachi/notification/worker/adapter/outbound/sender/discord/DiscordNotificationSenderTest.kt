@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.client.ClientRequest
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.ExchangeFunction
@@ -82,6 +83,24 @@ class DiscordNotificationSenderTest {
     }
 
     @Test
+    @DisplayName("rate limit header가 없으면 body retry_after 소수 초를 millis로 올림 변환한다")
+    fun rateLimitedByBodyRetryAfter() = runBlocking {
+        val sender = senderOf(
+            CapturingExchangeFunction(
+                status = HttpStatus.TOO_MANY_REQUESTS,
+                body = """{"retry_after":1.234}""",
+            )
+        )
+
+        val result = sender.send(command())
+
+        val failure = assertIs<SendNotificationResult.RateLimited>(result).failure
+        assertEquals(RetryFailureCode.VENDOR_RATE_LIMITED.code, failure.code)
+        assertEquals(429, failure.statusCode)
+        assertEquals(1_234, failure.retryAfterMillis)
+    }
+
+    @Test
     @DisplayName("5xx 응답은 transient failure로 분류한다")
     fun transientFailure() = runBlocking {
         val sender = senderOf(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -125,10 +144,12 @@ class DiscordNotificationSenderTest {
 
     private fun senderOf(exchangeFunction: ExchangeFunction): DiscordNotificationSender {
         return DiscordNotificationSender(
-            webClient = WebClient.builder()
-                .exchangeFunction(exchangeFunction)
-                .build(),
-            webhookUrl = "https://discord.test/api/webhooks/test",
+            client = DiscordWebhookClient(
+                webClient = WebClient.builder()
+                    .exchangeFunction(exchangeFunction)
+                    .build(),
+                webhookUrl = "https://discord.test/api/webhooks/test",
+            ),
         )
     }
 
@@ -145,6 +166,7 @@ class DiscordNotificationSenderTest {
     private class CapturingExchangeFunction(
         private val status: HttpStatus,
         private val headers: Map<String, String> = emptyMap(),
+        private val body: String = "",
     ) : ExchangeFunction {
 
         lateinit var request: ClientRequest
@@ -154,7 +176,10 @@ class DiscordNotificationSenderTest {
 
             val responseBuilder = ClientResponse.create(status)
             headers.forEach { (name, value) -> responseBuilder.header(name, value) }
-            return Mono.just(responseBuilder.build())
+            if (body.isNotBlank()) {
+                responseBuilder.header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            }
+            return Mono.just(responseBuilder.body(body).build())
         }
     }
 }

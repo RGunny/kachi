@@ -107,10 +107,12 @@ class SlackNotificationSenderTest {
 
     private fun senderOf(exchangeFunction: ExchangeFunction): SlackNotificationSender {
         return SlackNotificationSender(
-            webClient = WebClient.builder()
-                .exchangeFunction(exchangeFunction)
-                .build(),
-            webhookUrl = "https://hooks.slack.test/services/test",
+            client = SlackWebhookClient(
+                webClient = WebClient.builder()
+                    .exchangeFunction(exchangeFunction)
+                    .build(),
+                webhookUrl = "https://hooks.slack.test/services/test",
+            ),
         )
     }
 

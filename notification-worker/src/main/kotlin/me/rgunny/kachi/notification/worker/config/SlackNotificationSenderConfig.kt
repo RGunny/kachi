@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import me.rgunny.kachi.notification.worker.adapter.outbound.sender.slack.SlackNotificationSender
+import me.rgunny.kachi.notification.worker.adapter.outbound.sender.slack.SlackWebhookClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -60,8 +61,10 @@ class SlackNotificationSenderConfig {
         validateSlackSenderProperties(slack)
 
         return SlackNotificationSender(
-            webClient = webClient,
-            webhookUrl = slack.webhookUrl,
+            client = SlackWebhookClient(
+                webClient = webClient,
+                webhookUrl = slack.webhookUrl,
+            ),
         )
     }
 

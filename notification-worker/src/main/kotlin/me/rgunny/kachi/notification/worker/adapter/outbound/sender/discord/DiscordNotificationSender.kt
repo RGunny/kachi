@@ -1,6 +1,5 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord
 
-import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
@@ -10,15 +9,10 @@ import me.rgunny.kachi.notification.retry.FailureSource
 import me.rgunny.kachi.notification.retry.RetryFailure
 import me.rgunny.kachi.notification.retry.RetryFailureCode
 import me.rgunny.kachi.notification.worker.adapter.outbound.sender.VendorHttpExceptionClassifier
+import me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord.dto.DiscordWebhookResult
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatusCode
-import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientRequestException
-import reactor.core.publisher.Mono
-import java.math.BigDecimal
-import java.math.RoundingMode
 
 /**
  * Discord incoming webhook 기반 NotificationSender adapter.
@@ -26,9 +20,8 @@ import java.math.RoundingMode
  * Discord webhook은 wait=false 기본값에서 성공 시 204 No Content를 반환할 수 있고,
  * rate limit은 429와 Retry-After/X-RateLimit-Reset-After header로 표현된다.
  */
-class DiscordNotificationSender(
-    private val webClient: WebClient,
-    private val webhookUrl: String,
+class DiscordNotificationSender internal constructor(
+    private val client: DiscordWebhookClient,
 ) : NotificationSender {
 
     override fun supports(channel: NotificationChannel): Boolean {
@@ -42,19 +35,7 @@ class DiscordNotificationSender(
         require(command.message.isNotBlank()) { "message must not be blank" }
 
         return try {
-            val response = webClient.post()
-                .uri(webhookUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(DiscordWebhookRequest(content = command.message))
-                .exchangeToMono { clientResponse ->
-                    Mono.just(
-                        DiscordWebhookResponse(
-                            statusCode = clientResponse.statusCode().value(),
-                            retryAfterMillis = retryAfterMillis(clientResponse.headers().asHttpHeaders()),
-                        )
-                    )
-                }
-                .awaitSingle()
+            val response = client.send(content = command.message)
 
             classify(response)
         } catch (exception: WebClientRequestException) {
@@ -85,7 +66,7 @@ class DiscordNotificationSender(
         }
     }
 
-    private fun classify(response: DiscordWebhookResponse): SendNotificationResult {
+    private fun classify(response: DiscordWebhookResult): SendNotificationResult {
         val status = HttpStatusCode.valueOf(response.statusCode)
 
         return when {
@@ -125,38 +106,10 @@ class DiscordNotificationSender(
         }
     }
 
-    private fun retryAfterMillis(headers: HttpHeaders): Long? {
-        return headers.getFirst(HttpHeaders.RETRY_AFTER)
-            ?.let(::secondsToMillis)
-            ?: headers.getFirst(DISCORD_RESET_AFTER_HEADER)
-                ?.let(::secondsToMillis)
-    }
-
-    private fun secondsToMillis(value: String): Long? {
-        return runCatching {
-            BigDecimal(value)
-                .takeIf { it >= BigDecimal.ZERO }
-                ?.multiply(MILLIS_PER_SECOND)
-                ?.setScale(0, RoundingMode.CEILING)
-                ?.longValueExact()
-        }.getOrNull()
-    }
-
-    private data class DiscordWebhookRequest(
-        val content: String,
-    )
-
-    private data class DiscordWebhookResponse(
-        val statusCode: Int,
-        val retryAfterMillis: Long?,
-    )
-
     private companion object {
         const val HTTP_TOO_MANY_REQUESTS = 429
         const val HTTP_UNAUTHORIZED = 401
         const val HTTP_FORBIDDEN = 403
-        const val DISCORD_RESET_AFTER_HEADER = "X-RateLimit-Reset-After"
-        val MILLIS_PER_SECOND: BigDecimal = BigDecimal.valueOf(1000)
         val log = LoggerFactory.getLogger(DiscordNotificationSender::class.java)
     }
 }
