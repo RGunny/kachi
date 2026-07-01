@@ -56,14 +56,14 @@ kachi:
           write-timeout: PT5S
           max-in-memory-size: 262144
         discord:
-          enabled: false
+          enabled: true
           connect-timeout: PT2S
           response-timeout: PT5S
           read-timeout: PT5S
           write-timeout: PT5S
           max-in-memory-size: 262144
         telegram:
-          enabled: false
+          enabled: true
           base-url: https://api.telegram.org
           send-message-path: /sendMessage
           connect-timeout: PT2S

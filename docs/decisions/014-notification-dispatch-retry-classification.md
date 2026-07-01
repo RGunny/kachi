@@ -127,3 +127,8 @@ DLT 영속화와 운영자 재처리는 후속 admin 기능에서 다룬다.
 - core retry 정책과 Kafka retry topic 설정을 맞춰야 한다.
 - listener가 exception을 던지는 것이 정상 제어 흐름의 일부가 된다.
 - DLT 영속화/운영자 재처리 기능이 붙기 전까지는 retry 종료 후 운영 가시성이 제한된다.
+
+## 관련 결정
+
+Slack/Discord/Telegram sender의 client/DTO 구조와 vendor별 HTTP 실패 매핑 기준은
+[016. notification-worker vendor sender 구조와 설정 구성](./016-notification-worker-vendor-sender-구조.md)을 따른다.

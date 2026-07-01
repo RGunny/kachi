@@ -103,7 +103,7 @@ data class NotificationWorkerProperties(
              * Slack incoming webhook URL.
              * secret 성격의 값이므로 운영에서는 환경변수나 secret manager로 주입한다.
              */
-            val webhookUrl: String,
+            val webhookUrl: String?,
 
             /**
              * Slack host와 TCP 연결을 맺을 때의 대기 상한.

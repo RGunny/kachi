@@ -467,6 +467,7 @@ Outbox는 worker 발송 재시도와 목적이 다르다. Outbox는 DB commit �
 요청 접수와 dispatch 발행 흐름의 세부 결정은 [013. notification 요청 접수와 dispatch 발행 흐름](./013-notification-request-service-outbox-dispatch-flow.md)을 따른다.
 dispatch 실패 분류와 Kafka retry 연결은 [014. notification dispatch 실패 분류와 Kafka retry 연결](./014-notification-dispatch-retry-classification.md)을 따른다.
 outbox claim, stale recovery, retry 정책은 [015. notification outbox 발행 보장과 recovery 정책](./015-notification-outbox-publish-runtime.md)을 따른다.
+worker의 Slack/Discord/Telegram sender 구조와 설정 구성은 [016. notification-worker vendor sender 구조와 설정 구성](./016-notification-worker-vendor-sender-구조.md)을 따른다.
 
 ## WebFlux/Kotlin 구현 기준
 
