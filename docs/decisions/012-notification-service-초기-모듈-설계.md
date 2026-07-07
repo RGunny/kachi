@@ -55,6 +55,7 @@ notification-worker  -> notification-core -> notification-contract
 포함 대상:
 
 - `NotificationRequestedEvent`
+- `NotificationDispatchEvent`
 - `NotificationChannel`
 - `NotificationPriority`
 - `NotificationType`
@@ -71,6 +72,9 @@ notification-worker  -> notification-core -> notification-contract
 - 특정 vendor 연동 코드
 
 `notification-contract`는 여러 서비스가 함께 참조하는 계약 모듈이므로 변경 비용이 크다. 내부 구현 편의를 위한 클래스는 넣지 않고, 외부 서비스가 Kafka 메시지를 만들거나 읽는 데 필요한 타입만 둔다.
+
+`NotificationDispatchEvent`는 같은 notification bounded context 안의 `notification-service`와 `notification-worker` 사이에서 사용하는 Kafka payload 계약이다.
+두 런타임은 별도 애플리케이션으로 배포되고 Kafka topic을 통해 연결되므로, service/worker adapter에 같은 DTO를 중복 정의하지 않고 contract 모듈에서 공유한다.
 
 나중에 Kafka Avro와 Schema Registry를 도입하면 이 모듈은 Kotlin DTO 공유 모듈에서 Avro schema 중심의 계약 모듈로 변경한다.
 

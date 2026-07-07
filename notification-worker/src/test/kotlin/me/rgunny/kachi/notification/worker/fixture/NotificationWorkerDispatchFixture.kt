@@ -2,6 +2,8 @@ package me.rgunny.kachi.notification.worker.fixture
 
 import me.rgunny.kachi.notification.application.service.DispatchNotificationService
 import me.rgunny.kachi.notification.application.service.NotificationSenderRouter
+import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
+import me.rgunny.kachi.notification.contract.NotificationChannel as ContractNotificationChannel
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.NotificationDispatchKafkaListener
@@ -34,6 +36,7 @@ class NotificationWorkerDispatchFixture(
     val persistence = FakeNotificationPersistencePort()
     val deduplication = FakeNotificationDeduplicationPort()
     val listener: NotificationDispatchKafkaListener
+    private val jsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     init {
         val properties = properties(vendorServer)
@@ -70,7 +73,7 @@ class NotificationWorkerDispatchFixture(
 
         listener = NotificationDispatchKafkaListener(
             dispatchUseCase = dispatchUseCase,
-            jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+            jsonMapper = jsonMapper,
         )
     }
 
@@ -92,15 +95,15 @@ class NotificationWorkerDispatchFixture(
     }
 
     fun payload(notification: Notification): String {
-        return """
-            {
-              "notificationId": "${notification.id.id}",
-              "requestId": "${notification.requestId}",
-              "channel": "${notification.channel}",
-              "recipient": "${notification.recipient}",
-              "message": "$MESSAGE"
-            }
-        """.trimIndent()
+        return jsonMapper.writeValueAsString(
+            NotificationDispatchEvent(
+                notificationId = notification.id.id.toString(),
+                requestId = notification.requestId,
+                channel = ContractNotificationChannel.valueOf(notification.channel.name),
+                recipient = notification.recipient,
+                message = MESSAGE,
+            )
+        )
     }
 
     private fun properties(vendorServer: TestVendorServer): NotificationWorkerProperties {

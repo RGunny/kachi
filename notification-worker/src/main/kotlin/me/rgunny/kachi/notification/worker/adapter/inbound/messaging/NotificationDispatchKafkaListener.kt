@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
 import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
+import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.InvalidDispatchMessageException
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException
 import org.slf4j.LoggerFactory
@@ -51,8 +52,8 @@ class NotificationDispatchKafkaListener(
 
     private fun readCommand(payload: String): DispatchNotificationCommand {
         return try {
-            val dispatchPayload = jsonMapper.readValue(payload, NotificationDispatchPayload::class.java)
-            NotificationDispatchMessageMapper.toCommand(dispatchPayload)
+            val dispatchEvent = jsonMapper.readValue(payload, NotificationDispatchEvent::class.java)
+            NotificationDispatchMessageMapper.toCommand(dispatchEvent)
         } catch (exception: Exception) {
             throw InvalidDispatchMessageException("invalid notification dispatch payload", exception)
         }

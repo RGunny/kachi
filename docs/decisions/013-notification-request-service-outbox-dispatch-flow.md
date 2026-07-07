@@ -24,7 +24,11 @@
 `RequestNotificationUseCase`는 `Notification`을 `REQUESTED`로 저장하고, worker에 넘길 `NotificationDispatchMessage`를 `NotificationOutbox`에 함께 저장한다.
 
 `notification-worker`는 외부 요청 이벤트를 직접 처리하지 않는다.
-worker는 `notification.dispatch` topic의 `NotificationDispatchMessage`만 consume하고 `DispatchNotificationUseCase`를 호출한다.
+worker는 `notification.dispatch` topic의 `NotificationDispatchEvent`만 consume하고 `DispatchNotificationUseCase`를 호출한다.
+
+broker payload 계약은 `notification-contract`의 `NotificationDispatchEvent`로 둔다.
+core application 내부에서는 `NotificationDispatchMessage`를 사용하고, service adapter가 이를 contract event로 직렬화한다.
+worker adapter는 같은 contract event를 역직렬화해 core `DispatchNotificationCommand`로 변환한다.
 
 ## 흐름
 
