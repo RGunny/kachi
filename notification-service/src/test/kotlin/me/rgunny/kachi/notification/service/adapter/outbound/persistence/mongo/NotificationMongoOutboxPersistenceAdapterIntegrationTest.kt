@@ -75,6 +75,35 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
     }
 
     @Nested
+    @DisplayName("findDead()")
+    inner class FindDead {
+
+        @Test
+        @DisplayName("DEAD outbox만 조회한다")
+        fun findDead() = runBlocking {
+            val dead = outbox(partitionKey = "dead").also {
+                it.markPublishing(Instant.parse("2026-06-16T00:00:01Z"), "publisher-1")
+                it.recordFailure(
+                    reason = "broker-down",
+                    retryPolicy = RetryPolicy(
+                        maxAttempts = 1,
+                        baseDelay = Duration.ofSeconds(1),
+                        maxDelay = Duration.ofSeconds(1),
+                    ),
+                    now = Instant.parse("2026-06-16T00:00:02Z"),
+                )
+            }
+            val pending = outbox(partitionKey = "pending")
+            adapter.save(dead)
+            adapter.save(pending)
+
+            val result = adapter.findDead(batchSize = 10)
+
+            assertEquals(listOf(dead.id), result.map { it.id })
+        }
+    }
+
+    @Nested
     @DisplayName("claimPublishing()")
     inner class ClaimPublishing {
 

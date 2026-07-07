@@ -8,6 +8,7 @@ import java.time.Instant
 class FakeOutboxPersistencePort(
     private val publishable: List<NotificationOutbox> = emptyList(),
     private val stale: List<NotificationOutbox> = emptyList(),
+    private val dead: List<NotificationOutbox> = emptyList(),
     private val claimEnabled: Boolean = true,
 ) : NotificationOutboxPersistencePort {
     val saved = mutableListOf<NotificationOutbox>()
@@ -18,7 +19,11 @@ class FakeOutboxPersistencePort(
     }
 
     override suspend fun findById(outboxId: NotificationOutboxId): NotificationOutbox? {
-        return (publishable + stale).firstOrNull { it.id == outboxId }
+        return (publishable + stale + dead).firstOrNull { it.id == outboxId }
+    }
+
+    override suspend fun findDead(batchSize: Int): List<NotificationOutbox> {
+        return dead.take(batchSize)
     }
 
     override suspend fun findPublishable(now: Instant, batchSize: Int): List<NotificationOutbox> {

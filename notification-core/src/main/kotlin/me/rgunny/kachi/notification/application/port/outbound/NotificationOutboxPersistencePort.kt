@@ -16,6 +16,11 @@ interface NotificationOutboxPersistencePort {
 
     suspend fun findById(outboxId: NotificationOutboxId): NotificationOutbox?
 
+    /**
+     * 자동 publish retry가 종료된 운영자 복구 대상 outbox 조회.
+     */
+    suspend fun findDead(batchSize: Int): List<NotificationOutbox>
+
     suspend fun findPublishable(now: Instant, batchSize: Int): List<NotificationOutbox>
 
     suspend fun claimPublishing(

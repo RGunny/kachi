@@ -41,6 +41,20 @@ class NotificationMongoOutboxPersistenceAdapter(
             .awaitSingleOrNull()
     }
 
+    override suspend fun findDead(batchSize: Int): List<NotificationOutbox> {
+        // 운영자가 오래된 실패부터 확인할 수 있도록 retry 기준 시각과 생성 시각 순으로 정렬한다.
+        val query = Query.query(
+            Criteria.where(FIELD_OUTBOX_STATUS).`is`(NotificationOutboxStatus.DEAD.name)
+        )
+            .with(Sort.by(Sort.Order.asc(FIELD_NEXT_RETRY_AT), Sort.Order.asc(FIELD_CREATED_AT)))
+            .limit(batchSize)
+
+        return mongoTemplate.find(query, NotificationOutboxDocument::class.java)
+            .map(mapper::toDomain)
+            .collectList()
+            .awaitSingle()
+    }
+
     override suspend fun findPublishable(now: Instant, batchSize: Int): List<NotificationOutbox> {
         val query = Query.query(
             Criteria.where(FIELD_OUTBOX_STATUS).`is`(NotificationOutboxStatus.PENDING.name)

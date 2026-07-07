@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
+import me.rgunny.kachi.notification.exception.NotificationOutboxNotFoundException
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ErrorResponse
@@ -50,6 +51,14 @@ class GlobalExceptionHandler {
     fun handleIllegalArgument(exception: IllegalArgumentException): ResponseEntity<ApiResponse<Unit>> {
         log.debug("notification domain input failed: {}", exception.message)
         return error(ErrorCode.INVALID_DOMAIN_INPUT, exception.message)
+    }
+
+    @ExceptionHandler(NotificationOutboxNotFoundException::class)
+    fun handleNotificationOutboxNotFound(
+        exception: NotificationOutboxNotFoundException
+    ): ResponseEntity<ApiResponse<Unit>> {
+        log.debug("notification outbox not found: {}", exception.context)
+        return error(ErrorCode.NOT_FOUND, exception.message)
     }
 
     @ExceptionHandler(IllegalStateException::class)
