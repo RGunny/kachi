@@ -7,8 +7,4 @@ class NotificationOutboxNotFoundException(
 ) : NotificationException(
     errorCode = NotificationErrorCode.OUTBOX_NOT_FOUND,
     message = "notification outbox not found. outboxId=${outboxId.id}",
-) {
-    override val context: Map<String, String> = mapOf(
-        "outboxId" to outboxId.id.toString(),
-    )
-}
+)

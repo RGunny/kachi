@@ -9,8 +9,4 @@ class MultipleNotificationSendersFoundException(
 ) : NotificationException(
     errorCode = NotificationErrorCode.MULTIPLE_SENDERS_FOUND,
     message = "multiple notification senders found. channel=$channel",
-) {
-    override val context: Map<String, String> = mapOf(
-        "channel" to channel.name,
-    )
-}
+)

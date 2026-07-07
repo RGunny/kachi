@@ -7,8 +7,4 @@ class NotificationNotFoundException(
 ) : NotificationException(
     errorCode = NotificationErrorCode.NOTIFICATION_NOT_FOUND,
     message = "notification not found. notificationId=${notificationId.id}",
-) {
-    override val context: Map<String, String> = mapOf(
-        "notificationId" to notificationId.id.toString(),
-    )
-}
+)

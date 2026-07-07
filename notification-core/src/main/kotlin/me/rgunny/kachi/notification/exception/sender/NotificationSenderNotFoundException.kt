@@ -9,8 +9,4 @@ class NotificationSenderNotFoundException(
 ) : NotificationException(
     errorCode = NotificationErrorCode.SENDER_NOT_FOUND,
     message = "notification sender not found. channel=$channel",
-) {
-    override val context: Map<String, String> = mapOf(
-        "channel" to channel.name,
-    )
-}
+)

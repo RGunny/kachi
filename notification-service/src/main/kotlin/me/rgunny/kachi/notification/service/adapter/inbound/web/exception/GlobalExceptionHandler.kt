@@ -57,7 +57,7 @@ class GlobalExceptionHandler {
     fun handleNotificationOutboxNotFound(
         exception: NotificationOutboxNotFoundException
     ): ResponseEntity<ApiResponse<Unit>> {
-        log.debug("notification outbox not found: {}", exception.context)
+        log.debug("notification outbox not found. outboxId={}", exception.outboxId.id)
         return error(ErrorCode.NOT_FOUND, exception.message)
     }
 
