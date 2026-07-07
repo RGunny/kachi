@@ -11,6 +11,4 @@ abstract class RetryException(
     errorCode = errorCode,
     message = failure.message,
     cause = cause,
-) {
-    override val context: Map<String, String> = failure.context()
-}
+)

@@ -14,17 +14,6 @@ data class RetryFailure(
         require(retryAfterMillis == null || retryAfterMillis >= 0) { "retryAfterMillis must not be negative" }
     }
 
-    fun context(): Map<String, String> {
-        val values = mutableMapOf(
-            CONTEXT_FAILURE_CODE to code,
-            CONTEXT_FAILURE_SOURCE to source.name,
-            CONTEXT_FAILURE_CATEGORY to category.name,
-        )
-        statusCode?.let { values[CONTEXT_STATUS_CODE] = it.toString() }
-        retryAfterMillis?.let { values[CONTEXT_RETRY_AFTER_MILLIS] = it.toString() }
-        return values
-    }
-
     companion object {
 
         /**
@@ -66,11 +55,5 @@ data class RetryFailure(
                 retryAfterMillis = retryAfterMillis,
             )
         }
-
-        private const val CONTEXT_FAILURE_CODE = "failureCode"
-        private const val CONTEXT_FAILURE_SOURCE = "failureSource"
-        private const val CONTEXT_FAILURE_CATEGORY = "failureCategory"
-        private const val CONTEXT_STATUS_CODE = "statusCode"
-        private const val CONTEXT_RETRY_AFTER_MILLIS = "retryAfterMillis"
     }
 }

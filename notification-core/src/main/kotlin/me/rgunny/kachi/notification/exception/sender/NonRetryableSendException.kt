@@ -15,9 +15,4 @@ class NonRetryableSendException(
     errorCode = NotificationErrorCode.SEND_PERMANENT_FAILURE,
     failure = failure,
     cause = cause,
-) {
-    override val context: Map<String, String> = super.context + mapOf(
-        "notificationId" to notificationId.id.toString(),
-        "channel" to channel.name,
-    )
-}
+)

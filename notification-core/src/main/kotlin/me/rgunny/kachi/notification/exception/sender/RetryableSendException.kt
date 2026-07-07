@@ -15,9 +15,4 @@ class RetryableSendException(
     errorCode = NotificationErrorCode.SEND_TRANSIENT_FAILURE,
     failure = failure,
     cause = cause,
-) {
-    override val context: Map<String, String> = super.context + mapOf(
-        "notificationId" to notificationId.id.toString(),
-        "channel" to channel.name,
-    )
-}
+)
