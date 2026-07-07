@@ -6,6 +6,6 @@ spring:
     mongodb:
       auto-index-creation: true
   mongodb:
-    uri: mongodb://localhost:27017/kachi_notification
+    uri: mongodb://localhost:27017/kachi_notification?replicaSet=rs0
   kafka:
     bootstrap-servers: localhost:9092

@@ -76,12 +76,14 @@ services:
 ```
 
 `docker-compose.mongo.yml`에는 MongoDB 서비스만 둔다.
+notification의 multi-document transaction 검증을 위해 MongoDB는 standalone이 아니라 단일 노드 replica set으로 실행한다.
 
 ```yaml
 services:
   mongo:
     image: mongo:7.0
     container_name: kachi-mongo
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET:-rs0}", "--bind_ip_all"]
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kachi_collector}
       TZ: Asia/Seoul
@@ -92,8 +94,29 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({_id: '${MONGO_REPLICA_SET:-rs0}', members: [{ _id: 0, host: 'localhost:27017' }] }).ok }"
+        ]
 ```
+
+MongoDB command 의미와 이유:
+
+| 설정 | 의미 | 이유 |
+| --- | --- | --- |
+| `mongod` | MongoDB server process 실행 | Docker container의 main process로 MongoDB server를 직접 실행한다. |
+| `--replSet ${MONGO_REPLICA_SET:-rs0}` | replica set 이름을 지정해 mongod를 replica set 모드로 실행 | MongoDB multi-document transaction은 standalone에서 동작하지 않으므로 로컬도 replica set topology로 맞춘다. |
+| `--bind_ip_all` | 모든 network interface에서 접속 허용 | host에서 실행하는 애플리케이션과 Docker network 접근을 모두 허용한다. |
+
+`--replSet`만으로 replica set이 바로 초기화되지는 않는다.
+healthcheck는 `rs.status()`로 초기화 여부를 확인하고, 아직 초기화되지 않았으면 단일 멤버 replica set을 `rs.initiate(...)`로 만든다.
+현재 로컬 개발은 애플리케이션을 host에서 실행하는 방식을 기준으로 하므로 replica set member host는 `localhost:27017`로 둔다.
+운영 환경에서는 이 command를 그대로 쓰기보다 MongoDB config file, Atlas, Kubernetes Operator, Helm chart, VM/systemd, IaC 등으로 replica set을 구성한다.
+현재 설정은 운영 topology 전체를 재현하기 위한 것이 아니라 로컬에서도 transaction 전제를 검증하기 위한 최소 구성이다.
 
 `docker-compose.kafka.yml`에는 Kafka 서비스만 둔다.
 
@@ -206,6 +229,10 @@ MongoDB는 collector-service의 뉴스와 수집 실행 기록 저장소로 사�
 로컬 기본 이미지는 `mongo:7.0`으로 고정한다.
 Spring Data MongoDB reactive adapter와 Testcontainers MongoDB 테스트 기준에 맞춰 UUID representation은 `standard`로 사용한다.
 
+MongoDB multi-document transaction은 replica set 또는 sharded cluster에서만 동작한다.
+notification의 `Notification + NotificationOutbox` 같은 저장 경계를 실제로 검증하기 위해 로컬 MongoDB도 단일 노드 replica set으로 실행한다.
+sharding은 현재 데이터 규모와 운영 복잡도를 고려해 도입하지 않고, 별도 후속 작업으로 검토한다.
+
 ### `MONGO_*` 기본값
 
 로컬 compose에는 다음 기본값을 둔다.
@@ -215,6 +242,7 @@ Spring Data MongoDB reactive adapter와 Testcontainers MongoDB 테스트 기준�
 | `MONGO_HOST` | `localhost` | 로컬 collector-service 접속 host |
 | `MONGO_PORT` | `27017` | MongoDB 표준 포트 |
 | `MONGO_DATABASE` | `kachi_collector` | collector-service 기본 데이터베이스 |
+| `MONGO_REPLICA_SET` | `rs0` | 로컬 MongoDB 단일 노드 replica set 이름 |
 
 ### `apache/kafka:3.9.1`
 
@@ -277,7 +305,7 @@ app-network
 
 ### Healthcheck
 
-MySQL은 `mysqladmin ping`, Redis는 `redis-cli ping`, MongoDB는 `mongosh` ping 기반 healthcheck를 둔다.
+MySQL은 `mysqladmin ping`, Redis는 `redis-cli ping`, MongoDB는 `mongosh` 기반 replica set status/init healthcheck를 둔다.
 로컬에서 컨테이너가 떠 있는지 Docker 상태만으로 빠르게 확인할 수 있고, 나중에 의존 서비스가 늘어날 때 readiness 판단 근거로 확장할 수 있다.
 
 ### Resource limit 미적용

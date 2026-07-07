@@ -132,3 +132,4 @@ set +a
 | [008. collector-service 뉴스 수집 실행 모델](./docs/decisions/008-collector-service-뉴스-수집-실행-모델.md) | scheduler/internal API 진입점과 단일 인스턴스 lock 결정 |
 | [009. 외부 뉴스 provider 연동 기준](./docs/decisions/009-외부-뉴스-provider-연동-기준.md) | Google RSS, Naver, Finnhub provider 설정과 credential 기본 정책 |
 | [010. ai-service 초기 설계](./docs/decisions/010-ai-service-초기-설계.md) | 키워드 단위 AI 처리, 실행 모델, 저장 정책, LLM provider 연동 기준 |
+| [017. MongoDB replica set 전환과 트랜잭션 전제](./docs/decisions/017-mongodb-replica-set-전환과-트랜잭션-전제.md) | MongoDB multi-document transaction을 위한 로컬 replica set 전환과 transaction boundary 원칙 |

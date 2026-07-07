@@ -1,6 +1,6 @@
 spring:
   mongodb:
-    uri: mongodb://localhost:27017/kachi_ai
+    uri: mongodb://localhost:27017/kachi_ai?replicaSet=rs0
     representation:
       uuid: standard
   data:
