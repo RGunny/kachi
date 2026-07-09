@@ -2,6 +2,7 @@ package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDocumentMapper
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationOutboxDocumentMapper
+import me.rgunny.kachi.notification.service.config.NotificationMongoTransactionConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import
 
@@ -16,6 +17,8 @@ import org.springframework.context.annotation.Import
     NotificationOutboxDocumentMapper::class,
     NotificationMongoPersistenceAdapter::class,
     NotificationMongoOutboxPersistenceAdapter::class,
+    NotificationMongoRequestPersistenceAdapter::class,
+    NotificationMongoTransactionConfig::class,
     PersistenceAdapterTestContainersConfig::class,
 )
 abstract class PersistenceAdapterIntegrationTest

@@ -7,6 +7,7 @@ import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.fake.FakeDeduplicationPort
 import me.rgunny.kachi.notification.fake.FakeEventSerializer
 import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
+import me.rgunny.kachi.notification.fake.FakeNotificationRequestPersistencePort
 import me.rgunny.kachi.notification.fake.FakeOutboxPersistencePort
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DEDUPE_TTL
@@ -82,15 +83,18 @@ class RequestNotificationServiceTest {
     @Test
     @DisplayName("신규 요청 저장 중 실패하면 멱등 마커를 해제하고 예외를 전파한다")
     fun releaseDedupeWhenRequestFails() {
-        val notificationPersistence = FakeNotificationPersistencePort().also {
+        val notificationPersistence = FakeNotificationPersistencePort()
+        val outboxPersistence = FakeOutboxPersistencePort()
+        val requestPersistence = FakeNotificationRequestPersistencePort(notificationPersistence, outboxPersistence).also {
             it.saveFailure = IllegalStateException("db-down")
         }
         val deduplication = FakeDeduplicationPort()
         val service = service(
             notificationPersistence,
-            FakeOutboxPersistencePort(),
+            outboxPersistence,
             deduplication,
             FakeEventSerializer(),
+            requestPersistence,
         )
 
         assertFailsWith<IllegalStateException> {
@@ -105,10 +109,14 @@ class RequestNotificationServiceTest {
         outboxPersistence: FakeOutboxPersistencePort,
         deduplication: FakeDeduplicationPort,
         serializer: FakeEventSerializer,
+        requestPersistence: FakeNotificationRequestPersistencePort = FakeNotificationRequestPersistencePort(
+            notificationPersistence,
+            outboxPersistence,
+        ),
     ): RequestNotificationService {
         return RequestNotificationService(
             notificationPersistencePort = notificationPersistence,
-            outboxPersistencePort = outboxPersistence,
+            requestPersistencePort = requestPersistence,
             deduplicationPort = deduplication,
             eventSerializer = serializer,
             policy = RequestNotificationPolicy(

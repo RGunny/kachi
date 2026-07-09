@@ -6,8 +6,8 @@ import me.rgunny.kachi.notification.application.port.dto.RequestNotificationResu
 import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationEventSerializer
-import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationRequestPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import java.time.Clock
@@ -18,7 +18,7 @@ import java.time.Instant
  */
 class RequestNotificationService(
     private val notificationPersistencePort: NotificationPersistencePort,
-    private val outboxPersistencePort: NotificationOutboxPersistencePort,
+    private val requestPersistencePort: NotificationRequestPersistencePort,
     private val deduplicationPort: NotificationDeduplicationPort,
     private val eventSerializer: NotificationEventSerializer,
     private val policy: RequestNotificationPolicy,
@@ -74,9 +74,9 @@ class RequestNotificationService(
                 now = now,
             )
 
-            // 6. 알림 접수와 dispatch 발행 대기열은 같은 저장 경계에서 확정한다.
-            val savedNotification = notificationPersistencePort.save(notification)
-            outboxPersistencePort.save(outbox)
+            // 6. 알림 접수와 dispatch 발행 대기열은 같은 DB transaction 경계에서 확정한다.
+            // Redis dedupe는 MongoDB rollback 대상이 아니므로, 저장 실패 시 catch 블록에서 별도로 해제한다.
+            val savedNotification = requestPersistencePort.saveRequested(notification, outbox)
 
             // 7. 인입 채널과 무관하게 동일한 접수 결과를 반환한다.
             return RequestNotificationResult(
