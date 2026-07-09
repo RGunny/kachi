@@ -14,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
 )
 @Import(
     NotificationDocumentMapper::class,
+    NotificationMongoDispatchPersistenceAdapter::class,
     NotificationMongoPersistenceAdapter::class,
     PersistenceAdapterTestContainersConfig::class,
 )

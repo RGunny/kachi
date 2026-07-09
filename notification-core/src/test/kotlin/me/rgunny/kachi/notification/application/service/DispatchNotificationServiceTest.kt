@@ -12,6 +12,7 @@ import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.sender.RetryableSendException
 import me.rgunny.kachi.notification.fake.FakeDeduplicationPort
 import me.rgunny.kachi.notification.fake.FakeIdempotencyKeyPort
+import me.rgunny.kachi.notification.fake.FakeNotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
 import me.rgunny.kachi.notification.fake.FakeSender
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
@@ -213,6 +214,31 @@ class DispatchNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("재시도 가능 실패 저장에 실패하면 dedupe를 해제하지 않는다")
+    fun doNotReleaseDedupeWhenRetryableFailureSaveFails() {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also {
+            it.put(notification)
+            it.saveFailure = IllegalStateException("mongo-down")
+        }
+        val deduplication = FakeDeduplicationPort()
+        val sender = FakeSender(result = SendNotificationResult.RateLimited(rateLimitedFailure()))
+        val service = service(
+            persistence = persistence,
+            deduplication = deduplication,
+            idempotency = FakeIdempotencyKeyPort(),
+            sender = sender,
+            maxAttempts = 2,
+        )
+
+        assertFailsWith<IllegalStateException> {
+            runSuspend { service.dispatch(command(notification.id)) }
+        }
+
+        assertTrue(deduplication.releasedKeys.isEmpty())
+    }
+
+    @Test
     @DisplayName("sender가 non-retryable 예외를 던지면 DEAD로 완료한다")
     fun senderNonRetryableException() = runSuspend {
         val notification = publishedNotification()
@@ -242,6 +268,7 @@ class DispatchNotificationServiceTest {
     ): DispatchNotificationService {
         return DispatchNotificationService(
             notificationPersistencePort = persistence,
+            dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
             deduplicationPort = deduplication,
             idempotencyKeyPort = idempotency,
             senderRouter = NotificationSenderRouter(listOf(sender)),

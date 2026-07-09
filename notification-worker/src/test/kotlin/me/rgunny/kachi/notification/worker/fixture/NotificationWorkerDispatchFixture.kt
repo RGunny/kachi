@@ -14,6 +14,7 @@ import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties
 import me.rgunny.kachi.notification.worker.config.SlackNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.TelegramNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationDeduplicationPort
+import me.rgunny.kachi.notification.worker.fake.FakeNotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationPersistencePort
 import me.rgunny.kachi.notification.worker.support.TestVendorServer
@@ -64,6 +65,7 @@ class NotificationWorkerDispatchFixture(
         val dispatchPolicy = coreConfig.dispatchNotificationPolicy(properties, retryPolicy)
         val dispatchUseCase = DispatchNotificationService(
             notificationPersistencePort = persistence,
+            dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
             deduplicationPort = deduplication,
             idempotencyKeyPort = FakeNotificationIdempotencyKeyPort(),
             senderRouter = router,

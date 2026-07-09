@@ -11,6 +11,6 @@ class PersistenceAdapterTestContainersConfig {
     @Bean
     @ServiceConnection
     fun mongoContainer(): MongoDBContainer {
-        return MongoDBContainer("mongo:7.0")
+        return MongoDBContainer("mongo:7.0").withReplicaSet()
     }
 }

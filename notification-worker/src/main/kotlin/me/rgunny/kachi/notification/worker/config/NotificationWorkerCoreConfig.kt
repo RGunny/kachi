@@ -2,6 +2,7 @@ package me.rgunny.kachi.notification.worker.config
 
 import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
@@ -84,6 +85,7 @@ class NotificationWorkerCoreConfig {
     @Bean
     fun dispatchNotificationUseCase(
         notificationPersistencePort: NotificationPersistencePort,
+        dispatchPersistencePort: NotificationDispatchPersistencePort,
         deduplicationPort: NotificationDeduplicationPort,
         idempotencyKeyPort: NotificationIdempotencyKeyPort,
         senderRouter: NotificationSenderRouter,
@@ -92,6 +94,7 @@ class NotificationWorkerCoreConfig {
     ): DispatchNotificationUseCase {
         return DispatchNotificationService(
             notificationPersistencePort = notificationPersistencePort,
+            dispatchPersistencePort = dispatchPersistencePort,
             deduplicationPort = deduplicationPort,
             idempotencyKeyPort = idempotencyKeyPort,
             senderRouter = senderRouter,

@@ -7,6 +7,7 @@ import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
@@ -27,6 +28,7 @@ import java.time.Instant
  */
 class DispatchNotificationService(
     private val notificationPersistencePort: NotificationPersistencePort,
+    private val dispatchPersistencePort: NotificationDispatchPersistencePort,
     private val deduplicationPort: NotificationDeduplicationPort,
     private val idempotencyKeyPort: NotificationIdempotencyKeyPort,
     private val senderRouter: NotificationSenderRouter,
@@ -116,6 +118,7 @@ class DispatchNotificationService(
         }
 
         // 8. sender가 명시적인 결과를 반환하면 그 결과를 기준으로 알림 상태를 확정한다.
+        // vendor HTTP/Redis는 Mongo rollback 대상이 아니므로, 외부 호출 이후 DB finalize는 별도 저장 경계로 분리한다.
         return when (sendResult) {
             is SendNotificationResult.Success -> completeAsSent(claimedNotification, now)
             is SendNotificationResult.RateLimited -> completeAsRetryableFailure(
@@ -154,7 +157,7 @@ class DispatchNotificationService(
         now: Instant,
     ): DispatchNotificationResult {
         notification.markSent(now)
-        val savedNotification = notificationPersistencePort.save(notification)
+        val savedNotification = dispatchPersistencePort.saveFinalized(notification)
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
@@ -178,8 +181,6 @@ class DispatchNotificationService(
         val failureClassification = when (decision) {
             is RetryDecision.Retry -> {
                 notification.markRetryWait(now, reason)
-                // 재시도 가능한 실패는 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
-                deduplicationPort.release(dedupeKey)
                 DispatchFailureClassification.RETRYABLE
             }
             is RetryDecision.GiveUp -> {
@@ -188,7 +189,11 @@ class DispatchNotificationService(
             }
         }
 
-        val savedNotification = notificationPersistencePort.save(notification)
+        val savedNotification = dispatchPersistencePort.saveFinalized(notification)
+        if (failureClassification == DispatchFailureClassification.RETRYABLE) {
+            // 재시도 가능한 실패는 DB에 RETRY_WAIT 상태가 확정된 뒤 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
+            deduplicationPort.release(dedupeKey)
+        }
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
@@ -208,7 +213,7 @@ class DispatchNotificationService(
         val reason = failure.message
         notification.markFailed(now, reason)
         notification.markDead(now, reason)
-        val savedNotification = notificationPersistencePort.save(notification)
+        val savedNotification = dispatchPersistencePort.saveFinalized(notification)
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
