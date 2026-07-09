@@ -4,8 +4,7 @@ import me.rgunny.kachi.notification.application.port.dto.PublishNotificationDisp
 import me.rgunny.kachi.notification.application.port.inbound.PublishNotificationDispatchUseCase
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPublisher
 import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
-import me.rgunny.kachi.notification.domain.NotificationId
+import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
 import java.time.Clock
 import java.time.Instant
 
@@ -14,8 +13,8 @@ import java.time.Instant
  * PENDING outbox를 claim해 notification.dispatch로 발행하고 발행 결과를 상태에 반영한다.
  */
 class PublishNotificationDispatchService(
-    private val notificationPersistencePort: NotificationPersistencePort,
     private val outboxPersistencePort: NotificationOutboxPersistencePort,
+    private val publishPersistencePort: NotificationPublishPersistencePort,
     private val dispatchPublisher: NotificationDispatchPublisher,
     private val policy: OutboxPublishPolicy,
     private val clock: Clock,
@@ -33,8 +32,7 @@ class PublishNotificationDispatchService(
         var failed = 0
         staleOutboxes.forEach { outbox ->
             outbox.recordFailure(PUBLISHING_TIMEOUT_REASON, policy.retryPolicy, now)
-            outboxPersistencePort.save(outbox)
-            markNotificationPublishFailed(outbox.notificationId, now, PUBLISHING_TIMEOUT_REASON)
+            publishPersistencePort.savePublishFailed(outbox, now, PUBLISHING_TIMEOUT_REASON)
             failed += 1
         }
 
@@ -57,26 +55,21 @@ class PublishNotificationDispatchService(
             }.exceptionOrNull()
 
             if (publishFailure != null) {
-                // 6. 발행 실패는 outbox retry 정책에 맡기고, notification에는 발행 실패 상태를 남긴다.
+                // 6. Kafka publish 실패는 retry 가능한 DB 상태로만 보정한다.
+                // 외부 side effect와 DB rollback은 묶을 수 없으므로, 실패 결과 반영만 Mongo transaction으로 확정한다.
                 val reason = publishFailure.message?.takeIf { it.isNotBlank() }
                     ?: publishFailure::class.simpleName
                     ?: PUBLISH_FAILED
                 claimedOutbox.recordFailure(reason, policy.retryPolicy, now)
-                outboxPersistencePort.save(claimedOutbox)
-                markNotificationPublishFailed(claimedOutbox.notificationId, now, reason)
+                publishPersistencePort.savePublishFailed(claimedOutbox, now, reason)
 
                 failed += 1
                 return@forEach
             }
 
-            // 5. broker 발행이 끝나면 outbox와 notification을 발행 완료 상태로 맞춘다.
+            // 5. broker 발행이 끝난 뒤 outbox와 notification의 발행 완료 상태를 같은 DB transaction으로 맞춘다.
             claimedOutbox.markPublished(now)
-            outboxPersistencePort.save(claimedOutbox)
-
-            val notification = notificationPersistencePort.findById(claimedOutbox.notificationId)
-                ?: throw IllegalStateException("notification not found. notificationId=${claimedOutbox.notificationId}")
-            notification.markPublished(now)
-            notificationPersistencePort.save(notification)
+            publishPersistencePort.savePublished(claimedOutbox, now)
 
             published += 1
         }
@@ -93,16 +86,5 @@ class PublishNotificationDispatchService(
     private companion object {
         const val PUBLISHING_TIMEOUT_REASON = "publishing-timeout"
         const val PUBLISH_FAILED = "publish-failed"
-    }
-
-    private suspend fun markNotificationPublishFailed(
-        notificationId: NotificationId,
-        now: Instant,
-        reason: String,
-    ) {
-        val notification = notificationPersistencePort.findById(notificationId)
-            ?: throw IllegalStateException("notification not found. notificationId=$notificationId")
-        notification.markPublishFailed(now, reason)
-        notificationPersistencePort.save(notification)
     }
 }

@@ -9,6 +9,7 @@ import me.rgunny.kachi.notification.domain.NotificationOutboxStatus
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.fake.FakeDispatchPublisher
 import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
+import me.rgunny.kachi.notification.fake.FakeNotificationPublishPersistencePort
 import me.rgunny.kachi.notification.fake.FakeOutboxPersistencePort
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
@@ -143,9 +144,14 @@ class PublishNotificationDispatchServiceTest {
         publisher: FakeDispatchPublisher,
         maxAttempts: Int = 3,
     ): PublishNotificationDispatchService {
-        return PublishNotificationDispatchService(
+        val publishPersistence = FakeNotificationPublishPersistencePort(
             notificationPersistencePort = notificationPersistence,
             outboxPersistencePort = outboxPersistence,
+        )
+
+        return PublishNotificationDispatchService(
+            outboxPersistencePort = outboxPersistence,
+            publishPersistencePort = publishPersistence,
             dispatchPublisher = publisher,
             policy = OutboxPublishPolicy(
                 batchSize = 10,

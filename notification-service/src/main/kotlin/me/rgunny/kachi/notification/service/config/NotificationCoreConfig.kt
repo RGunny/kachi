@@ -8,6 +8,7 @@ import me.rgunny.kachi.notification.application.port.outbound.NotificationDispat
 import me.rgunny.kachi.notification.application.port.outbound.NotificationEventSerializer
 import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationRequestPersistencePort
 import me.rgunny.kachi.notification.application.service.NotificationOutboxAdminService
 import me.rgunny.kachi.notification.application.service.OutboxPublishPolicy
@@ -84,15 +85,15 @@ class NotificationCoreConfig {
 
     @Bean
     fun publishNotificationDispatchUseCase(
-        notificationPersistencePort: NotificationPersistencePort,
         outboxPersistencePort: NotificationOutboxPersistencePort,
+        publishPersistencePort: NotificationPublishPersistencePort,
         dispatchPublisher: NotificationDispatchPublisher,
         outboxPublishPolicy: OutboxPublishPolicy,
         clock: Clock,
     ): PublishNotificationDispatchUseCase {
         return PublishNotificationDispatchService(
-            notificationPersistencePort = notificationPersistencePort,
             outboxPersistencePort = outboxPersistencePort,
+            publishPersistencePort = publishPersistencePort,
             dispatchPublisher = dispatchPublisher,
             policy = outboxPublishPolicy,
             clock = clock,
