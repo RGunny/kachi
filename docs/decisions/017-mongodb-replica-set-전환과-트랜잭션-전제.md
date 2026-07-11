@@ -110,10 +110,12 @@ dispatch()
   -> Notification PROCESSING claim           (짧은 Mongo 저장 경계)
   -> Redis vendor idempotency key 조회/생성   (Mongo transaction 밖)
   -> vendor HTTP send                        (Mongo transaction 밖)
-  -> Notification 최종 상태 반영              (Mongo transaction)
+  -> Notification 최종 상태 조건부 반영        (PROCESSING claim CAS)
 ```
 
 이 구조는 하나의 상위 use case 메서드가 전체 흐름을 조율하되, DB transaction이 필요한 구간과 외부 side effect 구간을 명시적으로 분리한다.
+외부 side effect 이후의 dispatch finalize는 `_id + status + claimedAt + claimedBy` 조건으로만 저장한다.
+CAS 조건 불일치는 같은 조건으로 재시도해도 성공하지 않는 소유권 상실 신호이므로, 저장소 장애 retry와 구분한다.
 
 ## Sharding
 

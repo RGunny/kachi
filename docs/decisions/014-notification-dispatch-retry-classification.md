@@ -101,6 +101,36 @@ dlt: notification.dispatch.dlt
 Kafka retry attempts와 core retry attempts가 서로 다른 값을 가지면 상태와 topic 이동이 어긋난다.
 따라서 설정은 같은 property에서 주입하거나, 최소한 운영 문서에서 같은 값으로 관리한다.
 
+## PROCESSING finalize CAS 실패
+
+worker는 `PUBLISHED` 또는 `RETRY_WAIT` 알림을 `PROCESSING`으로 claim한 뒤 외부 vendor를 호출한다.
+외부 vendor 호출은 MongoDB transaction에 포함되지 않으므로, vendor 호출 이후 최종 상태 저장은 claim fencing 조건을 가져야 한다.
+
+최종 저장은 다음 조건이 모두 맞을 때만 수행한다.
+
+```text
+notificationId 일치
+status = PROCESSING
+claimedAt = 내가 claim한 시각
+claimedBy = 내가 claim한 worker id
+```
+
+이 조건이 맞지 않는 CAS 실패는 자동 retry 대상이 아니다.
+CAS 조건 불일치는 DB 장애가 아니라 저장소가 정상적으로 "네가 기대한 상태가 아니다"라고 응답한 것이다.
+같은 조건으로 다시 시도해도 조건 자체가 false이므로 성공하지 않는다.
+
+따라서 처리 원칙은 다음과 같다.
+
+```text
+CAS 조건 불일치
+  -> 같은 finalize를 재시도하지 않는다.
+  -> 현재 Notification 상태를 다시 조회한다.
+  -> 이미 SENT/RETRY_WAIT/DEAD 또는 다른 PROCESSING owner가 있으면 stale owner로 보고 skip한다.
+```
+
+반대로 MongoDB timeout, network error, primary election 같은 저장소 예외는 CAS 조건 불일치가 아니다.
+이 경우는 저장 성공 여부가 불확실하거나 저장소가 응답하지 못한 것이므로 별도 retry 판단 대상이다.
+
 ## DLT 기준
 
 non-retryable 실패는 DLT로 보내지 않는다.
