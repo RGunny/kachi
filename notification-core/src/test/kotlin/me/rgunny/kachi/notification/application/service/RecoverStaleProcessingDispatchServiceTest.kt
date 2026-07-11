@@ -34,9 +34,11 @@ class RecoverStaleProcessingDispatchServiceTest {
 
         val result = service.recoverStaleProcessing()
 
-        assertEquals(1, result.processed)
-        assertEquals(1, result.retryWait)
-        assertEquals(0, result.dead)
+        assertEquals(1, result.staleProcessingFound)
+        assertEquals(1, result.staleProcessingRecovered)
+        assertEquals(1, result.recoveredToRetryWait)
+        assertEquals(0, result.recoveredToDead)
+        assertEquals(0, result.staleProcessingSkipped)
         assertEquals(NotificationStatus.RETRY_WAIT, persistence.saved.last().status)
         assertEquals(RetryFailureCode.DISPATCH_PROCESSING_TIMEOUT.defaultMessage, persistence.saved.last().failureReason)
         assertEquals(1, persistence.saved.last().dispatchAttempts)
@@ -53,11 +55,40 @@ class RecoverStaleProcessingDispatchServiceTest {
 
         val result = service.recoverStaleProcessing()
 
-        assertEquals(1, result.processed)
-        assertEquals(0, result.retryWait)
-        assertEquals(1, result.dead)
+        assertEquals(1, result.staleProcessingFound)
+        assertEquals(1, result.staleProcessingRecovered)
+        assertEquals(0, result.recoveredToRetryWait)
+        assertEquals(1, result.recoveredToDead)
+        assertEquals(0, result.staleProcessingSkipped)
         assertEquals(NotificationStatus.DEAD, persistence.saved.last().status)
         assertEquals(1, persistence.saved.last().dispatchAttempts)
+        assertEquals(emptyList(), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("stale PROCESSING 회수 중 claim 조건이 불일치하면 저장하지 않고 skipped로 집계한다")
+    fun skipWhenClaimMismatch() = runSuspend {
+        val notification = processingNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val dispatchPersistence = FakeNotificationDispatchPersistencePort(persistence).also {
+            it.forceClaimMismatch = true
+        }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(
+            persistence = persistence,
+            dispatchPersistence = dispatchPersistence,
+            deduplication = deduplication,
+            maxAttempts = 3,
+        )
+
+        val result = service.recoverStaleProcessing()
+
+        assertEquals(1, result.staleProcessingFound)
+        assertEquals(0, result.staleProcessingRecovered)
+        assertEquals(0, result.recoveredToRetryWait)
+        assertEquals(0, result.recoveredToDead)
+        assertEquals(1, result.staleProcessingSkipped)
+        assertEquals(emptyList(), persistence.saved)
         assertEquals(emptyList(), deduplication.releasedKeys)
     }
 
@@ -71,7 +102,9 @@ class RecoverStaleProcessingDispatchServiceTest {
 
         val result = service.recoverStaleProcessing()
 
-        assertEquals(0, result.processed)
+        assertEquals(0, result.staleProcessingFound)
+        assertEquals(0, result.staleProcessingRecovered)
+        assertEquals(0, result.staleProcessingSkipped)
         assertEquals(emptyList(), persistence.saved)
     }
 
@@ -79,10 +112,11 @@ class RecoverStaleProcessingDispatchServiceTest {
         persistence: FakeNotificationPersistencePort,
         deduplication: FakeDeduplicationPort,
         maxAttempts: Int,
+        dispatchPersistence: FakeNotificationDispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
     ): RecoverStaleProcessingDispatchService {
         return RecoverStaleProcessingDispatchService(
             notificationPersistencePort = persistence,
-            dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
+            dispatchPersistencePort = dispatchPersistence,
             deduplicationPort = deduplication,
             policy = DispatchNotificationPolicy(
                 workerId = "worker-1",

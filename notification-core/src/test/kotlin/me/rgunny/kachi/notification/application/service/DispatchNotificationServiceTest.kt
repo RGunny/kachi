@@ -78,6 +78,32 @@ class DispatchNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("finalize CAS 조건이 불일치하면 Kafka retry 대상이 아닌 stale 결과로 종료한다")
+    fun staleFinalizeDoesNotRetry() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val dispatchPersistence = FakeNotificationDispatchPersistencePort(persistence).also {
+            it.forceClaimMismatch = true
+        }
+        val sender = FakeSender(result = SendNotificationResult.Success("provider-1"))
+        val service = service(
+            persistence = persistence,
+            deduplication = FakeDeduplicationPort(),
+            idempotency = FakeIdempotencyKeyPort(),
+            sender = sender,
+            dispatchPersistence = dispatchPersistence,
+        )
+
+        val result = service.dispatch(command(notification.id))
+
+        assertTrue(result.duplicated)
+        assertTrue(result.dispatchAttempted)
+        assertEquals(DispatchFailureClassification.NONE, result.failureClassification)
+        assertEquals(emptyList(), persistence.saved)
+        assertEquals(1, sender.sendCount)
+    }
+
+    @Test
     @DisplayName("PUBLISHED claim 실패 후 RETRY_WAIT claim에 성공하면 발송한다")
     fun dispatchFromRetryWait() = runSuspend {
         val notification = retryWaitNotification()
@@ -265,10 +291,11 @@ class DispatchNotificationServiceTest {
         idempotency: FakeIdempotencyKeyPort,
         sender: FakeSender,
         maxAttempts: Int = 3,
+        dispatchPersistence: FakeNotificationDispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
     ): DispatchNotificationService {
         return DispatchNotificationService(
             notificationPersistencePort = persistence,
-            dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
+            dispatchPersistencePort = dispatchPersistence,
             deduplicationPort = deduplication,
             idempotencyKeyPort = idempotency,
             senderRouter = NotificationSenderRouter(listOf(sender)),

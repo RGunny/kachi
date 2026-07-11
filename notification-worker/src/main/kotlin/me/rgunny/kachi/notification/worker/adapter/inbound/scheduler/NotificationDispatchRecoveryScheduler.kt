@@ -40,13 +40,15 @@ class NotificationDispatchRecoveryScheduler(
             )
         }.getOrNull() ?: return@runBlocking
 
-        if (result.processed > 0) {
+        if (result.staleProcessingFound > 0) {
             // 3. 운영자가 회수 규모와 DEAD 전환 여부를 추적할 수 있게 처리된 tick만 남긴다.
             log.info(
-                "notification dispatch recovery tick processed={} retryWait={} dead={} handledAt={}",
-                result.processed,
-                result.retryWait,
-                result.dead,
+                "notification dispatch recovery tick staleProcessingFound={} staleProcessingRecovered={} recoveredToRetryWait={} recoveredToDead={} staleProcessingSkipped={} handledAt={}",
+                result.staleProcessingFound,
+                result.staleProcessingRecovered,
+                result.recoveredToRetryWait,
+                result.recoveredToDead,
+                result.staleProcessingSkipped,
                 result.handledAt,
             )
         }

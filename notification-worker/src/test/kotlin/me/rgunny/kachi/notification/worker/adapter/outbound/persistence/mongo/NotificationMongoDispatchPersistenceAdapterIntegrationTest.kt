@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.query.Query
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @DisplayName("worker NotificationMongoDispatchPersistenceAdapter 통합 테스트")
 class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -38,13 +39,21 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @Test
     @DisplayName("vendor 발송 성공 결과를 SENT 상태로 저장한다")
     fun saveSent() = runBlocking {
-        val notification = processingNotification().also {
+        val notification = notificationPersistenceAdapter.save(processingNotification())
+        val expectedClaimedAt = requireNotNull(notification.claimedAt)
+        val expectedClaimedBy = requireNotNull(notification.claimedBy)
+        notification.also {
             it.markSent(handledAt)
         }
 
-        val saved = adapter.saveFinalized(notification)
+        val saved = adapter.saveFinalizedIfProcessingClaimMatches(
+            notification = notification,
+            expectedClaimedAt = expectedClaimedAt,
+            expectedClaimedBy = expectedClaimedBy,
+        )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
+        assertNotNull(saved)
         assertEquals(NotificationStatus.SENT, saved.status)
         assertNotNull(found)
         assertEquals(NotificationStatus.SENT, found.status)
@@ -54,14 +63,22 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @Test
     @DisplayName("vendor 재시도 가능 실패 결과를 RETRY_WAIT 상태로 저장한다")
     fun saveRetryWait() = runBlocking {
-        val notification = processingNotification().also {
+        val notification = notificationPersistenceAdapter.save(processingNotification())
+        val expectedClaimedAt = requireNotNull(notification.claimedAt)
+        val expectedClaimedBy = requireNotNull(notification.claimedBy)
+        notification.also {
             it.markFailed(handledAt, "vendor timeout")
             it.markRetryWait(handledAt, "vendor timeout")
         }
 
-        val saved = adapter.saveFinalized(notification)
+        val saved = adapter.saveFinalizedIfProcessingClaimMatches(
+            notification = notification,
+            expectedClaimedAt = expectedClaimedAt,
+            expectedClaimedBy = expectedClaimedBy,
+        )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
+        assertNotNull(saved)
         assertEquals(NotificationStatus.RETRY_WAIT, saved.status)
         assertNotNull(found)
         assertEquals(NotificationStatus.RETRY_WAIT, found.status)
@@ -72,19 +89,49 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @Test
     @DisplayName("vendor 영구 실패 결과를 DEAD 상태로 저장한다")
     fun saveDead() = runBlocking {
-        val notification = processingNotification().also {
+        val notification = notificationPersistenceAdapter.save(processingNotification())
+        val expectedClaimedAt = requireNotNull(notification.claimedAt)
+        val expectedClaimedBy = requireNotNull(notification.claimedBy)
+        notification.also {
             it.markFailed(handledAt, "invalid recipient")
             it.markDead(handledAt, "invalid recipient")
         }
 
-        val saved = adapter.saveFinalized(notification)
+        val saved = adapter.saveFinalizedIfProcessingClaimMatches(
+            notification = notification,
+            expectedClaimedAt = expectedClaimedAt,
+            expectedClaimedBy = expectedClaimedBy,
+        )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
+        assertNotNull(saved)
         assertEquals(NotificationStatus.DEAD, saved.status)
         assertNotNull(found)
         assertEquals(NotificationStatus.DEAD, found.status)
         assertEquals("invalid recipient", found.failureReason)
         assertEquals(1, found.dispatchAttempts)
+    }
+
+    @Test
+    @DisplayName("PROCESSING claim 조건이 불일치하면 저장하지 않고 null을 반환한다")
+    fun skipWhenClaimMismatch() = runBlocking {
+        val notification = notificationPersistenceAdapter.save(processingNotification())
+        val expectedClaimedAt = requireNotNull(notification.claimedAt)
+        val expectedClaimedBy = requireNotNull(notification.claimedBy)
+        notification.markSent(handledAt)
+
+        val saved = adapter.saveFinalizedIfProcessingClaimMatches(
+            notification = notification,
+            expectedClaimedAt = expectedClaimedAt.plusSeconds(1),
+            expectedClaimedBy = expectedClaimedBy,
+        )
+
+        val found = notificationPersistenceAdapter.findById(notification.id)
+        assertNull(saved)
+        assertNotNull(found)
+        assertEquals(NotificationStatus.PROCESSING, found.status)
+        assertEquals(expectedClaimedAt, found.claimedAt)
+        assertEquals(expectedClaimedBy, found.claimedBy)
     }
 
     private fun processingNotification(): Notification {

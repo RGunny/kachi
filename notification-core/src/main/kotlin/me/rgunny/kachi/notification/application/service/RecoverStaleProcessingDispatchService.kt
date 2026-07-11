@@ -44,6 +44,7 @@ class RecoverStaleProcessingDispatchService(
 
         var retryWait = 0
         var dead = 0
+        var skipped = 0
 
         // 3. 각 notification은 독립적으로 retry 대기 또는 DEAD로 finalize한다.
         staleNotifications.forEach { notification ->
@@ -51,13 +52,16 @@ class RecoverStaleProcessingDispatchService(
             when (recoveredStatus) {
                 RecoveredStatus.RETRY_WAIT -> retryWait += 1
                 RecoveredStatus.DEAD -> dead += 1
+                RecoveredStatus.SKIPPED -> skipped += 1
             }
         }
 
         return RecoverStaleProcessingDispatchResult(
-            processed = staleNotifications.size,
-            retryWait = retryWait,
-            dead = dead,
+            staleProcessingFound = staleNotifications.size,
+            staleProcessingRecovered = retryWait + dead,
+            recoveredToRetryWait = retryWait,
+            recoveredToDead = dead,
+            staleProcessingSkipped = skipped,
             handledAt = now,
         )
     }
@@ -69,6 +73,13 @@ class RecoverStaleProcessingDispatchService(
         notification: Notification,
         now: Instant,
     ): RecoveredStatus {
+        val expectedClaimedAt = requireNotNull(notification.claimedAt) {
+            "PROCESSING notification must have claimedAt"
+        }
+        val expectedClaimedBy = requireNotNull(notification.claimedBy) {
+            "PROCESSING notification must have claimedBy"
+        }
+
         // 1. PROCESSING timeout은 worker가 vendor 호출 또는 DB finalize 사이에서 중단된 것으로 분류한다.
         val failure = RetryFailure.of(RetryFailureCode.DISPATCH_PROCESSING_TIMEOUT)
 
@@ -90,11 +101,15 @@ class RecoverStaleProcessingDispatchService(
         }
 
         // 4. 회수 상태가 DB에 저장되기 전에는 dedupe marker를 풀지 않는다.
-        dispatchPersistencePort.saveFinalized(notification)
+        val savedNotification = dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
+            notification = notification,
+            expectedClaimedAt = expectedClaimedAt,
+            expectedClaimedBy = expectedClaimedBy,
+        ) ?: return RecoveredStatus.SKIPPED
 
         if (status == RecoveredStatus.RETRY_WAIT) {
             // 5. RETRY_WAIT 저장 후 marker를 해제해야 다음 dispatch 메시지가 다시 claim을 시도할 수 있다.
-            deduplicationPort.release(dispatchDedupeKey(notification))
+            deduplicationPort.release(dispatchDedupeKey(savedNotification))
         }
 
         return status
@@ -107,5 +122,6 @@ class RecoverStaleProcessingDispatchService(
     private enum class RecoveredStatus {
         RETRY_WAIT,
         DEAD,
+        SKIPPED,
     }
 }
