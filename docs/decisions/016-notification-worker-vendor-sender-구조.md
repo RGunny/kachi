@@ -142,9 +142,9 @@ result DTO는 외부 JSON DTO는 아니지만, 같은 vendor HTTP operation의 �
 vendor별 설정은 다음 prefix를 사용한다.
 
 ```text
-kachi.notification.worker.sender.slack
-kachi.notification.worker.sender.discord
-kachi.notification.worker.sender.telegram
+kachi.notification.sender.slack
+kachi.notification.sender.discord
+kachi.notification.sender.telegram
 ```
 
 현재 구성은 non-secret 값과 secret 값을 분리한다.
@@ -158,14 +158,15 @@ kachi.notification.worker.sender.telegram
 ```yaml
 kachi:
   notification:
-    worker:
-      sender:
-        slack:
-          enabled: true
-        discord:
-          enabled: true
-        telegram:
-          enabled: true
+    sender:
+      mock:
+        enabled: true
+      slack:
+        enabled: true
+      discord:
+        enabled: true
+      telegram:
+        enabled: true
 ```
 
 `application-local.yaml`은 secret 값을 env placeholder로 연결한다.
@@ -173,14 +174,13 @@ kachi:
 ```yaml
 kachi:
   notification:
-    worker:
-      sender:
-        slack:
-          webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL:}
-        discord:
-          webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
-        telegram:
-          bot-token: ${KACHI_NOTIFICATION_TELEGRAM_BOT_TOKEN:}
+    sender:
+      slack:
+        webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL:}
+      discord:
+        webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
+      telegram:
+        bot-token: ${KACHI_NOTIFICATION_TELEGRAM_BOT_TOKEN:}
 ```
 
 각 real sender bean은 자기 `enabled` 값을 보고 등록된다.
