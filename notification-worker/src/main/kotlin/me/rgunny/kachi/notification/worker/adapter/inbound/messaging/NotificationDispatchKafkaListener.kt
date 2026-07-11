@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * notification.dispatch Kafka 인입 adapter.s
+ * notification.dispatch Kafka 인입 adapter.
  */
 @Component
 class NotificationDispatchKafkaListener(
@@ -24,21 +24,26 @@ class NotificationDispatchKafkaListener(
 ) {
 
     @KafkaListener(
-        topics = ["\${kachi.notification.worker.dispatch.topic}"],
-        groupId = "\${kachi.notification.worker.dispatch.group-id}",
+        topics = ["\${kachi.notification.dispatch.topic}"],
+        groupId = "\${kachi.notification.dispatch.group-id}",
         containerFactory = "notificationDispatchKafkaListenerContainerFactory",
     )
     fun consume(
         @Payload payload: String,
         acknowledgment: Acknowledgment,
     ) = runBlocking {
+        // 1. Kafka payload를 contract event로 역직렬화하고 core command로 변환한다.
         val command = readCommand(payload)
+
+        // 2. 실제 상태 claim, vendor 호출, DB finalize는 core use case에 위임한다.
         val result = dispatchUseCase.dispatch(command)
 
+        // 3. 재시도 가능한 vendor 실패는 ack하지 않고 예외로 넘겨 Kafka retry/DLT 정책을 태운다.
         if (result.failureClassification == DispatchFailureClassification.RETRYABLE) {
             throw RetryableDispatchMessageException(result)
         }
 
+        // 4. 성공, 중복 skip, non-retryable DEAD는 현재 record 처리가 끝났으므로 offset을 commit한다.
         acknowledgment.acknowledge()
         log.info(
             "notification dispatch message consumed notificationId={} status={} duplicated={} attempted={} classification={}",

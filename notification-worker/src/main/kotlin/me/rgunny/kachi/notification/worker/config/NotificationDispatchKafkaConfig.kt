@@ -47,12 +47,12 @@ class NotificationDispatchKafkaConfig {
     @Bean
     fun notificationDispatchErrorHandler(
         kafkaTemplate: KafkaOperations<String, String>,
-        properties: NotificationWorkerProperties,
+        properties: NotificationDispatchProperties,
     ): DefaultErrorHandler {
         val recoverer = DeadLetterPublishingRecoverer(kafkaTemplate) { record, _ ->
-            TopicPartition(properties.dispatch.dlt.topic, record.partition())
+            TopicPartition(properties.dlt.topic, record.partition())
         }
-        val retry = properties.dispatch.retry
+        val retry = properties.retry
         val backOff = FixedBackOff(
             retry.backoff.toMillis(),
             (retry.maxAttempts - 1).coerceAtLeast(0),

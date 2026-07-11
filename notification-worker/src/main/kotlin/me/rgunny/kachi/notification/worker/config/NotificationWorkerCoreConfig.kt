@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.worker.config
 
 import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.RecoverStaleProcessingDispatchUseCase
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
@@ -9,6 +10,7 @@ import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
 import me.rgunny.kachi.notification.application.service.DispatchNotificationPolicy
 import me.rgunny.kachi.notification.application.service.DispatchNotificationService
 import me.rgunny.kachi.notification.application.service.NotificationSenderRouter
+import me.rgunny.kachi.notification.application.service.RecoverStaleProcessingDispatchService
 import me.rgunny.kachi.notification.retry.RetryPolicy
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -22,7 +24,11 @@ import java.time.Clock
  * 실제 Mongo/Redis/Sender adapter는 worker adapter 패키지에서 구현하고, 이 config는 조립 책임만 가진다.
  */
 @Configuration
-@EnableConfigurationProperties(NotificationWorkerProperties::class)
+@EnableConfigurationProperties(
+    NotificationWorkerProperties::class,
+    NotificationDispatchProperties::class,
+    NotificationSenderProperties::class,
+)
 class NotificationWorkerCoreConfig {
 
     /**
@@ -40,11 +46,11 @@ class NotificationWorkerCoreConfig {
      * Notification 상태(RETRY_WAIT/DEAD)와 Kafka retry/DLT 이동 시점이 서로 어긋나지 않는다.
      */
     @Bean
-    fun dispatchRetryPolicy(properties: NotificationWorkerProperties): RetryPolicy {
+    fun dispatchRetryPolicy(properties: NotificationDispatchProperties): RetryPolicy {
         return RetryPolicy(
-            maxAttempts = properties.dispatch.retry.maxAttempts.toInt(),
-            baseDelay = properties.dispatch.retry.backoff,
-            maxDelay = properties.dispatch.retry.backoff,
+            maxAttempts = properties.retry.maxAttempts.toInt(),
+            baseDelay = properties.retry.backoff,
+            maxDelay = properties.retry.backoff,
         )
     }
 
@@ -56,14 +62,17 @@ class NotificationWorkerCoreConfig {
      */
     @Bean
     fun dispatchNotificationPolicy(
-        properties: NotificationWorkerProperties,
+        workerProperties: NotificationWorkerProperties,
+        dispatchProperties: NotificationDispatchProperties,
         dispatchRetryPolicy: RetryPolicy,
     ): DispatchNotificationPolicy {
         return DispatchNotificationPolicy(
-            workerId = properties.workerId,
-            dedupeTtl = properties.dispatch.dedupeTtl,
-            idempotencyKeyTtl = properties.dispatch.idempotencyKeyTtl,
+            workerId = workerProperties.workerId,
+            dedupeTtl = dispatchProperties.dedupeTtl,
+            idempotencyKeyTtl = dispatchProperties.idempotencyKeyTtl,
             retryPolicy = dispatchRetryPolicy,
+            processingVisibilityTimeout = dispatchProperties.processingVisibilityTimeout,
+            recoveryBatchSize = dispatchProperties.recovery.batchSize,
         )
     }
 
@@ -98,6 +107,23 @@ class NotificationWorkerCoreConfig {
             deduplicationPort = deduplicationPort,
             idempotencyKeyPort = idempotencyKeyPort,
             senderRouter = senderRouter,
+            policy = dispatchNotificationPolicy,
+            clock = clock,
+        )
+    }
+
+    @Bean
+    fun recoverStaleProcessingDispatchUseCase(
+        notificationPersistencePort: NotificationPersistencePort,
+        dispatchPersistencePort: NotificationDispatchPersistencePort,
+        deduplicationPort: NotificationDeduplicationPort,
+        dispatchNotificationPolicy: DispatchNotificationPolicy,
+        clock: Clock,
+    ): RecoverStaleProcessingDispatchUseCase {
+        return RecoverStaleProcessingDispatchService(
+            notificationPersistencePort = notificationPersistencePort,
+            dispatchPersistencePort = dispatchPersistencePort,
+            deduplicationPort = deduplicationPort,
             policy = dispatchNotificationPolicy,
             clock = clock,
         )

@@ -25,13 +25,13 @@ class TelegramNotificationSenderConfig {
      */
     @Bean(TELEGRAM_WEB_CLIENT)
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.telegram",
+        prefix = "kachi.notification.sender.telegram",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
-    fun telegramWebClient(properties: NotificationWorkerProperties): WebClient {
-        val telegram = properties.sender.telegram
+    fun telegramWebClient(properties: NotificationSenderProperties): WebClient {
+        val telegram = properties.telegram
         validateTelegramHttpProperties(telegram)
 
         return WebClient.builder()
@@ -43,16 +43,16 @@ class TelegramNotificationSenderConfig {
 
     @Bean
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.telegram",
+        prefix = "kachi.notification.sender.telegram",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
     fun telegramNotificationSender(
         @Qualifier(TELEGRAM_WEB_CLIENT) webClient: WebClient,
-        properties: NotificationWorkerProperties,
+        properties: NotificationSenderProperties,
     ): TelegramNotificationSender {
-        val telegram = properties.sender.telegram
+        val telegram = properties.telegram
         val botToken = validateTelegramSenderProperties(telegram)
 
         return TelegramNotificationSender(
@@ -64,7 +64,7 @@ class TelegramNotificationSenderConfig {
         )
     }
 
-    private fun validateTelegramSenderProperties(telegram: NotificationWorkerProperties.Sender.Telegram): String {
+    private fun validateTelegramSenderProperties(telegram: NotificationSenderProperties.Telegram): String {
         val botToken = telegram.botToken
         require(!botToken.isNullOrBlank()) {
             "telegram botToken must not be blank when telegram sender is enabled"
@@ -72,7 +72,7 @@ class TelegramNotificationSenderConfig {
         return botToken
     }
 
-    private fun validateTelegramHttpProperties(telegram: NotificationWorkerProperties.Sender.Telegram) {
+    private fun validateTelegramHttpProperties(telegram: NotificationSenderProperties.Telegram) {
         require(telegram.baseUrl.isNotBlank()) {
             "telegram baseUrl must not be blank"
         }
@@ -96,7 +96,7 @@ class TelegramNotificationSenderConfig {
         }
     }
 
-    private fun telegramHttpClient(telegram: NotificationWorkerProperties.Sender.Telegram): HttpClient {
+    private fun telegramHttpClient(telegram: NotificationSenderProperties.Telegram): HttpClient {
         return HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, telegram.connectTimeout.toMillis().toInt())
             .responseTimeout(telegram.responseTimeout)

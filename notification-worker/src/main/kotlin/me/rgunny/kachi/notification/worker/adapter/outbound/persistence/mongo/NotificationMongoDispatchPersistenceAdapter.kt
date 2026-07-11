@@ -29,8 +29,13 @@ class NotificationMongoDispatchPersistenceAdapter(
     private val mapper: NotificationDocumentMapper,
 ) : NotificationDispatchPersistencePort {
 
+    /**
+     * vendor 호출 이후 core가 확정한 SENT/RETRY_WAIT/DEAD 상태를 저장한다.
+     */
     override suspend fun saveFinalized(notification: Notification): Notification {
+        // 1. core에서 계산한 최종 상태와 history를 Mongo document로 변환한다.
         return mongoTemplate.save(mapper.toDocument(notification))
+            // 2. 단일 Notification aggregate 저장은 MongoDB 단일 document 원자성에 맡긴다.
             .map(mapper::toDomain)
             .awaitSingle()
     }

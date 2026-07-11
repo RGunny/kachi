@@ -25,13 +25,13 @@ class DiscordNotificationSenderConfig {
      */
     @Bean(DISCORD_WEB_CLIENT)
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.discord",
+        prefix = "kachi.notification.sender.discord",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
-    fun discordWebClient(properties: NotificationWorkerProperties): WebClient {
-        val discord = properties.sender.discord
+    fun discordWebClient(properties: NotificationSenderProperties): WebClient {
+        val discord = properties.discord
         validateDiscordHttpProperties(discord)
 
         return WebClient.builder()
@@ -42,16 +42,16 @@ class DiscordNotificationSenderConfig {
 
     @Bean
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.discord",
+        prefix = "kachi.notification.sender.discord",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
     fun discordNotificationSender(
         @Qualifier(DISCORD_WEB_CLIENT) webClient: WebClient,
-        properties: NotificationWorkerProperties,
+        properties: NotificationSenderProperties,
     ): DiscordNotificationSender {
-        val discord = properties.sender.discord
+        val discord = properties.discord
         val webhookUrl = validateDiscordSenderProperties(discord)
 
         return DiscordNotificationSender(
@@ -62,7 +62,7 @@ class DiscordNotificationSenderConfig {
         )
     }
 
-    private fun validateDiscordSenderProperties(discord: NotificationWorkerProperties.Sender.Discord): String {
+    private fun validateDiscordSenderProperties(discord: NotificationSenderProperties.Discord): String {
         val webhookUrl = discord.webhookUrl
         require(!webhookUrl.isNullOrBlank()) {
             "discord webhookUrl must not be blank when discord sender is enabled"
@@ -70,7 +70,7 @@ class DiscordNotificationSenderConfig {
         return webhookUrl
     }
 
-    private fun validateDiscordHttpProperties(discord: NotificationWorkerProperties.Sender.Discord) {
+    private fun validateDiscordHttpProperties(discord: NotificationSenderProperties.Discord) {
         require(!discord.connectTimeout.isZero && !discord.connectTimeout.isNegative) {
             "discord connectTimeout must be positive"
         }
@@ -88,7 +88,7 @@ class DiscordNotificationSenderConfig {
         }
     }
 
-    private fun discordHttpClient(discord: NotificationWorkerProperties.Sender.Discord): HttpClient {
+    private fun discordHttpClient(discord: NotificationSenderProperties.Discord): HttpClient {
         return HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, discord.connectTimeout.toMillis().toInt())
             .responseTimeout(discord.responseTimeout)

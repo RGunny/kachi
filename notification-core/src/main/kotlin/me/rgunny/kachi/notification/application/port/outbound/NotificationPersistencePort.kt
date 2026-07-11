@@ -19,6 +19,17 @@ interface NotificationPersistencePort {
     suspend fun findByRequestId(requestId: String): Notification?
 
     /**
+     * PROCESSING 상태로 claim된 뒤 visibility timeout을 넘긴 알림 조회.
+     *
+     * worker가 vendor 호출 중단, process crash, DB finalize 실패 등으로 종료되면 PROCESSING 상태가 남을 수 있다.
+     * recovery use case는 이 목록을 재시도 대기 또는 DEAD 상태로 회수한다.
+     */
+    suspend fun findStaleProcessing(
+        threshold: Instant,
+        batchSize: Int,
+    ): List<Notification>
+
+    /**
      * PUBLISHED 상태의 알림을 처리 중 상태로 claim한다.
      *
      * 구현체는 현재 상태가 PUBLISHED인 경우에만 PROCESSING으로 전이되도록 CAS 조건을 적용해야 한다.

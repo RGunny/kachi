@@ -156,8 +156,13 @@ class DispatchNotificationService(
         notification: Notification,
         now: Instant,
     ): DispatchNotificationResult {
+        // 1. vendor 발송 성공이 확인된 뒤에만 domain 상태를 SENT로 확정한다.
         notification.markSent(now)
+
+        // 2. 외부 API 호출은 rollback할 수 없으므로, 발송 이후 DB finalize를 별도 저장 경계로 수행한다.
         val savedNotification = dispatchPersistencePort.saveFinalized(notification)
+
+        // 3. Kafka listener는 이 결과를 보고 offset ack 여부를 결정한다.
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
@@ -173,10 +178,12 @@ class DispatchNotificationService(
         dedupeKey: String,
         now: Instant,
     ): DispatchNotificationResult {
+        // 1. 이번 발송 시도를 포함한 attempts로 retry/give-up 결정을 계산한다.
         val nextAttempts = notification.dispatchAttempts + 1
         val decision = policy.retryPolicy.decide(failure, nextAttempts)
         val reason = failure.message
 
+        // 2. 실패 이력을 먼저 남기고, retry 정책 결과에 따라 RETRY_WAIT 또는 DEAD로 확정한다.
         notification.markFailed(now, reason)
         val failureClassification = when (decision) {
             is RetryDecision.Retry -> {
@@ -189,11 +196,14 @@ class DispatchNotificationService(
             }
         }
 
+        // 3. 계산된 최종 상태를 DB에 먼저 저장한다. 저장 전 dedupe를 풀면 다음 메시지가 낡은 상태를 볼 수 있다.
         val savedNotification = dispatchPersistencePort.saveFinalized(notification)
         if (failureClassification == DispatchFailureClassification.RETRYABLE) {
-            // 재시도 가능한 실패는 DB에 RETRY_WAIT 상태가 확정된 뒤 다음 dispatch 메시지가 막히지 않도록 멱등 마커를 해제한다.
+            // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
             deduplicationPort.release(dedupeKey)
         }
+
+        // 5. listener는 RETRYABLE classification을 보고 Kafka retry/DLT 흐름으로 연결한다.
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
@@ -210,9 +220,14 @@ class DispatchNotificationService(
         failure: RetryFailure,
         now: Instant,
     ): DispatchNotificationResult {
+        // 1. 재시도하지 않을 실패도 실패 이력을 먼저 남긴다.
         val reason = failure.message
         notification.markFailed(now, reason)
+
+        // 2. 이후 DEAD로 종착시켜 같은 dispatch 메시지가 다시 발송을 시도하지 않게 한다.
         notification.markDead(now, reason)
+
+        // 3. DEAD 저장이 성공하면 listener가 offset을 ack해 Kafka 재처리를 끝낸다.
         val savedNotification = dispatchPersistencePort.saveFinalized(notification)
         return DispatchNotificationResult(
             notificationId = savedNotification.id,

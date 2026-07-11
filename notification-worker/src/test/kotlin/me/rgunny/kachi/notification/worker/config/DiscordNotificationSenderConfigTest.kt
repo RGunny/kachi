@@ -115,7 +115,7 @@ class DiscordNotificationSenderConfigTest {
                 properties = properties(
                     webhookUrl = "https://discord.test/api/webhooks/test",
                     maxInMemorySize = 0,
-                )
+                ),
             )
         }
     }
@@ -127,57 +127,41 @@ class DiscordNotificationSenderConfigTest {
         readTimeout: Duration = Duration.ofSeconds(5),
         writeTimeout: Duration = Duration.ofSeconds(5),
         maxInMemorySize: Int = 256 * 1024,
-    ): NotificationWorkerProperties {
-        return NotificationWorkerProperties(
-            workerId = "test-worker",
-            dispatch = NotificationWorkerProperties.Dispatch(
-                topic = "notification.dispatch",
-                groupId = "notification-worker",
-                dedupeTtl = Duration.ofMinutes(5),
-                idempotencyKeyTtl = Duration.ofHours(24),
-                retry = NotificationWorkerProperties.Dispatch.Retry(
-                    maxAttempts = 3,
-                    backoff = Duration.ofSeconds(1),
-                ),
-                dlt = NotificationWorkerProperties.Dispatch.Dlt(
-                    topic = "notification.dispatch.dlt",
-                ),
+    ): NotificationSenderProperties {
+        return NotificationSenderProperties(
+            mock = NotificationSenderProperties.Mock(
+                enabled = true,
+                channels = listOf("SLACK", "DISCORD", "TELEGRAM", "SMS", "KAKAO", "EMAIL"),
+                mode = "SUCCESS",
             ),
-            sender = NotificationWorkerProperties.Sender(
-                mock = NotificationWorkerProperties.Sender.Mock(
-                    enabled = true,
-                    channels = listOf("SLACK", "DISCORD", "TELEGRAM", "SMS", "KAKAO", "EMAIL"),
-                    mode = "SUCCESS",
-                ),
-                slack = NotificationWorkerProperties.Sender.Slack(
-                    enabled = true,
-                    webhookUrl = "https://hooks.slack.test/services/test",
-                    connectTimeout = Duration.ofSeconds(2),
-                    responseTimeout = Duration.ofSeconds(5),
-                    readTimeout = Duration.ofSeconds(5),
-                    writeTimeout = Duration.ofSeconds(5),
-                    maxInMemorySize = 256 * 1024,
-                ),
-                discord = NotificationWorkerProperties.Sender.Discord(
-                    enabled = true,
-                    webhookUrl = webhookUrl,
-                    connectTimeout = connectTimeout,
-                    responseTimeout = responseTimeout,
-                    readTimeout = readTimeout,
-                    writeTimeout = writeTimeout,
-                    maxInMemorySize = maxInMemorySize,
-                ),
-                telegram = NotificationWorkerProperties.Sender.Telegram(
-                    enabled = false,
-                    baseUrl = "https://api.telegram.test",
-                    botToken = null,
-                    sendMessagePath = "/sendMessage",
-                    connectTimeout = Duration.ofSeconds(2),
-                    responseTimeout = Duration.ofSeconds(5),
-                    readTimeout = Duration.ofSeconds(5),
-                    writeTimeout = Duration.ofSeconds(5),
-                    maxInMemorySize = 256 * 1024,
-                ),
+            slack = NotificationSenderProperties.Slack(
+                enabled = true,
+                webhookUrl = "https://hooks.slack.test/services/test",
+                connectTimeout = Duration.ofSeconds(2),
+                responseTimeout = Duration.ofSeconds(5),
+                readTimeout = Duration.ofSeconds(5),
+                writeTimeout = Duration.ofSeconds(5),
+                maxInMemorySize = 256 * 1024,
+            ),
+            discord = NotificationSenderProperties.Discord(
+                enabled = true,
+                webhookUrl = webhookUrl,
+                connectTimeout = connectTimeout,
+                responseTimeout = responseTimeout,
+                readTimeout = readTimeout,
+                writeTimeout = writeTimeout,
+                maxInMemorySize = maxInMemorySize,
+            ),
+            telegram = NotificationSenderProperties.Telegram(
+                enabled = false,
+                baseUrl = "https://api.telegram.test",
+                botToken = null,
+                sendMessagePath = "/sendMessage",
+                connectTimeout = Duration.ofSeconds(2),
+                responseTimeout = Duration.ofSeconds(5),
+                readTimeout = Duration.ofSeconds(5),
+                writeTimeout = Duration.ofSeconds(5),
+                maxInMemorySize = 256 * 1024,
             ),
         )
     }

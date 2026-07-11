@@ -10,6 +10,7 @@ import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationDocument
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationHistoryDocument
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mapper.NotificationDocumentMapper
+import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -50,6 +51,29 @@ class NotificationMongoPersistenceAdapter(
         return mongoTemplate.findOne(query, NotificationDocument::class.java)
             .map(mapper::toDomain)
             .awaitSingleOrNull()
+    }
+
+    /**
+     * recovery 대상인 오래된 PROCESSING 알림을 claimedAt 오름차순으로 제한 조회한다.
+     */
+    override suspend fun findStaleProcessing(
+        threshold: Instant,
+        batchSize: Int,
+    ): List<Notification> {
+        // vendor 호출 또는 DB finalize 전에 worker가 중단되면 PROCESSING 상태가 남을 수 있다.
+        // claimedAt이 visibility timeout을 넘긴 알림만 recovery 대상으로 보고, fresh PROCESSING은 건드리지 않는다.
+        // 오래된 claim부터 회수해 장시간 막힌 dispatch를 우선 재시도/DEAD 처리한다.
+        val query = Query.query(
+            Criteria.where(FIELD_STATUS).`is`(NotificationStatus.PROCESSING.name)
+                .and(FIELD_CLAIMED_AT).lt(threshold)
+        )
+            .with(Sort.by(Sort.Order.asc(FIELD_CLAIMED_AT)))
+            .limit(batchSize)
+
+        return mongoTemplate.find(query, NotificationDocument::class.java)
+            .map(mapper::toDomain)
+            .collectList()
+            .awaitSingle()
     }
 
     override suspend fun claimFromPublished(

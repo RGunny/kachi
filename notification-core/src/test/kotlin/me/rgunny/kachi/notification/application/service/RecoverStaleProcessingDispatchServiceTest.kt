@@ -1,0 +1,116 @@
+package me.rgunny.kachi.notification.application.service
+
+import me.rgunny.kachi.notification.domain.Notification
+import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationStatus
+import me.rgunny.kachi.notification.fake.FakeDeduplicationPort
+import me.rgunny.kachi.notification.fake.FakeNotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.fake.FakeNotificationPersistencePort
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DEDUPE_TTL
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.IDEMPOTENCY_KEY_TTL
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.MESSAGE
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
+import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.retry.RetryPolicy
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
+import java.time.Duration
+import kotlin.test.assertEquals
+
+@DisplayName("RecoverStaleProcessingDispatchService")
+class RecoverStaleProcessingDispatchServiceTest {
+
+    @Test
+    @DisplayName("visibility timeout을 넘긴 PROCESSING 알림을 RETRY_WAIT로 회수하고 dedupe를 해제한다")
+    fun recoverAsRetryWait() = runSuspend {
+        val notification = processingNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(persistence, deduplication, maxAttempts = 3)
+
+        val result = service.recoverStaleProcessing()
+
+        assertEquals(1, result.processed)
+        assertEquals(1, result.retryWait)
+        assertEquals(0, result.dead)
+        assertEquals(NotificationStatus.RETRY_WAIT, persistence.saved.last().status)
+        assertEquals(RetryFailureCode.DISPATCH_PROCESSING_TIMEOUT.defaultMessage, persistence.saved.last().failureReason)
+        assertEquals(1, persistence.saved.last().dispatchAttempts)
+        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("재시도 한도에 도달한 stale PROCESSING 알림은 DEAD로 회수한다")
+    fun recoverAsDead() = runSuspend {
+        val notification = processingNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(persistence, deduplication, maxAttempts = 1)
+
+        val result = service.recoverStaleProcessing()
+
+        assertEquals(1, result.processed)
+        assertEquals(0, result.retryWait)
+        assertEquals(1, result.dead)
+        assertEquals(NotificationStatus.DEAD, persistence.saved.last().status)
+        assertEquals(1, persistence.saved.last().dispatchAttempts)
+        assertEquals(emptyList(), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("visibility timeout 안의 PROCESSING 알림은 회수하지 않는다")
+    fun skipFreshProcessing() = runSuspend {
+        val notification = processingNotification(claimedSecondsAgo = 10)
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(persistence, deduplication, maxAttempts = 3)
+
+        val result = service.recoverStaleProcessing()
+
+        assertEquals(0, result.processed)
+        assertEquals(emptyList(), persistence.saved)
+    }
+
+    private fun service(
+        persistence: FakeNotificationPersistencePort,
+        deduplication: FakeDeduplicationPort,
+        maxAttempts: Int,
+    ): RecoverStaleProcessingDispatchService {
+        return RecoverStaleProcessingDispatchService(
+            notificationPersistencePort = persistence,
+            dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
+            deduplicationPort = deduplication,
+            policy = DispatchNotificationPolicy(
+                workerId = "worker-1",
+                dedupeTtl = DEDUPE_TTL,
+                idempotencyKeyTtl = IDEMPOTENCY_KEY_TTL,
+                retryPolicy = RetryPolicy(
+                    maxAttempts = maxAttempts,
+                    baseDelay = Duration.ofSeconds(10),
+                    maxDelay = Duration.ofMinutes(1),
+                ),
+                processingVisibilityTimeout = Duration.ofSeconds(30),
+                recoveryBatchSize = 10,
+            ),
+            clock = CLOCK,
+        )
+    }
+
+    private fun processingNotification(claimedSecondsAgo: Long = 60): Notification {
+        return Notification.request(
+            requestId = REQUEST_ID,
+            requester = REQUESTER,
+            channel = NotificationChannel.SLACK,
+            recipient = RECIPIENT,
+            message = MESSAGE,
+            now = NOW.minusSeconds(120),
+        ).also {
+            it.markPublished(NOW.minusSeconds(90))
+            it.markProcessing(NOW.minusSeconds(claimedSecondsAgo), "worker-1")
+        }
+    }
+}

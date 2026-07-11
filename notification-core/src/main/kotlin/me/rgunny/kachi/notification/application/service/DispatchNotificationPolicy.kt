@@ -11,4 +11,6 @@ data class DispatchNotificationPolicy(
     val dedupeTtl: Duration,
     val idempotencyKeyTtl: Duration,
     val retryPolicy: RetryPolicy,
+    val processingVisibilityTimeout: Duration,
+    val recoveryBatchSize: Int,
 )

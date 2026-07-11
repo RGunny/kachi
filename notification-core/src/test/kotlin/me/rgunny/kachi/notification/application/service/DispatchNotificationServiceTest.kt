@@ -281,6 +281,8 @@ class DispatchNotificationServiceTest {
                     baseDelay = Duration.ofSeconds(10),
                     maxDelay = Duration.ofMinutes(1),
                 ),
+                processingVisibilityTimeout = Duration.ofSeconds(30),
+                recoveryBatchSize = 10,
             ),
             clock = clock,
         )

@@ -20,13 +20,13 @@ class MockNotificationSenderConfig {
 
     @Bean
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.mock",
+        prefix = "kachi.notification.sender.mock",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = true,
     )
-    fun mockNotificationSender(properties: NotificationWorkerProperties): MockNotificationSender {
-        val mock = properties.sender.mock
+    fun mockNotificationSender(properties: NotificationSenderProperties): MockNotificationSender {
+        val mock = properties.mock
         val configuredChannels = mock.channels.map { channel ->
             NotificationChannel.valueOf(channel.uppercase())
         }.toSet()
@@ -51,26 +51,26 @@ class MockNotificationSenderConfig {
         )
     }
 
-    private fun realSenderChannels(properties: NotificationWorkerProperties): Set<NotificationChannel> {
+    private fun realSenderChannels(properties: NotificationSenderProperties): Set<NotificationChannel> {
         return realSenderBindings(properties)
             .filter { it.enabled }
             .map { it.channel }
             .toSet()
     }
 
-    private fun realSenderBindings(properties: NotificationWorkerProperties): List<RealSenderBinding> {
+    private fun realSenderBindings(properties: NotificationSenderProperties): List<RealSenderBinding> {
         return listOf(
             RealSenderBinding(
                 channel = NotificationChannel.SLACK,
-                enabled = properties.sender.slack.enabled,
+                enabled = properties.slack.enabled,
             ),
             RealSenderBinding(
                 channel = NotificationChannel.DISCORD,
-                enabled = properties.sender.discord.enabled,
+                enabled = properties.discord.enabled,
             ),
             RealSenderBinding(
                 channel = NotificationChannel.TELEGRAM,
-                enabled = properties.sender.telegram.enabled,
+                enabled = properties.telegram.enabled,
             )
         )
     }

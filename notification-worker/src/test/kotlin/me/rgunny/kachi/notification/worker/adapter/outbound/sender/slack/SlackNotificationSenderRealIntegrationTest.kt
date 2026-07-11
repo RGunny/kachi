@@ -5,14 +5,11 @@ import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Dispatch
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Dispatch.Dlt
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Dispatch.Retry
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Discord
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Mock
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Slack
-import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties.Sender.Telegram
+import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties
+import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties.Discord
+import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties.Mock
+import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties.Slack
+import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties.Telegram
 import me.rgunny.kachi.notification.worker.config.SlackNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.support.TestSecretEnvironment
 import org.junit.jupiter.api.DisplayName
@@ -44,11 +41,11 @@ class SlackNotificationSenderRealIntegrationTest {
 
             val result = sender.send(
                 SendNotificationCommand(
-                    notificationId = NotificationId.newId(),
-                    channel = NotificationChannel.SLACK,
-                    recipient = "slack-webhook",
-                    message = "[${currentTimestamp()}] [notification-worker] [slack-webhook-test] SlackNotificationSender real integration test",
-                    idempotencyKey = "slack-real-integration-test",
+                notificationId = NotificationId.newId(),
+                channel = NotificationChannel.SLACK,
+                recipient = "slack-webhook",
+                message = "[${currentTimestamp()}] [notification-worker] [slack-webhook-test] SlackNotificationSender real integration test",
+                idempotencyKey = "slack-real-integration-test",
                 )
             )
 
@@ -61,57 +58,41 @@ class SlackNotificationSenderRealIntegrationTest {
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val MESSAGE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        fun properties(webhookUrl: String): NotificationWorkerProperties {
-            return NotificationWorkerProperties(
-                workerId = "slack-real-integration-test",
-                dispatch = Dispatch(
-                    topic = "notification.dispatch",
-                    groupId = "notification-worker",
-                    dedupeTtl = Duration.ofMinutes(5),
-                    idempotencyKeyTtl = Duration.ofHours(24),
-                    retry = Retry(
-                        maxAttempts = 3,
-                        backoff = Duration.ofSeconds(1),
-                    ),
-                    dlt = Dlt(
-                        topic = "notification.dispatch.dlt",
-                    ),
+        fun properties(webhookUrl: String): NotificationSenderProperties {
+            return NotificationSenderProperties(
+                mock = Mock(
+                    enabled = true,
+                    channels = listOf("SLACK", "DISCORD", "TELEGRAM", "SMS", "KAKAO", "EMAIL"),
+                    mode = "SUCCESS",
                 ),
-                sender = NotificationWorkerProperties.Sender(
-                    mock = Mock(
-                        enabled = true,
-                        channels = listOf("SLACK", "DISCORD", "TELEGRAM", "SMS", "KAKAO", "EMAIL"),
-                        mode = "SUCCESS",
-                    ),
-                    slack = Slack(
-                        enabled = true,
-                        webhookUrl = webhookUrl,
-                        connectTimeout = Duration.ofSeconds(2),
-                        responseTimeout = Duration.ofSeconds(5),
-                        readTimeout = Duration.ofSeconds(5),
-                        writeTimeout = Duration.ofSeconds(5),
-                        maxInMemorySize = 256 * 1024,
-                    ),
-                    discord = Discord(
-                        enabled = false,
-                        webhookUrl = null,
-                        connectTimeout = Duration.ofSeconds(2),
-                        responseTimeout = Duration.ofSeconds(5),
-                        readTimeout = Duration.ofSeconds(5),
-                        writeTimeout = Duration.ofSeconds(5),
-                        maxInMemorySize = 256 * 1024,
-                    ),
-                    telegram = Telegram(
-                        enabled = false,
-                        baseUrl = "https://api.telegram.test",
-                        botToken = null,
-                        sendMessagePath = "/sendMessage",
-                        connectTimeout = Duration.ofSeconds(2),
-                        responseTimeout = Duration.ofSeconds(5),
-                        readTimeout = Duration.ofSeconds(5),
-                        writeTimeout = Duration.ofSeconds(5),
-                        maxInMemorySize = 256 * 1024,
-                    ),
+                slack = Slack(
+                    enabled = true,
+                    webhookUrl = webhookUrl,
+                    connectTimeout = Duration.ofSeconds(2),
+                    responseTimeout = Duration.ofSeconds(5),
+                    readTimeout = Duration.ofSeconds(5),
+                    writeTimeout = Duration.ofSeconds(5),
+                    maxInMemorySize = 256 * 1024,
+                ),
+                discord = Discord(
+                    enabled = false,
+                    webhookUrl = null,
+                    connectTimeout = Duration.ofSeconds(2),
+                    responseTimeout = Duration.ofSeconds(5),
+                    readTimeout = Duration.ofSeconds(5),
+                    writeTimeout = Duration.ofSeconds(5),
+                    maxInMemorySize = 256 * 1024,
+                ),
+                telegram = Telegram(
+                    enabled = false,
+                    baseUrl = "https://api.telegram.test",
+                    botToken = null,
+                    sendMessagePath = "/sendMessage",
+                    connectTimeout = Duration.ofSeconds(2),
+                    responseTimeout = Duration.ofSeconds(5),
+                    readTimeout = Duration.ofSeconds(5),
+                    writeTimeout = Duration.ofSeconds(5),
+                    maxInMemorySize = 256 * 1024,
                 ),
             )
         }

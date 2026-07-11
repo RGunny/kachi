@@ -10,5 +10,11 @@ import me.rgunny.kachi.notification.domain.Notification
  */
 interface NotificationDispatchPersistencePort {
 
+    /**
+     * vendor 호출 이후 최종 dispatch 상태를 저장한다.
+     *
+     * 외부 API, Redis dedupe/idempotency는 MongoDB transaction으로 되돌릴 수 없으므로,
+     * 구현체는 상태 전이 계산이 끝난 Notification aggregate를 저장하는 finalize 경계가 된다.
+     */
     suspend fun saveFinalized(notification: Notification): Notification
 }

@@ -24,7 +24,7 @@ class MockNotificationSenderConfigTest {
     fun mockNotificationSender() {
         val sender = config.mockNotificationSender(
             properties(
-                mock = NotificationWorkerProperties.Sender.Mock(
+                mock = NotificationSenderProperties.Mock(
                     enabled = true,
                     channels = listOf("SLACK", "EMAIL"),
                     mode = MockNotificationSenderMode.SUCCESS.name,
@@ -41,7 +41,7 @@ class MockNotificationSenderConfigTest {
     fun removeSlackFromMockChannelsWhenSlackSenderEnabled(output: CapturedOutput) {
         val sender = config.mockNotificationSender(
             properties(
-                mock = NotificationWorkerProperties.Sender.Mock(
+                mock = NotificationSenderProperties.Mock(
                     enabled = true,
                     channels = listOf("SLACK", "EMAIL"),
                     mode = MockNotificationSenderMode.SUCCESS.name,
@@ -62,7 +62,7 @@ class MockNotificationSenderConfigTest {
     fun removeDiscordFromMockChannelsWhenDiscordSenderEnabled(output: CapturedOutput) {
         val sender = config.mockNotificationSender(
             properties(
-                mock = NotificationWorkerProperties.Sender.Mock(
+                mock = NotificationSenderProperties.Mock(
                     enabled = true,
                     channels = listOf("DISCORD", "EMAIL"),
                     mode = MockNotificationSenderMode.SUCCESS.name,
@@ -83,7 +83,7 @@ class MockNotificationSenderConfigTest {
     fun removeTelegramFromMockChannelsWhenTelegramSenderEnabled(output: CapturedOutput) {
         val sender = config.mockNotificationSender(
             properties(
-                mock = NotificationWorkerProperties.Sender.Mock(
+                mock = NotificationSenderProperties.Mock(
                     enabled = true,
                     channels = listOf("TELEGRAM", "EMAIL"),
                     mode = MockNotificationSenderMode.SUCCESS.name,
@@ -105,7 +105,7 @@ class MockNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.mockNotificationSender(
                 properties(
-                    mock = NotificationWorkerProperties.Sender.Mock(
+                    mock = NotificationSenderProperties.Mock(
                         enabled = true,
                         channels = listOf("UNKNOWN"),
                         mode = MockNotificationSenderMode.SUCCESS.name,
@@ -116,37 +116,21 @@ class MockNotificationSenderConfigTest {
     }
 
     private fun properties(
-        mock: NotificationWorkerProperties.Sender.Mock,
-        slack: NotificationWorkerProperties.Sender.Slack = slack(enabled = false),
-        discord: NotificationWorkerProperties.Sender.Discord = discord(enabled = false),
-        telegram: NotificationWorkerProperties.Sender.Telegram = telegram(enabled = false),
-    ): NotificationWorkerProperties {
-        return NotificationWorkerProperties(
-            workerId = "test-worker",
-            dispatch = NotificationWorkerProperties.Dispatch(
-                topic = "notification.dispatch",
-                groupId = "notification-worker",
-                dedupeTtl = Duration.ofMinutes(5),
-                idempotencyKeyTtl = Duration.ofHours(24),
-                retry = NotificationWorkerProperties.Dispatch.Retry(
-                    maxAttempts = 3,
-                    backoff = Duration.ofSeconds(1),
-                ),
-                dlt = NotificationWorkerProperties.Dispatch.Dlt(
-                    topic = "notification.dispatch.dlt",
-                ),
-            ),
-            sender = NotificationWorkerProperties.Sender(
-                mock = mock,
-                slack = slack,
-                discord = discord,
-                telegram = telegram,
-            ),
+        mock: NotificationSenderProperties.Mock,
+        slack: NotificationSenderProperties.Slack = slack(enabled = false),
+        discord: NotificationSenderProperties.Discord = discord(enabled = false),
+        telegram: NotificationSenderProperties.Telegram = telegram(enabled = false),
+    ): NotificationSenderProperties {
+        return NotificationSenderProperties(
+            mock = mock,
+            slack = slack,
+            discord = discord,
+            telegram = telegram,
         )
     }
 
-    private fun slack(enabled: Boolean): NotificationWorkerProperties.Sender.Slack {
-        return NotificationWorkerProperties.Sender.Slack(
+    private fun slack(enabled: Boolean): NotificationSenderProperties.Slack {
+        return NotificationSenderProperties.Slack(
             enabled = enabled,
             webhookUrl = "https://hooks.slack.test/services/test",
             connectTimeout = Duration.ofSeconds(2),
@@ -157,8 +141,8 @@ class MockNotificationSenderConfigTest {
         )
     }
 
-    private fun discord(enabled: Boolean): NotificationWorkerProperties.Sender.Discord {
-        return NotificationWorkerProperties.Sender.Discord(
+    private fun discord(enabled: Boolean): NotificationSenderProperties.Discord {
+        return NotificationSenderProperties.Discord(
             enabled = enabled,
             webhookUrl = "https://discord.test/api/webhooks/test",
             connectTimeout = Duration.ofSeconds(2),
@@ -169,8 +153,8 @@ class MockNotificationSenderConfigTest {
         )
     }
 
-    private fun telegram(enabled: Boolean): NotificationWorkerProperties.Sender.Telegram {
-        return NotificationWorkerProperties.Sender.Telegram(
+    private fun telegram(enabled: Boolean): NotificationSenderProperties.Telegram {
+        return NotificationSenderProperties.Telegram(
             enabled = enabled,
             baseUrl = "https://api.telegram.test",
             botToken = "telegram-bot-token",

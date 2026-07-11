@@ -36,4 +36,10 @@ enum class RetryFailureCode(
         source = FailureSource.APPLICATION,
         category = FailureCategory.TRANSIENT_ERROR,
     ),
+    DISPATCH_PROCESSING_TIMEOUT(
+        code = "DISPATCH_PROCESSING_TIMEOUT",
+        defaultMessage = "dispatch processing timeout",
+        source = FailureSource.APPLICATION,
+        category = FailureCategory.TIMEOUT,
+    ),
 }

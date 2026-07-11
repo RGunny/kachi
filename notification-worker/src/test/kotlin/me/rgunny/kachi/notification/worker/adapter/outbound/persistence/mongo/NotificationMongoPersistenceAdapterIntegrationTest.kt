@@ -53,6 +53,39 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
     }
 
     @Nested
+    @DisplayName("findStaleProcessing()")
+    inner class FindStaleProcessing {
+
+        @Test
+        @DisplayName("threshold보다 오래된 PROCESSING 알림만 조회한다")
+        fun findStaleProcessing() = runBlocking {
+            val stale = notification(requestId = "stale").also {
+                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                it.markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
+            }
+            val fresh = notification(requestId = "fresh").also {
+                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                it.markProcessing(Instant.parse("2026-06-19T00:00:50Z"), "worker-1")
+            }
+            val sent = notification(requestId = "sent").also {
+                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                it.markProcessing(Instant.parse("2026-06-19T00:00:15Z"), "worker-1")
+                it.markSent(Instant.parse("2026-06-19T00:00:20Z"))
+            }
+            adapter.save(stale)
+            adapter.save(fresh)
+            adapter.save(sent)
+
+            val result = adapter.findStaleProcessing(
+                threshold = Instant.parse("2026-06-19T00:00:30Z"),
+                batchSize = 10,
+            )
+
+            assertEquals(listOf(stale.id), result.map { it.id })
+        }
+    }
+
+    @Nested
     @DisplayName("claimFromPublished()")
     inner class ClaimFromPublished {
 
@@ -146,9 +179,9 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         }
     }
 
-    private fun notification(): Notification {
+    private fun notification(requestId: String = "request-1"): Notification {
         return Notification.request(
-            requestId = "request-1",
+            requestId = requestId,
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
             recipient = "C123",

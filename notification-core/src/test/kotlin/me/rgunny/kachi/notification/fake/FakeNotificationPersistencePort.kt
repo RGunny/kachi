@@ -34,6 +34,15 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         return notificationsByRequestId[requestId]
     }
 
+    override suspend fun findStaleProcessing(
+        threshold: Instant,
+        batchSize: Int,
+    ): List<Notification> {
+        return notificationsById.values
+            .filter { it.status == NotificationStatus.PROCESSING && it.claimedAt != null && it.claimedAt!! < threshold }
+            .take(batchSize)
+    }
+
     override suspend fun claimFromPublished(
         notificationId: NotificationId,
         workerId: String,

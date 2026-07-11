@@ -25,13 +25,13 @@ class SlackNotificationSenderConfig {
      */
     @Bean(SLACK_WEB_CLIENT)
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.slack",
+        prefix = "kachi.notification.sender.slack",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
-    fun slackWebClient(properties: NotificationWorkerProperties): WebClient {
-        val slack = properties.sender.slack
+    fun slackWebClient(properties: NotificationSenderProperties): WebClient {
+        val slack = properties.slack
         validateSlackHttpProperties(slack)
 
         return WebClient.builder()
@@ -41,23 +41,23 @@ class SlackNotificationSenderConfig {
     }
 
     /**
-     * application.yaml의 kachi.notification.worker.sender.slack.enabled=true일 때만 실제 Slack sender bean을 등록한다.
+     * application.yaml의 kachi.notification.sender.slack.enabled=true일 때만 실제 Slack sender bean을 등록한다.
      *
      * @ConditionalOnProperty의 prefix/name은 별도 설정값이 아니라 같은 설정 key를 조회하는 경로다.
      * mock sender가 SLACK을 포함해도 MockNotificationSenderConfig가 같은 real sender enabled 설정을 보고 mock SLACK을 제외한다.
      */
     @Bean
     @ConditionalOnProperty(
-        prefix = "kachi.notification.worker.sender.slack",
+        prefix = "kachi.notification.sender.slack",
         name = ["enabled"],
         havingValue = "true",
         matchIfMissing = false,
     )
     fun slackNotificationSender(
         @Qualifier(SLACK_WEB_CLIENT) webClient: WebClient,
-        properties: NotificationWorkerProperties,
+        properties: NotificationSenderProperties,
     ): SlackNotificationSender {
-        val slack = properties.sender.slack
+        val slack = properties.slack
         val webhookUrl = validateSlackSenderProperties(slack)
 
         return SlackNotificationSender(
@@ -68,7 +68,7 @@ class SlackNotificationSenderConfig {
         )
     }
 
-    private fun validateSlackSenderProperties(slack: NotificationWorkerProperties.Sender.Slack): String {
+    private fun validateSlackSenderProperties(slack: NotificationSenderProperties.Slack): String {
         val webhookUrl = slack.webhookUrl
         require(!webhookUrl.isNullOrBlank()) {
             "slack webhookUrl must not be blank when slack sender is enabled"
@@ -76,7 +76,7 @@ class SlackNotificationSenderConfig {
         return webhookUrl
     }
 
-    private fun validateSlackHttpProperties(slack: NotificationWorkerProperties.Sender.Slack) {
+    private fun validateSlackHttpProperties(slack: NotificationSenderProperties.Slack) {
         require(!slack.connectTimeout.isZero && !slack.connectTimeout.isNegative) {
             "slack connectTimeout must be positive"
         }
@@ -94,7 +94,7 @@ class SlackNotificationSenderConfig {
         }
     }
 
-    private fun slackHttpClient(slack: NotificationWorkerProperties.Sender.Slack): HttpClient {
+    private fun slackHttpClient(slack: NotificationSenderProperties.Slack): HttpClient {
         return HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, slack.connectTimeout.toMillis().toInt())
             .responseTimeout(slack.responseTimeout)
