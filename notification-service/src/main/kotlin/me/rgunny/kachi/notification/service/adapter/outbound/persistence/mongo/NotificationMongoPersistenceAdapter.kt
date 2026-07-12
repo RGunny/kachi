@@ -1,10 +1,11 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
+import com.mongodb.MongoCommandException
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
-import me.rgunny.kachi.notification.domain.NotificationHistoryId
+import me.rgunny.kachi.notification.domain.NotificationHistory
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDocument
@@ -16,7 +17,10 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import org.springframework.dao.DataAccessException
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.reactive.TransactionalOperator
+import org.springframework.transaction.reactive.executeAndAwait
 import java.time.Instant
 
 /**
@@ -29,12 +33,19 @@ import java.time.Instant
 class NotificationMongoPersistenceAdapter(
     private val mongoTemplate: ReactiveMongoTemplate,
     private val mapper: NotificationDocumentMapper,
+    private val transactionalOperator: TransactionalOperator,
 ) : NotificationPersistencePort {
 
     override suspend fun save(notification: Notification): Notification {
-        return mongoTemplate.save(mapper.toDocument(notification))
-            .map(mapper::toDomain)
-            .awaitSingle()
+        return transactionalOperator.executeAndAwait {
+            val saved = mongoTemplate.save(mapper.toDocument(notification))
+                .map(mapper::toDomain)
+                .awaitSingle()
+
+            insertHistories(notification.uncommittedHistories)
+
+            return@executeAndAwait saved
+        }
     }
 
     override suspend fun findById(notificationId: NotificationId): Notification? {
@@ -107,37 +118,61 @@ class NotificationMongoPersistenceAdapter(
     ): Notification? {
         require(workerId.isNotBlank()) { "workerId must not be blank" }
 
-        val query = Query.query(
-            Criteria.where(FIELD_ID).`is`(notificationId.id.toString())
-                .and(FIELD_STATUS).`is`(fromStatus.name)
-        )
-        val update = Update()
-            .set(FIELD_STATUS, NotificationStatus.PROCESSING.name)
-            .set(FIELD_FAILURE_REASON, null)
-            .set(FIELD_UPDATED_AT, now)
-            .set(FIELD_LAST_TRANSITION_AT, now)
-            .set(FIELD_CLAIMED_AT, now)
-            .set(FIELD_CLAIMED_BY, workerId)
-            .push(
-                FIELD_HISTORIES,
-                NotificationHistoryDocument(
-                    id = NotificationHistoryId.newId().id.toString(),
-                    notificationId = notificationId.id.toString(),
-                    fromStatus = fromStatus.name,
-                    toStatus = NotificationStatus.PROCESSING.name,
-                    reason = null,
+        return try {
+            transactionalOperator.executeAndAwait {
+                val history = NotificationHistory.record(
+                    notificationId = notificationId,
+                    fromStatus = fromStatus,
+                    toStatus = NotificationStatus.PROCESSING,
                     createdAt = now,
+                    reason = null,
                 )
-            )
 
-        return mongoTemplate.findAndModify(
-            query,
-            update,
-            FindAndModifyOptions.options().returnNew(true),
-            NotificationDocument::class.java,
-        )
-            .map(mapper::toDomain)
-            .awaitSingleOrNull()
+                val query = Query.query(
+                    Criteria.where(FIELD_ID).`is`(notificationId.id.toString())
+                        .and(FIELD_STATUS).`is`(fromStatus.name)
+                )
+                val update = Update()
+                    .set(FIELD_STATUS, NotificationStatus.PROCESSING.name)
+                    .set(FIELD_FAILURE_REASON, null)
+                    .set(FIELD_UPDATED_AT, now)
+                    .set(FIELD_LAST_TRANSITION_AT, now)
+                    .set(FIELD_CLAIMED_AT, now)
+                    .set(FIELD_CLAIMED_BY, workerId)
+
+                val claimed = mongoTemplate.findAndModify(
+                    query,
+                    update,
+                    FindAndModifyOptions.options().returnNew(true),
+                    NotificationDocument::class.java,
+                )
+                    .map(mapper::toDomain)
+                    .awaitSingleOrNull()
+
+                if (claimed != null) {
+                    insertHistory(history)
+                }
+
+                return@executeAndAwait claimed
+            }
+        } catch (exception: DataAccessException) {
+            if (exception.isMongoWriteConflict()) {
+                // 같은 row를 두고 claim transaction이 경합하면 MongoDB가 WriteConflict를 반환할 수 있다.
+                // claim CAS에서는 같은 조건 재시도가 대부분 상태 불일치로 귀결되므로 claim 실패로 다룬다.
+                null
+            } else {
+                throw exception
+            }
+        }
+    }
+
+    private suspend fun insertHistories(histories: List<NotificationHistory>) {
+        histories.forEach { insertHistory(it) }
+    }
+
+    private suspend fun insertHistory(history: NotificationHistory) {
+        mongoTemplate.insert(mapper.toHistoryDocument(history))
+            .awaitSingle()
     }
 
     private companion object {
@@ -148,7 +183,17 @@ class NotificationMongoPersistenceAdapter(
         const val FIELD_LAST_TRANSITION_AT = "lastTransitionAt"
         const val FIELD_CLAIMED_AT = "claimedAt"
         const val FIELD_CLAIMED_BY = "claimedBy"
-        const val FIELD_HISTORIES = "histories"
         const val FIELD_REQUEST_ID = "requestId"
     }
+}
+
+private fun Throwable.isMongoWriteConflict(): Boolean {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current is MongoCommandException && current.code == 112) {
+            return true
+        }
+        current = current.cause
+    }
+    return false
 }

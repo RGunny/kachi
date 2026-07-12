@@ -27,7 +27,7 @@ class NotificationTest {
         assertEquals(now, notification.updatedAt)
         assertEquals(0, notification.dispatchAttempts)
         assertNull(notification.failureReason)
-        assertTrue(notification.histories.isEmpty())
+        assertTrue(notification.uncommittedHistories.isEmpty())
 
         assertFailsWith<IllegalArgumentException> {
             Notification.request("", "api", NotificationChannel.SLACK, "user", "message", now)
@@ -53,7 +53,7 @@ class NotificationTest {
         notification.markPublished(publishedAt.plusSeconds(1))
 
         assertEquals(NotificationStatus.PUBLISHED, notification.status)
-        assertEquals(1, notification.histories.size)
+        assertEquals(1, notification.uncommittedHistories.size)
         assertNull(notification.failureReason)
 
         val failed = notification("request-2")
@@ -62,12 +62,12 @@ class NotificationTest {
 
         assertEquals(NotificationStatus.PUBLISH_FAILED, failed.status)
         assertEquals("broker-down", failed.failureReason)
-        assertEquals(1, failed.histories.size)
+        assertEquals(1, failed.uncommittedHistories.size)
 
         failed.markPublished(publishedAt.plusSeconds(2))
         assertEquals(NotificationStatus.PUBLISHED, failed.status)
         assertNull(failed.failureReason)
-        assertEquals(2, failed.histories.size)
+        assertEquals(2, failed.uncommittedHistories.size)
     }
 
     @Test
@@ -90,11 +90,11 @@ class NotificationTest {
         assertEquals(sentAt, notification.updatedAt)
         assertEquals(
             listOf(NotificationStatus.REQUESTED, NotificationStatus.PUBLISHED, NotificationStatus.PROCESSING),
-            notification.histories.map { it.fromStatus },
+            notification.uncommittedHistories.map { it.fromStatus },
         )
         assertEquals(
             listOf(NotificationStatus.PUBLISHED, NotificationStatus.PROCESSING, NotificationStatus.SENT),
-            notification.histories.map { it.toStatus },
+            notification.uncommittedHistories.map { it.toStatus },
         )
     }
 
@@ -135,7 +135,7 @@ class NotificationTest {
 
         assertEquals(NotificationStatus.DEAD, notification.status)
         assertEquals("invalid-recipient", notification.failureReason)
-        assertEquals(4, notification.histories.size)
+        assertEquals(4, notification.uncommittedHistories.size)
     }
 
     @Test

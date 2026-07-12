@@ -1,10 +1,12 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mongo
 
+import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationDocument
+import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationHistoryDocument
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mapper.NotificationDocumentMapper
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -12,6 +14,8 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.reactive.TransactionalOperator
+import org.springframework.transaction.reactive.executeAndAwait
 import java.time.Instant
 
 /**
@@ -27,13 +31,13 @@ import java.time.Instant
  * 4. vendor 호출 결과만 이 adapter가 MongoDB에 최종 저장한다.
  *
  * MongoDB transaction은 Redis dedupe, Redis idempotency key, vendor HTTP 호출을 rollback하지 못한다.
- * 현재 Notification은 단일 document aggregate이므로 최종 상태 저장은 MongoDB 단일 document 원자 write로 충분하다.
- * 나중에 dispatch outbox/history 별도 collection처럼 함께 확정해야 하는 document가 생기면 이 adapter가 transaction 경계가 된다.
+ * Notification 최종 상태와 상태 전이 history는 서로 다른 collection에 저장되므로 이 adapter가 transaction 경계가 된다.
  */
 @Repository
 class NotificationMongoDispatchPersistenceAdapter(
     private val mongoTemplate: ReactiveMongoTemplate,
     private val mapper: NotificationDocumentMapper,
+    private val transactionalOperator: TransactionalOperator,
 ) : NotificationDispatchPersistencePort {
 
     /**
@@ -42,7 +46,8 @@ class NotificationMongoDispatchPersistenceAdapter(
      * `_id + PROCESSING + claimedAt + claimedBy`가 맞지 않으면 이미 다른 worker/recovery가 상태를 확정했거나
      * 소유권이 바뀐 stale 결과이므로 null을 반환한다.
      *
-     * 조건이 맞으면 core가 계산한 최종 상태와 history를 반영하고, PROCESSING claim 정보는 finalize와 함께 제거한다.
+     * 조건이 맞으면 core가 계산한 최종 상태를 반영하고, uncommitted history를 별도 collection에 append한다.
+     * PROCESSING claim 정보는 finalize와 함께 제거한다.
      */
     override suspend fun saveFinalizedIfProcessingClaimMatches(
         notification: Notification,
@@ -51,21 +56,29 @@ class NotificationMongoDispatchPersistenceAdapter(
     ): Notification? {
         require(expectedClaimedBy.isNotBlank()) { "expectedClaimedBy must not be blank" }
 
-        // 1. 외부 vendor 호출 이후 finalize는 caller가 획득했던 PROCESSING claim이 아직 유효할 때만 저장한다.
-        // 조건 불일치는 저장소 장애가 아니라 stale owner 결과이므로 null을 반환한다.
-        return mongoTemplate.findAndModify(
-            processingClaimQuery(
-                notification = notification,
-                expectedClaimedAt = expectedClaimedAt,
-                expectedClaimedBy = expectedClaimedBy,
-            ),
-            // 2. 조건이 맞으면 최종 상태와 history를 반영하고 PROCESSING claim 정보를 제거한다.
-            finalizedUpdate(notification),
-            FindAndModifyOptions.options().returnNew(true),
-            NotificationDocument::class.java,
-        )
-            .map(mapper::toDomain)
-            .awaitSingleOrNull()
+        return transactionalOperator.executeAndAwait {
+            // 1. 외부 vendor 호출 이후 finalize는 caller가 획득했던 PROCESSING claim이 아직 유효할 때만 저장한다.
+            // 조건 불일치는 저장소 장애가 아니라 stale owner 결과이므로 null을 반환한다.
+            val finalized = mongoTemplate.findAndModify(
+                processingClaimQuery(
+                    notification = notification,
+                    expectedClaimedAt = expectedClaimedAt,
+                    expectedClaimedBy = expectedClaimedBy,
+                ),
+                // 2. 조건이 맞으면 최종 상태를 반영하고 PROCESSING claim 정보를 제거한다.
+                finalizedUpdate(notification),
+                FindAndModifyOptions.options().returnNew(true),
+                NotificationDocument::class.java,
+            )
+                .map(mapper::toDomain)
+                .awaitSingleOrNull()
+
+            if (finalized != null) {
+                insertUncommittedHistories(notification)
+            }
+
+            return@executeAndAwait finalized
+        }
     }
 
     private fun processingClaimQuery(
@@ -92,7 +105,13 @@ class NotificationMongoDispatchPersistenceAdapter(
             .set(FIELD_DISPATCH_ATTEMPTS, document.dispatchAttempts)
             .set(FIELD_CLAIMED_AT, null)
             .set(FIELD_CLAIMED_BY, null)
-            .set(FIELD_HISTORIES, document.histories)
+    }
+
+    private suspend fun insertUncommittedHistories(notification: Notification) {
+        notification.uncommittedHistories.forEach { history ->
+            mongoTemplate.insert(mapper.toHistoryDocument(history))
+                .awaitSingle()
+        }
     }
 
     private companion object {
@@ -104,6 +123,5 @@ class NotificationMongoDispatchPersistenceAdapter(
         const val FIELD_DISPATCH_ATTEMPTS = "dispatchAttempts"
         const val FIELD_CLAIMED_AT = "claimedAt"
         const val FIELD_CLAIMED_BY = "claimedBy"
-        const val FIELD_HISTORIES = "histories"
     }
 }

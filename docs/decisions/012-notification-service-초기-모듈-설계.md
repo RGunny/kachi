@@ -127,6 +127,13 @@ notification-core
 `core`에 domain만 두지 않고 application까지 두는 이유는 알림 도메인의 핵심이 단순 데이터 모델이 아니라 처리 규칙이기 때문이다. 
 멱등, 상태 전이, retry, DLT, vendor idempotency key, claim, 재처리 규칙이 api/worker/admin에 흩어지면 같은 알림에 대해 서로 다른 상태 전이가 생길 수 있다.
 
+`NotificationHistory`는 별도 도메인 개념이며 저장 구조상 `notification_histories` 별도 collection에 둔다.
+대량 운영에서 Notification document가 history array 때문에 커지는 문제를 피하고, 운영 audit 조회와 paging을 독립적으로 설계하기 위해서다.
+상태 변경과 상태 전이 이력 insert는 같은 MongoDB transaction에서 확정되어야 하므로, 이 이력을 별도 Kafka consumer나 별도 모듈에서 후처리하지 않는다.
+
+`history-service`가 나중에 담당할 이력은 사용자 장기 조회와 통계 적재용 이력이다.
+notification 내부의 `NotificationHistory`는 알림 한 건의 상태 전이 감사 로그이며, `history-service`의 장기 이력과 책임이 다르다.
+
 ### notification-service
 
 HTTP API, 운영 API, outbox 발행/복구를 담당하는 런타임이다.

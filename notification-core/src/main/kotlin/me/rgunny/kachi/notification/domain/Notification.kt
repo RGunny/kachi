@@ -27,7 +27,7 @@ class Notification private constructor(
     dispatchAttempts: Int = 0,
     claimedAt: Instant? = null,
     claimedBy: String? = null,
-    histories: List<NotificationHistory> = emptyList(),
+    uncommittedHistories: List<NotificationHistory> = emptyList(),
 ) {
     var status: NotificationStatus = status
         private set
@@ -50,9 +50,9 @@ class Notification private constructor(
     var claimedBy: String? = claimedBy
         private set
 
-    private val _histories = histories.toMutableList()
-    val histories: List<NotificationHistory>
-        get() = _histories.toList()
+    private val _uncommittedHistories = uncommittedHistories.toMutableList()
+    val uncommittedHistories: List<NotificationHistory>
+        get() = _uncommittedHistories.toList()
 
     companion object {
 
@@ -103,7 +103,7 @@ class Notification private constructor(
             dispatchAttempts: Int,
             claimedAt: Instant?,
             claimedBy: String?,
-            histories: List<NotificationHistory>,
+            uncommittedHistories: List<NotificationHistory> = emptyList(),
         ): Notification {
             require(requestId.isNotBlank()) { "requestId must not be blank" }
             require(requester.isNotBlank()) { "requester must not be blank" }
@@ -139,7 +139,7 @@ class Notification private constructor(
                 dispatchAttempts = dispatchAttempts,
                 claimedAt = claimedAt,
                 claimedBy = claimedBy,
-                histories = histories,
+                uncommittedHistories = uncommittedHistories,
             )
         }
     }
@@ -261,7 +261,7 @@ class Notification private constructor(
         this.updatedAt = now
         this.lastTransitionAt = now
         this.failureReason = reason
-        this._histories.add(NotificationHistory.record(
+        this._uncommittedHistories.add(NotificationHistory.record(
             notificationId = this.id,
             fromStatus = fromStatus,
             toStatus = next,

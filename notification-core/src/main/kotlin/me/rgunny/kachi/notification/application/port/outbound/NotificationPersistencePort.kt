@@ -7,7 +7,7 @@ import java.time.Instant
 /**
  * 알림 aggregate 영속화 port.
  *
- * 구현체는 Notification의 현재 상태와 append-only history를 저장한다.
+ * 구현체는 Notification의 현재 상태와 uncommitted append-only history를 같은 저장 경계에서 저장한다.
  * requestId는 외부 요청 멱등 키이므로 저장소 수준의 unique 제약으로도 보호해야 한다.
  */
 interface NotificationPersistencePort {

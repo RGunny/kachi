@@ -37,7 +37,7 @@ class NotificationMongoRequestPersistenceAdapter(
             mongoTemplate.save(outboxMapper.toDocument(outbox))
                 .awaitSingle()
 
-            savedNotification
+            return@executeAndAwait savedNotification
         }
     }
 }

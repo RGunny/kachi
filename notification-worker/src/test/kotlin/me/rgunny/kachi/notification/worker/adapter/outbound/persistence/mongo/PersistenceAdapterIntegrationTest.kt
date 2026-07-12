@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mongo
 
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mapper.NotificationDocumentMapper
+import me.rgunny.kachi.notification.worker.config.NotificationWorkerMongoTransactionConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -16,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers
     NotificationDocumentMapper::class,
     NotificationMongoDispatchPersistenceAdapter::class,
     NotificationMongoPersistenceAdapter::class,
+    NotificationWorkerMongoTransactionConfig::class,
     PersistenceAdapterTestContainersConfig::class,
 )
 abstract class PersistenceAdapterIntegrationTest

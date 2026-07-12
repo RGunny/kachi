@@ -38,5 +38,4 @@ data class NotificationDocument(
     val dispatchAttempts: Int,
     val claimedAt: Instant?,
     val claimedBy: String?,
-    val histories: List<NotificationHistoryDocument>
 )

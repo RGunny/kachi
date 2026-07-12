@@ -5,6 +5,7 @@ import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationDocument
+import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationHistoryDocument
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -34,6 +35,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @BeforeEach
     fun cleanUp() {
         mongoTemplate.remove(Query(), NotificationDocument::class.java).block()
+        mongoTemplate.remove(Query(), NotificationHistoryDocument::class.java).block()
     }
 
     @Test
@@ -58,6 +60,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         assertNotNull(found)
         assertEquals(NotificationStatus.SENT, found.status)
         assertEquals(1, found.dispatchAttempts)
+        assertEquals(3, historyCount(notification))
     }
 
     @Test
@@ -84,6 +87,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         assertEquals(NotificationStatus.RETRY_WAIT, found.status)
         assertEquals("vendor timeout", found.failureReason)
         assertEquals(1, found.dispatchAttempts)
+        assertEquals(4, historyCount(notification))
     }
 
     @Test
@@ -110,6 +114,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         assertEquals(NotificationStatus.DEAD, found.status)
         assertEquals("invalid recipient", found.failureReason)
         assertEquals(1, found.dispatchAttempts)
+        assertEquals(4, historyCount(notification))
     }
 
     @Test
@@ -132,6 +137,18 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         assertEquals(NotificationStatus.PROCESSING, found.status)
         assertEquals(expectedClaimedAt, found.claimedAt)
         assertEquals(expectedClaimedBy, found.claimedBy)
+        assertEquals(2, historyCount(notification))
+    }
+
+    private fun historyCount(notification: Notification): Int {
+        return mongoTemplate.count(
+            Query.query(
+                org.springframework.data.mongodb.core.query.Criteria
+                    .where("notificationId")
+                    .`is`(notification.id.id.toString())
+            ),
+            NotificationHistoryDocument::class.java,
+        ).block()?.toInt() ?: 0
     }
 
     private fun processingNotification(): Notification {

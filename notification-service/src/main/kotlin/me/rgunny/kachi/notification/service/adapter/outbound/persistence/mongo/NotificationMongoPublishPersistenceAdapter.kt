@@ -3,8 +3,10 @@ package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
+import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDocument
+import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationHistoryDocument
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDocumentMapper
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationOutboxDocumentMapper
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -62,6 +64,7 @@ class NotificationMongoPublishPersistenceAdapter(
             notification.markPublished(now)
             mongoTemplate.save(notificationMapper.toDocument(notification))
                 .awaitSingle()
+            insertUncommittedHistories(notification)
         }
     }
 
@@ -80,6 +83,7 @@ class NotificationMongoPublishPersistenceAdapter(
             notification.markPublishFailed(now, reason)
             mongoTemplate.save(notificationMapper.toDocument(notification))
                 .awaitSingle()
+            insertUncommittedHistories(notification)
         }
     }
 
@@ -88,4 +92,11 @@ class NotificationMongoPublishPersistenceAdapter(
             .map(notificationMapper::toDomain)
             .awaitSingleOrNull()
             ?: throw IllegalStateException("notification not found. notificationId=${outbox.notificationId}")
+
+    private suspend fun insertUncommittedHistories(notification: Notification) {
+        notification.uncommittedHistories.forEach { history ->
+            mongoTemplate.insert(notificationMapper.toHistoryDocument(history))
+                .awaitSingle()
+        }
+    }
 }

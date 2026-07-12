@@ -15,7 +15,7 @@ class NotificationDocumentMapperTest {
     private val mapper = NotificationDocumentMapper()
 
     @Test
-    @DisplayName("Notification aggregate와 document를 상호 변환할 때 상태와 history를 보존한다")
+    @DisplayName("Notification aggregate와 document를 상호 변환할 때 상태 snapshot을 보존한다")
     fun roundTrip() {
         val requestedAt = Instant.parse("2026-06-17T00:00:00Z")
         val publishedAt = Instant.parse("2026-06-17T00:00:10Z")
@@ -43,9 +43,11 @@ class NotificationDocumentMapperTest {
         assertEquals(NotificationStatus.PUBLISHED, restored.status)
         assertEquals(publishedAt, restored.updatedAt)
         assertEquals(publishedAt, restored.lastTransitionAt)
-        assertEquals(1, restored.histories.size)
-        assertEquals(NotificationStatus.REQUESTED, restored.histories.first().fromStatus)
-        assertEquals(NotificationStatus.PUBLISHED, restored.histories.first().toStatus)
+
+        val historyDocument = mapper.toHistoryDocument(notification.uncommittedHistories.single())
+        assertEquals(notification.id.id.toString(), historyDocument.notificationId)
+        assertEquals(NotificationStatus.REQUESTED.name, historyDocument.fromStatus)
+        assertEquals(NotificationStatus.PUBLISHED.name, historyDocument.toStatus)
     }
 
     @Test
