@@ -48,6 +48,7 @@ kachi:
         backoff: PT1S
       dlt:
         topic: notification.dispatch.dlt
+        group-id: notification-worker-dlt
     sender:
       mock:
         enabled: true

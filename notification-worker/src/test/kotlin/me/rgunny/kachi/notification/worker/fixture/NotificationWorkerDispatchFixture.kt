@@ -130,6 +130,7 @@ class NotificationWorkerDispatchFixture(
             ),
             dlt = NotificationDispatchProperties.Dlt(
                 topic = "notification.dispatch.dlt",
+                groupId = "notification-worker-dlt",
             ),
         )
     }

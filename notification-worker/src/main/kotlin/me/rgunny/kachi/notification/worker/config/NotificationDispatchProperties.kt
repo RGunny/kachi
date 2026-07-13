@@ -79,8 +79,12 @@ data class NotificationDispatchProperties(
     data class Dlt(
         /**
          * 자동 재시도 종료 또는 malformed dispatch payload를 보관하는 topic.
-         * DLT 영속화/운영자 재처리는 후속 admin/service 기능에서 담당한다.
          */
         val topic: String,
+
+        /**
+         * DLT 영속화 전용 consumer group.
+         */
+        val groupId: String,
     )
 }

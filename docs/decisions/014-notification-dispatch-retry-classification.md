@@ -142,7 +142,11 @@ DLT는 다음 상황을 위한 큐다.
 - listener runtime 장애처럼 core가 정상 결과를 만들지 못한 경우
 - broker/serialization 문제처럼 runtime에서만 관측 가능한 실패
 
-DLT 영속화와 운영자 재처리는 후속 admin 기능에서 다룬다.
+worker는 `notification.dispatch.dlt`를 consume해 `notification_dlt_messages` collection에 영속화한다.
+저장 idempotency 기준은 원본 Kafka record의 topic, partition, offset이다.
+같은 DLT record가 consumer 재시작이나 ack 실패로 다시 들어와도 같은 document로 upsert한다.
+
+DLT 운영 조회, 재처리, 폐기는 후속 admin 기능에서 다룬다.
 
 ## 트레이드오프
 
@@ -156,7 +160,7 @@ DLT 영속화와 운영자 재처리는 후속 admin 기능에서 다룬다.
 
 - core retry 정책과 Kafka retry topic 설정을 맞춰야 한다.
 - listener가 exception을 던지는 것이 정상 제어 흐름의 일부가 된다.
-- DLT 영속화/운영자 재처리 기능이 붙기 전까지는 retry 종료 후 운영 가시성이 제한된다.
+- DLT 운영 조회/재처리 기능이 붙기 전까지는 영속화된 메시지를 직접 DB로 확인해야 한다.
 
 ## 관련 결정
 
