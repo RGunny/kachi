@@ -1,6 +1,12 @@
 package me.rgunny.kachi.notification.application.service
 
 import me.rgunny.kachi.notification.application.port.dto.NotificationDispatchMessage
+import me.rgunny.kachi.notification.application.port.dto.admin.DeadNotificationQuery
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationAdminResult
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryQuery
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryResult
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistorySummary
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationSummary
 import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationResult
 import me.rgunny.kachi.notification.application.port.inbound.NotificationAdminUseCase
@@ -26,6 +32,20 @@ class NotificationAdminService(
     private val policy: RequestNotificationPolicy,
     private val clock: Clock,
 ) : NotificationAdminUseCase {
+
+    override suspend fun findDead(query: DeadNotificationQuery): NotificationAdminResult {
+        val notifications = adminPersistencePort.findDead(query.batchSize)
+            .map(NotificationSummary::from)
+
+        return NotificationAdminResult(notifications)
+    }
+
+    override suspend fun findHistories(query: NotificationHistoryQuery): NotificationHistoryResult {
+        val histories = adminPersistencePort.findHistories(query.notificationId, query.batchSize)
+            .map(NotificationHistorySummary::from)
+
+        return NotificationHistoryResult(histories)
+    }
 
     /**
      * DEAD notification을 REQUESTED로 되돌리고 새 dispatch outbox를 생성한다.

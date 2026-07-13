@@ -4,6 +4,8 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.NotificationAdminPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
+import me.rgunny.kachi.notification.domain.NotificationHistory
+import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDocument
@@ -15,14 +17,15 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.transaction.reactive.executeAndAwait
 
 /**
- * Notification 현재 상태 document 운영 복구 MongoDB 구현.
+ * Notification 현재 상태 document 운영 조회/복구 MongoDB 구현.
  *
- * DEAD notification을 REQUESTED로 되살리고, 새 dispatch outbox를 같은 transaction에서 생성한다.
+ * DEAD notification과 상태 history를 조회하고, 수동 복구 시 새 dispatch outbox를 같은 transaction에서 생성한다.
  */
 @Repository
 class NotificationMongoAdminPersistenceAdapter(
@@ -31,6 +34,33 @@ class NotificationMongoAdminPersistenceAdapter(
     private val outboxMapper: NotificationOutboxDocumentMapper,
     private val transactionalOperator: TransactionalOperator,
 ) : NotificationAdminPersistencePort {
+
+    override suspend fun findDead(batchSize: Int): List<Notification> {
+        return mongoTemplate.find(
+            Query.query(Criteria.where(FIELD_STATUS).`is`(NotificationStatus.DEAD.name))
+                .with(Sort.by(Sort.Direction.DESC, FIELD_UPDATED_AT))
+                .limit(batchSize),
+            NotificationDocument::class.java,
+        )
+            .map(notificationMapper::toDomain)
+            .collectList()
+            .awaitSingle()
+    }
+
+    override suspend fun findHistories(
+        notificationId: NotificationId,
+        batchSize: Int,
+    ): List<NotificationHistory> {
+        return mongoTemplate.find(
+            Query.query(Criteria.where(FIELD_NOTIFICATION_ID).`is`(notificationId.id.toString()))
+                .with(Sort.by(Sort.Direction.ASC, FIELD_CREATED_AT))
+                .limit(batchSize),
+            NotificationHistoryDocument::class.java,
+        )
+            .map(notificationMapper::toHistoryDomain)
+            .collectList()
+            .awaitSingle()
+    }
 
     /**
      * DEAD 조건이 맞는 경우에만 notification, history, outbox를 하나의 transaction으로 확정한다.
@@ -94,5 +124,7 @@ class NotificationMongoAdminPersistenceAdapter(
         const val FIELD_DISPATCH_ATTEMPTS = "dispatchAttempts"
         const val FIELD_CLAIMED_AT = "claimedAt"
         const val FIELD_CLAIMED_BY = "claimedBy"
+        const val FIELD_NOTIFICATION_ID = "notificationId"
+        const val FIELD_CREATED_AT = "createdAt"
     }
 }

@@ -3,6 +3,7 @@ package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationHistory
+import me.rgunny.kachi.notification.domain.NotificationHistoryId
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDocument
@@ -62,6 +63,17 @@ class NotificationDocumentMapper {
             toStatus = history.toStatus.name,
             reason = history.reason,
             createdAt = history.createdAt,
+        )
+    }
+
+    fun toHistoryDomain(document: NotificationHistoryDocument): NotificationHistory {
+        return NotificationHistory.restore(
+            id = NotificationHistoryId.of(UUID.fromString(document.id)),
+            notificationId = NotificationId.of(UUID.fromString(document.notificationId)),
+            fromStatus = NotificationStatus.valueOf(document.fromStatus),
+            toStatus = NotificationStatus.valueOf(document.toStatus),
+            createdAt = document.createdAt,
+            reason = document.reason,
         )
     }
 }

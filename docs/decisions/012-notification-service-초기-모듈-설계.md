@@ -138,6 +138,9 @@ notification 내부의 `NotificationHistory`는 알림 한 건의 상태 전이 
 상태는 `DEAD -> REQUESTED`로 되돌리고, 다음 outbox publisher tick이 `notification.dispatch`를 다시 발행한다.
 이때 Notification 상태 변경, `NotificationHistory` insert, 새 outbox insert는 같은 MongoDB transaction에서 확정한다.
 
+운영 API는 `notification-service` 안에서 제공한다.
+DEAD notification 목록은 `notifications` 현재 상태 document를 조회하고, 상태 전이 근거는 `notification_histories`를 notification 단위로 조회한다.
+
 ### notification-service
 
 HTTP API, 운영 API, outbox 발행/복구를 담당하는 런타임이다.
@@ -167,7 +170,7 @@ notification-service
 - Outbox 저장
 - Kafka publish
 - Outbox recovery scheduler
-- DLT/DEAD 알림 조회와 재처리 API
+- DEAD notification/outbox 조회와 재처리 API
 
 `kachi`의 주 인입은 Kafka 이벤트지만, HTTP 인입과 outbox 흐름도 남겨둔다. 이유는 다음과 같다.
 

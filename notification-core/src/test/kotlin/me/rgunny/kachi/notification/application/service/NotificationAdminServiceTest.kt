@@ -1,5 +1,7 @@
 package me.rgunny.kachi.notification.application.service
 
+import me.rgunny.kachi.notification.application.port.dto.admin.DeadNotificationQuery
+import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryQuery
 import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationCommand
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
@@ -20,6 +22,48 @@ import kotlin.test.assertFailsWith
 
 @DisplayName("NotificationAdminService")
 class NotificationAdminServiceTest {
+
+    @Test
+    @DisplayName("DEAD notification 목록을 조회한다")
+    fun findDead() = runSuspend {
+        val dead = deadNotification()
+        val requested = requestedNotification("request-live")
+        val notificationPersistence = FakeNotificationPersistencePort().also {
+            it.put(dead)
+            it.put(requested)
+        }
+        val adminPersistence = FakeNotificationAdminPersistencePort(
+            notificationPersistence,
+            FakeOutboxPersistencePort(),
+        )
+        val service = service(notificationPersistence, adminPersistence, FakeEventSerializer())
+
+        val result = service.findDead(DeadNotificationQuery(batchSize = 10))
+
+        assertEquals(1, result.notifications.size)
+        assertEquals(dead.id, result.notifications.single().notificationId)
+        assertEquals(NotificationStatus.DEAD, result.notifications.single().status)
+    }
+
+    @Test
+    @DisplayName("notification 상태 전이 history를 조회한다")
+    fun findHistories() = runSuspend {
+        val notification = deadNotification()
+        val notificationPersistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val adminPersistence = FakeNotificationAdminPersistencePort(
+            notificationPersistence,
+            FakeOutboxPersistencePort(),
+        ).also {
+            it.histories[notification.id] = notification.uncommittedHistories.toMutableList()
+        }
+        val service = service(notificationPersistence, adminPersistence, FakeEventSerializer())
+
+        val result = service.findHistories(NotificationHistoryQuery(notification.id, batchSize = 10))
+
+        assertEquals(4, result.histories.size)
+        assertEquals(NotificationStatus.REQUESTED, result.histories.first().fromStatus)
+        assertEquals(NotificationStatus.DEAD, result.histories.last().toStatus)
+    }
 
     @Test
     @DisplayName("DEAD notification을 REQUESTED로 되살리고 새 outbox를 생성한다")
@@ -87,18 +131,22 @@ class NotificationAdminServiceTest {
     }
 
     private fun deadNotification(): Notification {
-        return Notification.request(
-            requestId = "request-dead",
-            requester = REQUESTER,
-            channel = NotificationChannel.SLACK,
-            recipient = "C123",
-            message = MESSAGE,
-            now = NOW,
-        ).also {
+        return requestedNotification("request-dead").also {
             it.markPublished(NOW.plusSeconds(1))
             it.markProcessing(NOW.plusSeconds(2), "worker-1")
             it.markFailed(NOW.plusSeconds(3), "invalid recipient")
             it.markDead(NOW.plusSeconds(4), "invalid recipient")
         }
+    }
+
+    private fun requestedNotification(requestId: String): Notification {
+        return Notification.request(
+            requestId = requestId,
+            requester = REQUESTER,
+            channel = NotificationChannel.SLACK,
+            recipient = "C123",
+            message = MESSAGE,
+            now = NOW,
+        )
     }
 }

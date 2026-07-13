@@ -10,6 +10,8 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
     val saved = mutableListOf<Notification>()
     val notificationsByRequestId = mutableMapOf<String, Notification>()
     private val notificationsById = mutableMapOf<NotificationId, Notification>()
+    val notifications: List<Notification>
+        get() = notificationsById.values.toList()
     var saveFailure: RuntimeException? = null
     var claimPublishedEnabled = true
     var retryWaitClaimCount = 0

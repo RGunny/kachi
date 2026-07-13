@@ -43,6 +43,30 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
     }
 
     @Test
+    @DisplayName("DEAD notification 목록을 최신 변경순으로 조회한다")
+    fun findDead() = runBlocking {
+        val older = notificationPersistenceAdapter.save(deadNotification("request-old", NOW.plusSeconds(10)))
+        val newer = notificationPersistenceAdapter.save(deadNotification("request-new", NOW.plusSeconds(20)))
+        notificationPersistenceAdapter.save(requestedNotification("request-live"))
+
+        val result = adapter.findDead(batchSize = 10)
+
+        assertEquals(listOf(newer.id, older.id), result.map { it.id })
+    }
+
+    @Test
+    @DisplayName("notification 상태 전이 history를 생성 시각 오름차순으로 조회한다")
+    fun findHistories() = runBlocking {
+        val notification = notificationPersistenceAdapter.save(deadNotification("request-history", NOW.plusSeconds(10)))
+
+        val result = adapter.findHistories(notification.id, batchSize = 10)
+
+        assertEquals(4, result.size)
+        assertEquals(NotificationStatus.REQUESTED, result.first().fromStatus)
+        assertEquals(NotificationStatus.DEAD, result.last().toStatus)
+    }
+
+    @Test
     @DisplayName("DEAD notification을 REQUESTED로 복구하고 새 outbox와 history를 transaction으로 저장한다")
     fun recoverDeadToRequested() = runBlocking {
         val notification = notificationPersistenceAdapter.save(deadNotification())
@@ -83,17 +107,21 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
     }
 
     private fun deadNotification(): Notification {
-        return requestedNotification().also {
-            it.markPublished(NOW.plusSeconds(1))
-            it.markProcessing(NOW.plusSeconds(2), "worker-1")
-            it.markFailed(NOW.plusSeconds(3), "invalid recipient")
-            it.markDead(NOW.plusSeconds(4), "invalid recipient")
+        return deadNotification("request-1", NOW.plusSeconds(4))
+    }
+
+    private fun deadNotification(requestId: String, deadAt: java.time.Instant): Notification {
+        return requestedNotification(requestId).also {
+            it.markPublished(deadAt.minusSeconds(3))
+            it.markProcessing(deadAt.minusSeconds(2), "worker-1")
+            it.markFailed(deadAt.minusSeconds(1), "invalid recipient")
+            it.markDead(deadAt, "invalid recipient")
         }
     }
 
-    private fun requestedNotification(): Notification {
+    private fun requestedNotification(requestId: String = "request-1"): Notification {
         return Notification.request(
-            requestId = "request-1",
+            requestId = requestId,
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
             recipient = "C123",
