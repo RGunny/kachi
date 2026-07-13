@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Import
     NotificationDocumentMapper::class,
     NotificationOutboxDocumentMapper::class,
     NotificationMongoPersistenceAdapter::class,
+    NotificationMongoAdminPersistenceAdapter::class,
     NotificationMongoOutboxPersistenceAdapter::class,
     NotificationMongoPublishPersistenceAdapter::class,
     NotificationMongoRequestPersistenceAdapter::class,

@@ -139,6 +139,26 @@ class NotificationTest {
     }
 
     @Test
+    @DisplayName("운영자 복구는 DEAD를 REQUESTED로 되돌리고 실패 snapshot을 초기화한다")
+    fun recoverDeadToRequested() {
+        val notification = publishedNotification()
+        notification.markProcessing(now.plusSeconds(2), "worker-1")
+        notification.markFailed(now.plusSeconds(3), "invalid-recipient")
+        notification.markDead(now.plusSeconds(4), "invalid-recipient")
+
+        notification.recoverDeadToRequested(now.plusSeconds(5), "operator retry")
+
+        assertEquals(NotificationStatus.REQUESTED, notification.status)
+        assertNull(notification.failureReason)
+        assertEquals(0, notification.dispatchAttempts)
+        assertNull(notification.claimedAt)
+        assertNull(notification.claimedBy)
+        assertEquals(NotificationStatus.DEAD, notification.uncommittedHistories.last().fromStatus)
+        assertEquals(NotificationStatus.REQUESTED, notification.uncommittedHistories.last().toStatus)
+        assertEquals("operator retry", notification.uncommittedHistories.last().reason)
+    }
+
+    @Test
     @DisplayName("허용되지 않은 상태 전이는 예외로 차단한다")
     fun rejectInvalidTransitions() {
         val notification = notification()

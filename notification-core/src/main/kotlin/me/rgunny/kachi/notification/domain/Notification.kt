@@ -238,6 +238,32 @@ class Notification private constructor(
         transition(NotificationStatus.FAILED, NotificationStatus.DEAD, now, reason)
     }
 
+    /**
+     * 운영자 수동 복구 처리.
+     * NotificationStatus: [DEAD --> REQUESTED]
+     */
+    fun recoverDeadToRequested(now: Instant, reason: String) {
+        require(reason.isNotBlank()) { "reason must not be blank" }
+        if (this.status != NotificationStatus.DEAD) {
+            throw IllegalStateException("recoverDeadToRequested requires DEAD, current=${this.status}")
+        }
+
+        val fromStatus = this.status
+        this.status = NotificationStatus.REQUESTED
+        this.failureReason = null
+        this.updatedAt = now
+        this.lastTransitionAt = now
+        this.dispatchAttempts = 0
+        clearClaim()
+        this._uncommittedHistories.add(NotificationHistory.record(
+            notificationId = this.id,
+            fromStatus = fromStatus,
+            toStatus = NotificationStatus.REQUESTED,
+            createdAt = now,
+            reason = reason,
+        ))
+    }
+
     fun canRetry(maxAttempts: Int): Boolean {
         require(maxAttempts > 0) { "maxAttempts must be positive" }
         return this.dispatchAttempts < maxAttempts

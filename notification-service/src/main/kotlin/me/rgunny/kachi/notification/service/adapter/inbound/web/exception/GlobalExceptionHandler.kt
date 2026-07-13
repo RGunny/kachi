@@ -1,5 +1,7 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
+import me.rgunny.kachi.notification.exception.InvalidNotificationStateException
+import me.rgunny.kachi.notification.exception.NotificationNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationOutboxNotFoundException
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ErrorCode
@@ -59,6 +61,26 @@ class GlobalExceptionHandler {
     ): ResponseEntity<ApiResponse<Unit>> {
         log.debug("notification outbox not found. outboxId={}", exception.outboxId.id)
         return error(ErrorCode.NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(NotificationNotFoundException::class)
+    fun handleNotificationNotFound(
+        exception: NotificationNotFoundException
+    ): ResponseEntity<ApiResponse<Unit>> {
+        log.debug("notification not found. notificationId={}", exception.notificationId.id)
+        return error(ErrorCode.NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(InvalidNotificationStateException::class)
+    fun handleInvalidNotificationState(
+        exception: InvalidNotificationStateException
+    ): ResponseEntity<ApiResponse<Unit>> {
+        log.debug(
+            "invalid notification state. notificationId={}, currentStatus={}",
+            exception.notificationId?.id,
+            exception.currentStatus,
+        )
+        return error(ErrorCode.DOMAIN_INVARIANT, exception.message)
     }
 
     @ExceptionHandler(IllegalStateException::class)

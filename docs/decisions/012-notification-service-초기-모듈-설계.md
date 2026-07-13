@@ -134,6 +134,10 @@ notification-core
 `history-service`가 나중에 담당할 이력은 사용자 장기 조회와 통계 적재용 이력이다.
 notification 내부의 `NotificationHistory`는 알림 한 건의 상태 전이 감사 로그이며, `history-service`의 장기 이력과 책임이 다르다.
 
+`Notification.DEAD` 수동 복구는 기존 notification 현재 상태 document를 조건부 update하고 새 dispatch outbox를 insert한다.
+상태는 `DEAD -> REQUESTED`로 되돌리고, 다음 outbox publisher tick이 `notification.dispatch`를 다시 발행한다.
+이때 Notification 상태 변경, `NotificationHistory` insert, 새 outbox insert는 같은 MongoDB transaction에서 확정한다.
+
 ### notification-service
 
 HTTP API, 운영 API, outbox 발행/복구를 담당하는 런타임이다.
