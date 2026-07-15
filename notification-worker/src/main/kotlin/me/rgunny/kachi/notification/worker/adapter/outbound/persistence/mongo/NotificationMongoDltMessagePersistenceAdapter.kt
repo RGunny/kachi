@@ -20,6 +20,7 @@ class NotificationMongoDltMessagePersistenceAdapter(
      * 원본 Kafka record 위치 기준으로 upsert해 DLT consumer 재처리 중복 저장을 막는다.
      */
     override suspend fun save(message: NotificationDltMessage): NotificationDltMessage {
+        // NotificationDltMessageId가 원본 topic/partition/offset 기반 deterministic id라 save가 upsert처럼 동작한다.
         val document = mapper.toDocument(message)
         return mongoTemplate.save(document)
             .map(mapper::toDomain)
