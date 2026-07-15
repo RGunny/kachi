@@ -2,6 +2,7 @@ package me.rgunny.kachi.notification.fake
 
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDltMessageAdminPersistencePort
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 
 class FakeNotificationDltMessageAdminPersistencePort(
@@ -22,5 +23,9 @@ class FakeNotificationDltMessageAdminPersistencePort(
             .filter { it.status == status }
             .sortedByDescending { it.failedAt }
             .take(batchSize)
+    }
+
+    override suspend fun findById(messageId: NotificationDltMessageId): NotificationDltMessage? {
+        return messages.firstOrNull { it.id == messageId }
     }
 }

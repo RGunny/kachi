@@ -2,12 +2,15 @@ package me.rgunny.kachi.notification.application.service
 
 import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageQuery
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
+import me.rgunny.kachi.notification.exception.NotificationDltMessageNotFoundException
 import me.rgunny.kachi.notification.fake.FakeNotificationDltMessageAdminPersistencePort
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 @DisplayName("NotificationDltMessageAdminService")
 class NotificationDltMessageAdminServiceTest {
@@ -31,6 +34,33 @@ class NotificationDltMessageAdminServiceTest {
         assertEquals(1, result.messages.size)
         assertEquals(message.id, result.messages.single().messageId)
         assertEquals("java.net.SocketTimeoutException", result.messages.single().exceptionFqcn)
+    }
+
+    @Test
+    @DisplayName("DLT 메시지 상세를 조회한다")
+    fun get() = runSuspend {
+        val message = message()
+        val service = NotificationDltMessageAdminService(
+            FakeNotificationDltMessageAdminPersistencePort(listOf(message))
+        )
+
+        val result = service.get(message.id)
+
+        assertEquals(message.id, result.messageId)
+        assertEquals("""{"notificationId":"n1"}""", result.payload)
+        assertEquals("timeout", result.exceptionMessage)
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 DLT 메시지 상세 조회는 실패한다")
+    fun getNotFound() {
+        val service = NotificationDltMessageAdminService(FakeNotificationDltMessageAdminPersistencePort())
+
+        assertFailsWith<NotificationDltMessageNotFoundException> {
+            runSuspend {
+                service.get(NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 999))
+            }
+        }
     }
 
     private fun message(): NotificationDltMessage {

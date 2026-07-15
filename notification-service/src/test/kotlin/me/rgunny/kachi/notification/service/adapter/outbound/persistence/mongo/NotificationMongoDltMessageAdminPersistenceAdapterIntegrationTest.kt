@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDltMessageDocument
 import org.junit.jupiter.api.BeforeEach
@@ -12,6 +13,8 @@ import org.springframework.data.mongodb.core.query.Query
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @DisplayName("NotificationMongoDltMessageAdminPersistenceAdapter 통합 테스트")
 class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -43,6 +46,27 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
 
         assertEquals(listOf(101L, 100L), result.map { it.originalOffset })
         assertEquals(listOf(NotificationDltMessageStatus.PENDING, NotificationDltMessageStatus.PENDING), result.map { it.status })
+    }
+
+    @Test
+    @DisplayName("DLT 메시지를 id로 조회한다")
+    fun findById() = runBlocking {
+        val document = document(originalOffset = 100, failedAt = NOW)
+        mongoTemplate.insert(document).block()
+
+        val result = adapter.findById(NotificationDltMessageId.of(UUID.fromString(document.id)))
+
+        assertNotNull(result)
+        assertEquals(100, result.originalOffset)
+        assertEquals("""{"notificationId":"n100"}""", result.payload)
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 DLT 메시지는 null을 반환한다")
+    fun findByIdNotFound() = runBlocking {
+        val result = adapter.findById(NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 404))
+
+        assertNull(result)
     }
 
     private fun document(

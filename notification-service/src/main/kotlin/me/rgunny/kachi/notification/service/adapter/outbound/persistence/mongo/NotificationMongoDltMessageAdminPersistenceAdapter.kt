@@ -1,8 +1,10 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDltMessageAdminPersistencePort
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDltMessageDocument
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDltMessageDocumentMapper
@@ -37,6 +39,15 @@ class NotificationMongoDltMessageAdminPersistenceAdapter(
             .map(mapper::toDomain)
             .collectList()
             .awaitSingle()
+    }
+
+    /**
+     * 운영자가 선택한 DLT 메시지 상세를 식별자로 조회한다.
+     */
+    override suspend fun findById(messageId: NotificationDltMessageId): NotificationDltMessage? {
+        return mongoTemplate.findById(messageId.id.toString(), NotificationDltMessageDocument::class.java)
+            .map(mapper::toDomain)
+            .awaitSingleOrNull()
     }
 
     private companion object {

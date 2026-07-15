@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
 import me.rgunny.kachi.notification.exception.InvalidNotificationStateException
+import me.rgunny.kachi.notification.exception.NotificationDltMessageNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationOutboxNotFoundException
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ApiResponse
@@ -68,6 +69,14 @@ class GlobalExceptionHandler {
         exception: NotificationNotFoundException
     ): ResponseEntity<ApiResponse<Unit>> {
         log.debug("notification not found. notificationId={}", exception.notificationId.id)
+        return error(ErrorCode.NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(NotificationDltMessageNotFoundException::class)
+    fun handleNotificationDltMessageNotFound(
+        exception: NotificationDltMessageNotFoundException
+    ): ResponseEntity<ApiResponse<Unit>> {
+        log.debug("notification dlt message not found. messageId={}", exception.messageId.id)
         return error(ErrorCode.NOT_FOUND, exception.message)
     }
 

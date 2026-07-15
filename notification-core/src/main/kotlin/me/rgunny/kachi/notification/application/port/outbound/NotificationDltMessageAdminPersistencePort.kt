@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.application.port.outbound
 
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 
 /**
@@ -15,4 +16,9 @@ interface NotificationDltMessageAdminPersistencePort {
         status: NotificationDltMessageStatus,
         batchSize: Int,
     ): List<NotificationDltMessage>
+
+    /**
+     * DLT 메시지를 식별자로 조회한다.
+     */
+    suspend fun findById(messageId: NotificationDltMessageId): NotificationDltMessage?
 }

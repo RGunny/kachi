@@ -1,6 +1,8 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
+import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationOutboxId
+import me.rgunny.kachi.notification.exception.NotificationDltMessageNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationOutboxNotFoundException
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ErrorCode
 import org.junit.jupiter.api.DisplayName
@@ -44,6 +46,22 @@ class GlobalExceptionHandlerTest {
     fun handleNotificationOutboxNotFound() {
         val response = handler.handleNotificationOutboxNotFound(
             NotificationOutboxNotFoundException(NotificationOutboxId.newId())
+        )
+
+        assertEquals(ErrorCode.NOT_FOUND.status, response.statusCode)
+        val body = assertNotNull(response.body)
+        val error = assertNotNull(body.error)
+        assertEquals(false, body.success)
+        assertEquals(ErrorCode.NOT_FOUND.name, error.code)
+    }
+
+    @Test
+    @DisplayName("DLT message not found 예외를 404로 변환한다")
+    fun handleNotificationDltMessageNotFound() {
+        val response = handler.handleNotificationDltMessageNotFound(
+            NotificationDltMessageNotFoundException(
+                NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 100)
+            )
         )
 
         assertEquals(ErrorCode.NOT_FOUND.status, response.statusCode)

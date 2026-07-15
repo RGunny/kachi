@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageDetail
 import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageAdminResult
 import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageQuery
 import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageSummary
@@ -37,9 +38,24 @@ class NotificationDltMessageAdminControllerTest {
         assertEquals("java.net.SocketTimeoutException", data.messages.single().exceptionFqcn)
     }
 
+    @Test
+    @DisplayName("DLT 메시지 상세를 조회한다")
+    fun get() = runBlocking {
+        val response = controller.get(useCase.messageId.id)
+
+        assertEquals(useCase.messageId, useCase.lastMessageId)
+        val body = assertNotNull(response.body)
+        val data = assertNotNull(body.data)
+        assertEquals(NotificationDltMessageStatus.PENDING.name, data.status)
+        assertEquals("""{"notificationId":"n1"}""", data.payload)
+    }
+
     private class CapturingNotificationDltMessageAdminUseCase : NotificationDltMessageAdminUseCase {
         val now: Instant = Instant.parse("2026-07-13T00:00:00Z")
+        val messageId: NotificationDltMessageId = NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 100)
         var lastQuery: NotificationDltMessageQuery? = null
+            private set
+        var lastMessageId: NotificationDltMessageId? = null
             private set
 
         override suspend fun find(query: NotificationDltMessageQuery): NotificationDltMessageAdminResult {
@@ -47,7 +63,7 @@ class NotificationDltMessageAdminControllerTest {
             return NotificationDltMessageAdminResult(
                 messages = listOf(
                     NotificationDltMessageSummary(
-                        messageId = NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 100),
+                        messageId = messageId,
                         status = NotificationDltMessageStatus.PENDING,
                         originalTopic = "notification.dispatch",
                         originalPartition = 0,
@@ -63,6 +79,27 @@ class NotificationDltMessageAdminControllerTest {
                         receivedAt = now.plusSeconds(1),
                     )
                 )
+            )
+        }
+
+        override suspend fun get(messageId: NotificationDltMessageId): NotificationDltMessageDetail {
+            lastMessageId = messageId
+            return NotificationDltMessageDetail(
+                messageId = messageId,
+                status = NotificationDltMessageStatus.PENDING,
+                originalTopic = "notification.dispatch",
+                originalPartition = 0,
+                originalOffset = 100,
+                dltTopic = "notification.dispatch.dlt",
+                dltPartition = 0,
+                dltOffset = 200,
+                consumerGroup = "notification-worker",
+                messageKey = "key-1",
+                payload = """{"notificationId":"n1"}""",
+                exceptionFqcn = "java.net.SocketTimeoutException",
+                exceptionMessage = "timeout",
+                failedAt = now,
+                receivedAt = now.plusSeconds(1),
             )
         }
     }

@@ -148,6 +148,7 @@ worker는 `notification.dispatch.dlt`를 consume해 `notification_dlt_messages` 
 
 `notification-service`의 admin API는 `PENDING` DLT 메시지를 조회할 수 있다.
 목록 응답에서는 원본 Kafka 위치, DLT 위치, 예외 타입/메시지, 실패 시각을 노출하고 payload는 제외한다.
+상세 조회는 운영자가 재처리 가능 여부를 판단할 수 있도록 payload를 포함한다.
 
 DLT 재처리와 폐기는 후속 admin 기능에서 다룬다.
 
