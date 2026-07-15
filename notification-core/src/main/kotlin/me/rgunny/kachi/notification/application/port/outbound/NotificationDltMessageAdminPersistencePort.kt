@@ -1,0 +1,18 @@
+package me.rgunny.kachi.notification.application.port.outbound
+
+import me.rgunny.kachi.notification.domain.NotificationDltMessage
+import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
+
+/**
+ * Notification dispatch DLT 메시지 운영 조회 port.
+ */
+interface NotificationDltMessageAdminPersistencePort {
+
+    /**
+     * 상태별 DLT 메시지를 실패 시각 최신순으로 조회한다.
+     */
+    suspend fun findByStatus(
+        status: NotificationDltMessageStatus,
+        batchSize: Int,
+    ): List<NotificationDltMessage>
+}

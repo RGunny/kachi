@@ -146,7 +146,10 @@ worker는 `notification.dispatch.dlt`를 consume해 `notification_dlt_messages` 
 저장 idempotency 기준은 원본 Kafka record의 topic, partition, offset이다.
 같은 DLT record가 consumer 재시작이나 ack 실패로 다시 들어와도 같은 document로 upsert한다.
 
-DLT 운영 조회, 재처리, 폐기는 후속 admin 기능에서 다룬다.
+`notification-service`의 admin API는 `PENDING` DLT 메시지를 조회할 수 있다.
+목록 응답에서는 원본 Kafka 위치, DLT 위치, 예외 타입/메시지, 실패 시각을 노출하고 payload는 제외한다.
+
+DLT 재처리와 폐기는 후속 admin 기능에서 다룬다.
 
 ## 트레이드오프
 
@@ -160,7 +163,7 @@ DLT 운영 조회, 재처리, 폐기는 후속 admin 기능에서 다룬다.
 
 - core retry 정책과 Kafka retry topic 설정을 맞춰야 한다.
 - listener가 exception을 던지는 것이 정상 제어 흐름의 일부가 된다.
-- DLT 운영 조회/재처리 기능이 붙기 전까지는 영속화된 메시지를 직접 DB로 확인해야 한다.
+- DLT 재처리 기능이 붙기 전까지는 조회는 가능하지만 운영자가 API로 재투입하거나 폐기할 수는 없다.
 
 ## 관련 결정
 

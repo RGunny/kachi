@@ -1,9 +1,11 @@
 package me.rgunny.kachi.notification.service.config
 
+import me.rgunny.kachi.notification.application.port.inbound.NotificationDltMessageAdminUseCase
 import me.rgunny.kachi.notification.application.port.inbound.NotificationAdminUseCase
 import me.rgunny.kachi.notification.application.port.inbound.NotificationOutboxAdminUseCase
 import me.rgunny.kachi.notification.application.port.inbound.PublishNotificationDispatchUseCase
 import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.outbound.NotificationDltMessageAdminPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationAdminPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPublisher
@@ -12,6 +14,7 @@ import me.rgunny.kachi.notification.application.port.outbound.NotificationOutbox
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.NotificationRequestPersistencePort
+import me.rgunny.kachi.notification.application.service.NotificationDltMessageAdminService
 import me.rgunny.kachi.notification.application.service.NotificationAdminService
 import me.rgunny.kachi.notification.application.service.NotificationOutboxAdminService
 import me.rgunny.kachi.notification.application.service.OutboxPublishPolicy
@@ -129,6 +132,13 @@ class NotificationCoreConfig {
             policy = requestNotificationPolicy,
             clock = clock,
         )
+    }
+
+    @Bean
+    fun notificationDltMessageAdminUseCase(
+        persistencePort: NotificationDltMessageAdminPersistencePort,
+    ): NotificationDltMessageAdminUseCase {
+        return NotificationDltMessageAdminService(persistencePort)
     }
 
 }

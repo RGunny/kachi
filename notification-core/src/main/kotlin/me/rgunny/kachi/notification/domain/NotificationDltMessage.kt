@@ -26,6 +26,12 @@ class NotificationDltMessage private constructor(
         private set
 
     companion object {
+        /**
+         * DLT record를 운영 확인 대상인 PENDING 메시지로 기록한다.
+         *
+         * payload, messageKey, exception metadata는 runtime에서 관측한 원본 값을 보존해야 하므로
+         * 빈 문자열까지 도메인에서 강하게 차단하지 않는다.
+         */
         fun record(
             originalTopic: String,
             originalPartition: Int,
@@ -72,6 +78,9 @@ class NotificationDltMessage private constructor(
             )
         }
 
+        /**
+         * 저장소에 보관된 DLT 메시지 snapshot을 복원한다.
+         */
         fun restore(
             id: NotificationDltMessageId,
             originalTopic: String,

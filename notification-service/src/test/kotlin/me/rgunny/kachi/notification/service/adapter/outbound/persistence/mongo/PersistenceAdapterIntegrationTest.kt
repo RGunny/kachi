@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
+import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDltMessageDocumentMapper
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDocumentMapper
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationOutboxDocumentMapper
 import me.rgunny.kachi.notification.service.config.NotificationMongoTransactionConfig
@@ -13,7 +14,9 @@ import org.springframework.context.annotation.Import
     ]
 )
 @Import(
+    NotificationDltMessageDocumentMapper::class,
     NotificationDocumentMapper::class,
+    NotificationMongoDltMessageAdminPersistenceAdapter::class,
     NotificationOutboxDocumentMapper::class,
     NotificationMongoPersistenceAdapter::class,
     NotificationMongoAdminPersistenceAdapter::class,
