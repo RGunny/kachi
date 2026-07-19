@@ -5,15 +5,10 @@ import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mapper.N
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerMongoTransactionConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import
-import org.testcontainers.junit.jupiter.Testcontainers
+import org.springframework.test.context.ActiveProfiles
 
-@Testcontainers(disabledWithoutDocker = true)
-@DataMongoTest(
-    properties = [
-        "spring.data.mongodb.auto-index-creation=true",
-        "spring.mongodb.representation.uuid=standard",
-    ]
-)
+@ActiveProfiles("test")
+@DataMongoTest
 @Import(
     NotificationDltMessageDocumentMapper::class,
     NotificationDocumentMapper::class,

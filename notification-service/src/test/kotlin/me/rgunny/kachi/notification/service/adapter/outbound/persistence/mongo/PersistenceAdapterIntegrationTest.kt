@@ -6,13 +6,10 @@ import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.
 import me.rgunny.kachi.notification.service.config.NotificationMongoTransactionConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.ActiveProfiles
 
-@DataMongoTest(
-    properties = [
-        "spring.data.mongodb.auto-index-creation=true",
-        "spring.mongodb.representation.uuid=standard"
-    ]
-)
+@ActiveProfiles("test")
+@DataMongoTest
 @Import(
     NotificationDltMessageDocumentMapper::class,
     NotificationDocumentMapper::class,

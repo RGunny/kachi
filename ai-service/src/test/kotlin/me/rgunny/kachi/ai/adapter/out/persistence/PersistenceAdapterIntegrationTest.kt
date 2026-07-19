@@ -1,18 +1,16 @@
 package me.rgunny.kachi.ai.adapter.out.persistence
 
+import me.rgunny.kachi.ai.AiServiceTestContainersConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import
+import org.springframework.test.context.ActiveProfiles
 
-@DataMongoTest(
-    properties = [
-        "spring.data.mongodb.auto-index-creation=true",
-        "spring.mongodb.representation.uuid=standard"
-    ]
-)
+@ActiveProfiles("test")
+@DataMongoTest
 @Import(
     AiRunPersistenceAdapter::class,
     KeywordExpansionPersistenceAdapter::class,
     NewsSummaryPersistenceAdapter::class,
-    PersistenceAdapterTestContainersConfig::class
+    AiServiceTestContainersConfig::class
 )
 abstract class PersistenceAdapterIntegrationTest
