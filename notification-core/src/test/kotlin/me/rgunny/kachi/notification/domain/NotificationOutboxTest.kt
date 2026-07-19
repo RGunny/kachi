@@ -64,15 +64,15 @@ class NotificationOutboxTest {
     @DisplayName("발행 실패가 재시도 가능하면 PENDING으로 돌리고 다음 재시도 시각을 계산한다")
     fun retryableFailure() {
         val outbox = outbox()
-        val failedAt = now.plusSeconds(3)
+        val failureAt = now.plusSeconds(3)
 
         outbox.markPublishing(now.plusSeconds(1), "publisher-1")
-        outbox.recordFailure("broker-timeout", retryPolicy, failedAt)
+        outbox.recordFailure("broker-timeout", retryPolicy, failureAt)
 
         assertEquals(NotificationOutboxStatus.PENDING, outbox.outboxStatus)
         assertEquals(1, outbox.retryCount)
         assertEquals("broker-timeout", outbox.lastError)
-        assertEquals(failedAt.plusSeconds(10), outbox.nextRetryAt)
+        assertEquals(failureAt.plusSeconds(10), outbox.nextRetryAt)
         assertNull(outbox.claimedAt)
         assertNull(outbox.claimedBy)
     }

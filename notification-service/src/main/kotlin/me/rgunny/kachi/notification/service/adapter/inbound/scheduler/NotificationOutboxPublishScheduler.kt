@@ -37,11 +37,11 @@ class NotificationOutboxPublishScheduler(
 
         if (result.processed > 0) {
             log.info(
-                "notification outbox publish tick processed={} published={} failed={} handledAt={}",
+                "notification outbox publish tick processed={} published={} failed={} publishTickCompletedAt={}",
                 result.processed,
                 result.published,
                 result.failed,
-                result.handledAt,
+                result.publishTickCompletedAt,
             )
         }
     }

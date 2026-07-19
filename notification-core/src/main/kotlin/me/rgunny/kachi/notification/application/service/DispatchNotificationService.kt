@@ -54,7 +54,7 @@ class DispatchNotificationService(
                 status = notification.status,
                 duplicated = true,
                 dispatchAttempted = false,
-                handledAt = now,
+                dispatchCompletedAt = now,
             )
         }
 
@@ -85,7 +85,7 @@ class DispatchNotificationService(
                 status = notification.status,
                 duplicated = true,
                 dispatchAttempted = false,
-                handledAt = now,
+                dispatchCompletedAt = now,
             )
         }
 
@@ -182,7 +182,7 @@ class DispatchNotificationService(
             status = savedNotification.status,
             duplicated = false,
             dispatchAttempted = true,
-            handledAt = now,
+            dispatchCompletedAt = now,
         )
     }
 
@@ -228,7 +228,7 @@ class DispatchNotificationService(
             status = savedNotification.status,
             duplicated = false,
             dispatchAttempted = true,
-            handledAt = now,
+            dispatchCompletedAt = now,
             failureClassification = failureClassification,
             failure = failure,
         )
@@ -258,7 +258,7 @@ class DispatchNotificationService(
             status = savedNotification.status,
             duplicated = false,
             dispatchAttempted = true,
-            handledAt = now,
+            dispatchCompletedAt = now,
             failureClassification = DispatchFailureClassification.NON_RETRYABLE,
             failure = failure,
         )
@@ -276,7 +276,7 @@ class DispatchNotificationService(
             status = current.status,
             duplicated = true,
             dispatchAttempted = true,
-            handledAt = now,
+            dispatchCompletedAt = now,
             failureClassification = DispatchFailureClassification.NONE,
         )
     }

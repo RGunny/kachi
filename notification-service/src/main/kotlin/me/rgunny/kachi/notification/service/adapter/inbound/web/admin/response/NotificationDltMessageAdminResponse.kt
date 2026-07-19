@@ -13,6 +13,7 @@ data class NotificationDltMessageAdminResponse(
     val originalTopic: String,
     val originalPartition: Int,
     val originalOffset: Long,
+    val originalTimestamp: Instant?,
     val dltTopic: String,
     val dltPartition: Int,
     val dltOffset: Long,
@@ -20,8 +21,12 @@ data class NotificationDltMessageAdminResponse(
     val messageKey: String?,
     val exceptionFqcn: String?,
     val exceptionMessage: String?,
-    val failedAt: Instant,
-    val receivedAt: Instant,
+    val deadLetteredAt: Instant,
+    val storedAt: Instant,
+    val discardedAt: Instant?,
+    val discardReason: String?,
+    val reprocessedAt: Instant?,
+    val reprocessReason: String?,
 ) {
     companion object {
         fun from(summary: NotificationDltMessageSummary): NotificationDltMessageAdminResponse {
@@ -31,6 +36,7 @@ data class NotificationDltMessageAdminResponse(
                 originalTopic = summary.originalTopic,
                 originalPartition = summary.originalPartition,
                 originalOffset = summary.originalOffset,
+                originalTimestamp = summary.originalTimestamp,
                 dltTopic = summary.dltTopic,
                 dltPartition = summary.dltPartition,
                 dltOffset = summary.dltOffset,
@@ -38,8 +44,12 @@ data class NotificationDltMessageAdminResponse(
                 messageKey = summary.messageKey,
                 exceptionFqcn = summary.exceptionFqcn,
                 exceptionMessage = summary.exceptionMessage,
-                failedAt = summary.failedAt,
-                receivedAt = summary.receivedAt,
+                deadLetteredAt = summary.deadLetteredAt,
+                storedAt = summary.storedAt,
+                discardedAt = summary.discardedAt,
+                discardReason = summary.discardReason,
+                reprocessedAt = summary.reprocessedAt,
+                reprocessReason = summary.reprocessReason,
             )
         }
     }

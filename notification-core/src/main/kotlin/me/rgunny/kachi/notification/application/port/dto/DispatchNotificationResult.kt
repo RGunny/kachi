@@ -21,7 +21,7 @@ data class DispatchNotificationResult(
     /**
      * dispatch command 처리를 마치고 이 결과를 만든 시각.
      */
-    val handledAt: Instant,
+    val dispatchCompletedAt: Instant,
     /**
      * Kafka retry, ack 같은 런타임 처리는 이 분류를 바탕으로 core 밖에서 결정한다.
      */

@@ -33,12 +33,14 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
     @Test
     @DisplayName("PENDING DLT 메시지를 실패 시각 최신순으로 조회한다")
     fun findByStatus() = runBlocking {
-        val older = document(originalOffset = 100, failedAt = NOW.minusSeconds(60))
-        val newer = document(originalOffset = 101, failedAt = NOW)
+        val older = document(originalOffset = 100, deadLetteredAt = NOW.minusSeconds(60))
+        val newer = document(originalOffset = 101, deadLetteredAt = NOW)
         val discarded = document(
             originalOffset = 102,
-            failedAt = NOW.plusSeconds(60),
+            deadLetteredAt = NOW.plusSeconds(60),
             status = NotificationDltMessageStatus.DISCARDED,
+            discardedAt = NOW.plusSeconds(70),
+            discardReason = "operator discard",
         )
         mongoTemplate.insertAll(listOf(older, newer, discarded)).collectList().block()
 
@@ -51,7 +53,7 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
     @Test
     @DisplayName("DLT 메시지를 id로 조회한다")
     fun findById() = runBlocking {
-        val document = document(originalOffset = 100, failedAt = NOW)
+        val document = document(originalOffset = 100, deadLetteredAt = NOW)
         mongoTemplate.insert(document).block()
 
         val result = adapter.findById(NotificationDltMessageId.of(UUID.fromString(document.id)))
@@ -69,16 +71,57 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
         assertNull(result)
     }
 
+    @Test
+    @DisplayName("PENDING DLT 메시지를 DISCARDED로 조건부 갱신한다")
+    fun discardIfPending() = runBlocking {
+        val document = document(originalOffset = 100, deadLetteredAt = NOW)
+        mongoTemplate.insert(document).block()
+        val message = adapter.findById(NotificationDltMessageId.of(UUID.fromString(document.id)))
+        assertNotNull(message)
+        message.discard(NOW.plusSeconds(10), "operator discard")
+
+        val result = adapter.discardIfPending(message)
+
+        assertNotNull(result)
+        assertEquals(NotificationDltMessageStatus.DISCARDED, result.status)
+        assertEquals(NOW.plusSeconds(10), result.discardedAt)
+        assertEquals("operator discard", result.discardReason)
+    }
+
+    @Test
+    @DisplayName("PENDING 조건이 불일치하면 DLT 메시지를 폐기하지 않는다")
+    fun discardIfPendingMismatch() = runBlocking {
+        val document = document(
+            originalOffset = 100,
+            deadLetteredAt = NOW,
+            status = NotificationDltMessageStatus.DISCARDED,
+            discardedAt = NOW.plusSeconds(5),
+            discardReason = "already discarded",
+        )
+        mongoTemplate.insert(document).block()
+        val message = adapter.findById(NotificationDltMessageId.of(UUID.fromString(document.id)))
+        assertNotNull(message)
+
+        val result = adapter.discardIfPending(message)
+
+        assertNull(result)
+    }
+
     private fun document(
         originalOffset: Long,
-        failedAt: Instant,
+        deadLetteredAt: Instant,
         status: NotificationDltMessageStatus = NotificationDltMessageStatus.PENDING,
+        discardedAt: Instant? = null,
+        discardReason: String? = null,
+        reprocessedAt: Instant? = null,
+        reprocessReason: String? = null,
     ): NotificationDltMessageDocument {
         return NotificationDltMessageDocument(
             id = UUID.nameUUIDFromBytes("notification.dispatch:0:$originalOffset".toByteArray()).toString(),
             originalTopic = "notification.dispatch",
             originalPartition = 0,
             originalOffset = originalOffset,
+            originalTimestamp = deadLetteredAt.minusSeconds(1),
             dltTopic = "notification.dispatch.dlt",
             dltPartition = 0,
             dltOffset = originalOffset + 100,
@@ -87,8 +130,12 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
             payload = """{"notificationId":"n$originalOffset"}""",
             exceptionFqcn = "java.net.SocketTimeoutException",
             exceptionMessage = "timeout",
-            failedAt = failedAt,
-            receivedAt = failedAt.plusSeconds(1),
+            deadLetteredAt = deadLetteredAt,
+            storedAt = deadLetteredAt.plusSeconds(1),
+            discardedAt = discardedAt,
+            discardReason = discardReason,
+            reprocessedAt = reprocessedAt,
+            reprocessReason = reprocessReason,
             status = status.name,
         )
     }

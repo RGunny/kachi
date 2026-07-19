@@ -62,7 +62,7 @@ class RecoverStaleProcessingDispatchService(
             recoveredToRetryWait = retryWait,
             recoveredToDead = dead,
             staleProcessingSkipped = skipped,
-            handledAt = now,
+            recoveryTickCompletedAt = now,
         )
     }
 

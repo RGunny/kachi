@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
+import me.rgunny.kachi.notification.exception.InvalidNotificationDltMessageStateException
 import me.rgunny.kachi.notification.exception.InvalidNotificationStateException
 import me.rgunny.kachi.notification.exception.NotificationDltMessageNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
@@ -87,6 +88,18 @@ class GlobalExceptionHandler {
         log.debug(
             "invalid notification state. notificationId={}, currentStatus={}",
             exception.notificationId?.id,
+            exception.currentStatus,
+        )
+        return error(ErrorCode.DOMAIN_INVARIANT, exception.message)
+    }
+
+    @ExceptionHandler(InvalidNotificationDltMessageStateException::class)
+    fun handleInvalidNotificationDltMessageState(
+        exception: InvalidNotificationDltMessageStateException
+    ): ResponseEntity<ApiResponse<Unit>> {
+        log.debug(
+            "invalid notification dlt message state. messageId={}, currentStatus={}",
+            exception.messageId.id,
             exception.currentStatus,
         )
         return error(ErrorCode.DOMAIN_INVARIANT, exception.message)

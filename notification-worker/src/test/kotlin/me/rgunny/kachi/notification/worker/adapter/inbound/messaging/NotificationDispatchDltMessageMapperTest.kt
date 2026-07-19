@@ -33,6 +33,7 @@ class NotificationDispatchDltMessageMapperTest {
         assertEquals("notification.dispatch", result.originalTopic)
         assertEquals(0, result.originalPartition)
         assertEquals(100, result.originalOffset)
+        assertEquals(Instant.parse("2026-07-13T00:00:00Z"), result.originalTimestamp)
         assertEquals("notification.dispatch.dlt", result.dltTopic)
         assertEquals(1, result.dltPartition)
         assertEquals(200, result.dltOffset)
@@ -40,7 +41,8 @@ class NotificationDispatchDltMessageMapperTest {
         assertEquals("key-1", result.messageKey)
         assertEquals("java.net.SocketTimeoutException", result.exceptionFqcn)
         assertEquals("timeout", result.exceptionMessage)
-        assertEquals(Instant.parse("2026-07-13T00:00:00Z"), result.failedAt)
+        assertEquals(Instant.parse("2026-07-13T00:00:01Z"), result.deadLetteredAt)
+        assertEquals(Instant.parse("2026-07-13T00:00:01Z"), result.storedAt)
     }
 
     private fun headers(): RecordHeaders {

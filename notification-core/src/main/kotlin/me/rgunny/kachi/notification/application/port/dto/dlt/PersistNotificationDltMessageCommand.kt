@@ -9,6 +9,7 @@ data class PersistNotificationDltMessageCommand(
     val originalTopic: String,
     val originalPartition: Int,
     val originalOffset: Long,
+    val originalTimestamp: Instant?,
     val dltTopic: String,
     val dltPartition: Int,
     val dltOffset: Long,
@@ -17,6 +18,6 @@ data class PersistNotificationDltMessageCommand(
     val payload: String,
     val exceptionFqcn: String?,
     val exceptionMessage: String?,
-    val failedAt: Instant,
-    val receivedAt: Instant,
+    val deadLetteredAt: Instant,
+    val storedAt: Instant,
 )

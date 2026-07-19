@@ -17,8 +17,8 @@ import java.time.Instant
         unique = true
     ),
     CompoundIndex(
-        name = "idx_notification_dlt_status_failed_at",
-        def = "{'status': 1, 'failedAt': -1}"
+        name = "idx_notification_dlt_status_dead_lettered_at",
+        def = "{'status': 1, 'deadLetteredAt': -1}"
     )
 )
 data class NotificationDltMessageDocument(
@@ -27,6 +27,7 @@ data class NotificationDltMessageDocument(
     val originalTopic: String,
     val originalPartition: Int,
     val originalOffset: Long,
+    val originalTimestamp: Instant?,
     val dltTopic: String,
     val dltPartition: Int,
     val dltOffset: Long,
@@ -35,7 +36,11 @@ data class NotificationDltMessageDocument(
     val payload: String,
     val exceptionFqcn: String?,
     val exceptionMessage: String?,
-    val failedAt: Instant,
-    val receivedAt: Instant,
+    val deadLetteredAt: Instant,
+    val storedAt: Instant,
+    val discardedAt: Instant?,
+    val discardReason: String?,
+    val reprocessedAt: Instant?,
+    val reprocessReason: String?,
     val status: String,
 )

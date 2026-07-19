@@ -91,7 +91,7 @@ class NotificationDispatchKafkaListenerTest {
             },
             duplicated = false,
             dispatchAttempted = true,
-            handledAt = Instant.parse("2026-06-17T00:00:00Z"),
+            dispatchCompletedAt = Instant.parse("2026-06-17T00:00:00Z"),
             failureClassification = classification,
             failure = if (classification == DispatchFailureClassification.RETRYABLE) {
                 RetryFailure.of(

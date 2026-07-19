@@ -387,6 +387,7 @@ NotificationSender
 worker는 `notification.dispatch.dlt` 메시지를 `notification_dlt_messages` collection에 먼저 영속화한다.
 DLT 저장은 원본 Kafka record 위치 기준 upsert로 처리해 DLT consumer 재처리 중복을 막는다.
 `notification-service` admin API는 저장된 DLT 메시지를 상태별로 조회한다.
+운영자가 재처리하지 않기로 판단한 DLT 메시지는 `DISCARDED`로 닫고 처리 시각과 사유를 남긴다.
 
 초기에는 이 기능을 `notification-service`의 `/admin` API로 제공한다. 별도 admin 런타임은 운영 기능의 배포, 인증, 스케일링 요구가 커질 때 분리한다.
 

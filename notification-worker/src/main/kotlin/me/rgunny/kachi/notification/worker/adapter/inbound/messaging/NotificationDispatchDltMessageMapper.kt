@@ -21,7 +21,7 @@ class NotificationDispatchDltMessageMapper {
     fun toCommand(
         record: ConsumerRecord<String, String>,
         payload: String,
-        receivedAt: Instant,
+        storedAt: Instant,
     ): PersistNotificationDltMessageCommand {
         // 1. 원본 record 위치는 DLT idempotency key로 쓰이므로 Spring Kafka DLT header를 우선 사용한다.
         val headers = record.headers()
@@ -29,12 +29,17 @@ class NotificationDispatchDltMessageMapper {
         val originalPartition = headers.lastInt(KafkaHeaders.DLT_ORIGINAL_PARTITION) ?: record.partition()
         val originalOffset = headers.lastLong(KafkaHeaders.DLT_ORIGINAL_OFFSET) ?: record.offset()
         val originalTimestamp = headers.lastLong(KafkaHeaders.DLT_ORIGINAL_TIMESTAMP)
+        val deadLetteredAt = record.timestamp()
+            .takeIf { it >= 0 }
+            ?.let(Instant::ofEpochMilli)
+            ?: storedAt
 
         // 2. DLT record 자체의 위치와 예외 metadata도 함께 저장해 운영자가 broker 위치를 추적할 수 있게 한다.
         return PersistNotificationDltMessageCommand(
             originalTopic = originalTopic,
             originalPartition = originalPartition,
             originalOffset = originalOffset,
+            originalTimestamp = originalTimestamp?.let(Instant::ofEpochMilli),
             dltTopic = record.topic(),
             dltPartition = record.partition(),
             dltOffset = record.offset(),
@@ -43,8 +48,8 @@ class NotificationDispatchDltMessageMapper {
             payload = payload,
             exceptionFqcn = headers.lastString(KafkaHeaders.DLT_EXCEPTION_FQCN),
             exceptionMessage = headers.lastString(KafkaHeaders.DLT_EXCEPTION_MESSAGE),
-            failedAt = originalTimestamp?.let(Instant::ofEpochMilli) ?: Instant.ofEpochMilli(record.timestamp()),
-            receivedAt = receivedAt,
+            deadLetteredAt = deadLetteredAt,
+            storedAt = storedAt,
         )
     }
 

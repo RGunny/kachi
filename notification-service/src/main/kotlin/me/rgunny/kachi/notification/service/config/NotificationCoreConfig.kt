@@ -137,8 +137,9 @@ class NotificationCoreConfig {
     @Bean
     fun notificationDltMessageAdminUseCase(
         persistencePort: NotificationDltMessageAdminPersistencePort,
+        clock: Clock,
     ): NotificationDltMessageAdminUseCase {
-        return NotificationDltMessageAdminService(persistencePort)
+        return NotificationDltMessageAdminService(persistencePort, clock)
     }
 
 }

@@ -31,6 +31,7 @@ class PersistNotificationDltMessageServiceTest {
             originalTopic = "notification.dispatch",
             originalPartition = 0,
             originalOffset = 10,
+            originalTimestamp = Instant.parse("2026-07-12T23:59:59Z"),
             dltTopic = "notification.dispatch.dlt",
             dltPartition = 0,
             dltOffset = 20,
@@ -39,8 +40,8 @@ class PersistNotificationDltMessageServiceTest {
             payload = """{"notificationId":"n1"}""",
             exceptionFqcn = "java.net.SocketTimeoutException",
             exceptionMessage = "timeout",
-            failedAt = Instant.parse("2026-07-13T00:00:00Z"),
-            receivedAt = Instant.parse("2026-07-13T00:00:01Z"),
+            deadLetteredAt = Instant.parse("2026-07-13T00:00:00Z"),
+            storedAt = Instant.parse("2026-07-13T00:00:01Z"),
         )
     }
 }

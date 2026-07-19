@@ -19,6 +19,7 @@ class NotificationDltMessageDocumentMapper {
             originalTopic = document.originalTopic,
             originalPartition = document.originalPartition,
             originalOffset = document.originalOffset,
+            originalTimestamp = document.originalTimestamp,
             dltTopic = document.dltTopic,
             dltPartition = document.dltPartition,
             dltOffset = document.dltOffset,
@@ -27,8 +28,12 @@ class NotificationDltMessageDocumentMapper {
             payload = document.payload,
             exceptionFqcn = document.exceptionFqcn,
             exceptionMessage = document.exceptionMessage,
-            failedAt = document.failedAt,
-            receivedAt = document.receivedAt,
+            deadLetteredAt = document.deadLetteredAt,
+            storedAt = document.storedAt,
+            discardedAt = document.discardedAt,
+            discardReason = document.discardReason,
+            reprocessedAt = document.reprocessedAt,
+            reprocessReason = document.reprocessReason,
             status = NotificationDltMessageStatus.valueOf(document.status),
         )
     }

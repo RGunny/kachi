@@ -30,7 +30,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     private lateinit var mongoTemplate: ReactiveMongoTemplate
 
     private val requestedAt = Instant.parse("2026-06-19T00:00:00Z")
-    private val handledAt = Instant.parse("2026-06-19T00:00:30Z")
+    private val transitionAt = Instant.parse("2026-06-19T00:00:30Z")
 
     @BeforeEach
     fun cleanUp() {
@@ -45,7 +45,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         val expectedClaimedAt = requireNotNull(notification.claimedAt)
         val expectedClaimedBy = requireNotNull(notification.claimedBy)
         notification.also {
-            it.markSent(handledAt)
+            it.markSent(transitionAt)
         }
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
@@ -70,8 +70,8 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         val expectedClaimedAt = requireNotNull(notification.claimedAt)
         val expectedClaimedBy = requireNotNull(notification.claimedBy)
         notification.also {
-            it.markFailed(handledAt, "vendor timeout")
-            it.markRetryWait(handledAt, "vendor timeout")
+            it.markFailed(transitionAt, "vendor timeout")
+            it.markRetryWait(transitionAt, "vendor timeout")
         }
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
@@ -97,8 +97,8 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         val expectedClaimedAt = requireNotNull(notification.claimedAt)
         val expectedClaimedBy = requireNotNull(notification.claimedBy)
         notification.also {
-            it.markFailed(handledAt, "invalid recipient")
-            it.markDead(handledAt, "invalid recipient")
+            it.markFailed(transitionAt, "invalid recipient")
+            it.markDead(transitionAt, "invalid recipient")
         }
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
@@ -123,7 +123,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         val notification = notificationPersistenceAdapter.save(processingNotification())
         val expectedClaimedAt = requireNotNull(notification.claimedAt)
         val expectedClaimedBy = requireNotNull(notification.claimedBy)
-        notification.markSent(handledAt)
+        notification.markSent(transitionAt)
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
             notification = notification,

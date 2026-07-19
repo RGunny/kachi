@@ -12,5 +12,5 @@ data class PublishNotificationDispatchResult(
     /**
      * outbox 발행 주기를 처리하고 이 결과를 만든 시각.
      */
-    val handledAt: Instant
+    val publishTickCompletedAt: Instant
 )

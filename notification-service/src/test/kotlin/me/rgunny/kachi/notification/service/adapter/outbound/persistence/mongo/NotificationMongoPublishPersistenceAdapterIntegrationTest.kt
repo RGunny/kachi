@@ -38,7 +38,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     private lateinit var mongoTemplate: ReactiveMongoTemplate
 
     private val requestedAt = Instant.parse("2026-06-16T00:00:00Z")
-    private val handledAt = Instant.parse("2026-06-16T00:00:10Z")
+    private val transitionAt = Instant.parse("2026-06-16T00:00:10Z")
 
     @BeforeEach
     fun cleanUp() {
@@ -51,11 +51,11 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     fun savePublished() = runBlocking {
         val notification = notification("request-1")
         val outbox = publishingOutbox(notification.id).also {
-            it.markPublished(handledAt)
+            it.markPublished(transitionAt)
         }
         notificationPersistenceAdapter.save(notification)
 
-        adapter.savePublished(outbox, handledAt)
+        adapter.savePublished(outbox, transitionAt)
 
         val savedOutbox = outboxPersistenceAdapter.findById(outbox.id)
         val savedNotification = notificationPersistenceAdapter.findById(notification.id)
@@ -78,12 +78,12 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
                     baseDelay = Duration.ofSeconds(10),
                     maxDelay = Duration.ofMinutes(1),
                 ),
-                now = handledAt,
+                now = transitionAt,
             )
         }
         notificationPersistenceAdapter.save(notification)
 
-        adapter.savePublishFailed(outbox, handledAt, "broker-down")
+        adapter.savePublishFailed(outbox, transitionAt, "broker-down")
 
         val savedOutbox = outboxPersistenceAdapter.findById(outbox.id)
         val savedNotification = notificationPersistenceAdapter.findById(notification.id)
@@ -100,11 +100,11 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     @DisplayName("notification 조회 실패 시 outbox 저장도 rollback한다")
     fun rollbackWhenNotificationNotFound() = runBlocking {
         val outbox = publishingOutbox(NotificationId.newId()).also {
-            it.markPublished(handledAt)
+            it.markPublished(transitionAt)
         }
 
         assertFailsWith<IllegalStateException> {
-            adapter.savePublished(outbox, handledAt)
+            adapter.savePublished(outbox, transitionAt)
         }
 
         assertEquals(null, outboxPersistenceAdapter.findById(outbox.id))
@@ -129,7 +129,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
             eventPayload = """{"notificationId":"${notificationId.id}"}""",
             now = requestedAt,
         ).also {
-            it.markPublishing(handledAt.minusSeconds(1), "publisher-1")
+            it.markPublishing(transitionAt.minusSeconds(1), "publisher-1")
         }
     }
 }

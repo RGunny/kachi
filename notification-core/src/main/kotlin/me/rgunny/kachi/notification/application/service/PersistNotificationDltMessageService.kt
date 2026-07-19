@@ -21,6 +21,7 @@ class PersistNotificationDltMessageService(
                 originalTopic = command.originalTopic,
                 originalPartition = command.originalPartition,
                 originalOffset = command.originalOffset,
+                originalTimestamp = command.originalTimestamp,
                 dltTopic = command.dltTopic,
                 dltPartition = command.dltPartition,
                 dltOffset = command.dltOffset,
@@ -29,8 +30,8 @@ class PersistNotificationDltMessageService(
                 payload = command.payload,
                 exceptionFqcn = command.exceptionFqcn,
                 exceptionMessage = command.exceptionMessage,
-                failedAt = command.failedAt,
-                receivedAt = command.receivedAt,
+                deadLetteredAt = command.deadLetteredAt,
+                storedAt = command.storedAt,
             )
         )
 

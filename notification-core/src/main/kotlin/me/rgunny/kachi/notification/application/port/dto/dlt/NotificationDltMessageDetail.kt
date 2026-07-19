@@ -16,6 +16,7 @@ data class NotificationDltMessageDetail(
     val originalTopic: String,
     val originalPartition: Int,
     val originalOffset: Long,
+    val originalTimestamp: Instant?,
     val dltTopic: String,
     val dltPartition: Int,
     val dltOffset: Long,
@@ -24,8 +25,12 @@ data class NotificationDltMessageDetail(
     val payload: String,
     val exceptionFqcn: String?,
     val exceptionMessage: String?,
-    val failedAt: Instant,
-    val receivedAt: Instant,
+    val deadLetteredAt: Instant,
+    val storedAt: Instant,
+    val discardedAt: Instant?,
+    val discardReason: String?,
+    val reprocessedAt: Instant?,
+    val reprocessReason: String?,
 ) {
     companion object {
         fun from(message: NotificationDltMessage): NotificationDltMessageDetail {
@@ -35,6 +40,7 @@ data class NotificationDltMessageDetail(
                 originalTopic = message.originalTopic,
                 originalPartition = message.originalPartition,
                 originalOffset = message.originalOffset,
+                originalTimestamp = message.originalTimestamp,
                 dltTopic = message.dltTopic,
                 dltPartition = message.dltPartition,
                 dltOffset = message.dltOffset,
@@ -43,8 +49,12 @@ data class NotificationDltMessageDetail(
                 payload = message.payload,
                 exceptionFqcn = message.exceptionFqcn,
                 exceptionMessage = message.exceptionMessage,
-                failedAt = message.failedAt,
-                receivedAt = message.receivedAt,
+                deadLetteredAt = message.deadLetteredAt,
+                storedAt = message.storedAt,
+                discardedAt = message.discardedAt,
+                discardReason = message.discardReason,
+                reprocessedAt = message.reprocessedAt,
+                reprocessReason = message.reprocessReason,
             )
         }
     }

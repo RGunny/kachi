@@ -147,10 +147,31 @@ worker는 `notification.dispatch.dlt`를 consume해 `notification_dlt_messages` 
 같은 DLT record가 consumer 재시작이나 ack 실패로 다시 들어와도 같은 document로 upsert한다.
 
 `notification-service`의 admin API는 `PENDING` DLT 메시지를 조회할 수 있다.
-목록 응답에서는 원본 Kafka 위치, DLT 위치, 예외 타입/메시지, 실패 시각을 노출하고 payload는 제외한다.
+목록 응답에서는 원본 Kafka 위치, DLT 위치, 예외 타입/메시지, 원본 record 시각, DLT 진입 시각, 저장 시각을 노출하고 payload는 제외한다.
 상세 조회는 운영자가 재처리 가능 여부를 판단할 수 있도록 payload를 포함한다.
+운영자가 재처리하지 않기로 판단한 메시지는 `PENDING -> DISCARDED`로 폐기하고 `discardedAt`, `discardReason`을 남긴다.
 
-DLT 재처리와 폐기는 후속 admin 기능에서 다룬다.
+DLT 시간 필드의 의미는 다음과 같이 분리한다.
+
+- `originalTimestamp`: Spring Kafka DLT header에 담긴 원본 record timestamp
+- `deadLetteredAt`: DLT record timestamp. Kafka retry가 종료되어 DLT에 들어온 시각에 가깝다.
+- `storedAt`: 우리 worker가 DLT record를 운영 저장소에 보관한 시각
+- `discardedAt`, `discardReason`: 운영자가 재처리하지 않기로 판단해 `DISCARDED`로 종료한 시각과 사유
+- `reprocessedAt`, `reprocessReason`: 운영자가 재처리를 완료해 `REPROCESSED`로 종료한 시각과 사유
+
+DLT 운영 종료 필드는 상태별로 분리한다.
+`closedAt`, `handledAt`처럼 여러 종료 방식을 한 필드에 합친 이름은 사용하지 않는다.
+상태와 필드의 불변식은 다음과 같다.
+
+| status | 종료 필드 |
+| --- | --- |
+| `PENDING` | 모든 종료 필드 `null` |
+| `DISCARDED` | `discardedAt`, `discardReason`만 값 존재 |
+| `REPROCESSED` | `reprocessedAt`, `reprocessReason`만 값 존재 |
+
+개발 중 기존 `failedAt`, `receivedAt`, `closedAt`, `closeReason` 기반 DLT document가 남아 있으면 migration하지 않고 collection 또는 로컬 MongoDB volume을 초기화한다.
+
+DLT 재처리는 후속 admin 기능에서 다룬다.
 
 ## 트레이드오프
 
@@ -164,7 +185,7 @@ DLT 재처리와 폐기는 후속 admin 기능에서 다룬다.
 
 - core retry 정책과 Kafka retry topic 설정을 맞춰야 한다.
 - listener가 exception을 던지는 것이 정상 제어 흐름의 일부가 된다.
-- DLT 재처리 기능이 붙기 전까지는 조회는 가능하지만 운영자가 API로 재투입하거나 폐기할 수는 없다.
+- DLT 재처리 기능이 붙기 전까지는 조회와 폐기는 가능하지만 운영자가 API로 재투입할 수는 없다.
 
 ## 관련 결정
 

@@ -21,4 +21,9 @@ interface NotificationDltMessageAdminPersistencePort {
      * DLT 메시지를 식별자로 조회한다.
      */
     suspend fun findById(messageId: NotificationDltMessageId): NotificationDltMessage?
+
+    /**
+     * PENDING 상태일 때만 DISCARDED로 조건부 갱신한다.
+     */
+    suspend fun discardIfPending(message: NotificationDltMessage): NotificationDltMessage?
 }

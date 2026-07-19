@@ -1,7 +1,9 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.exception
 
 import me.rgunny.kachi.notification.domain.NotificationDltMessageId
+import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.domain.NotificationOutboxId
+import me.rgunny.kachi.notification.exception.InvalidNotificationDltMessageStateException
 import me.rgunny.kachi.notification.exception.NotificationDltMessageNotFoundException
 import me.rgunny.kachi.notification.exception.NotificationOutboxNotFoundException
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ErrorCode
@@ -69,6 +71,24 @@ class GlobalExceptionHandlerTest {
         val error = assertNotNull(body.error)
         assertEquals(false, body.success)
         assertEquals(ErrorCode.NOT_FOUND.name, error.code)
+    }
+
+    @Test
+    @DisplayName("invalid DLT message state 예외를 domain invariant 오류로 변환한다")
+    fun handleInvalidNotificationDltMessageState() {
+        val response = handler.handleInvalidNotificationDltMessageState(
+            InvalidNotificationDltMessageStateException(
+                messageId = NotificationDltMessageId.fromOriginalRecord("notification.dispatch", 0, 100),
+                currentStatus = NotificationDltMessageStatus.DISCARDED,
+                message = "notification dlt message is not discardable",
+            )
+        )
+
+        assertEquals(ErrorCode.DOMAIN_INVARIANT.status, response.statusCode)
+        val body = assertNotNull(response.body)
+        val error = assertNotNull(body.error)
+        assertEquals(false, body.success)
+        assertEquals(ErrorCode.DOMAIN_INVARIANT.name, error.code)
     }
 
     private fun methodParameter(): MethodParameter {

@@ -26,5 +26,8 @@ data class RecoverStaleProcessingDispatchResult(
      * 후보로 조회됐지만 claim CAS 조건 불일치 등으로 저장하지 않은 수.
      */
     val staleProcessingSkipped: Int,
-    val handledAt: Instant,
+    /**
+     * stale PROCESSING recovery 주기를 처리하고 이 결과를 만든 시각.
+     */
+    val recoveryTickCompletedAt: Instant,
 )
