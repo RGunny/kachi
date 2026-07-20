@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.worker.fixture
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import me.rgunny.kachi.notification.application.service.DispatchNotificationService
 import me.rgunny.kachi.notification.application.service.NotificationSenderRouter
 import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
@@ -7,6 +8,7 @@ import me.rgunny.kachi.notification.contract.NotificationChannel as ContractNoti
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.NotificationDispatchKafkaListener
+import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.config.DiscordNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.MockNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.NotificationDispatchProperties
@@ -80,6 +82,7 @@ class NotificationWorkerDispatchFixture(
         listener = NotificationDispatchKafkaListener(
             dispatchUseCase = dispatchUseCase,
             jsonMapper = jsonMapper,
+            metrics = NotificationWorkerMetrics(SimpleMeterRegistry()),
         )
     }
 

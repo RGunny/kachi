@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.sender.telegram
 
-import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
@@ -19,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
  * Telegram Bot API sendMessage 기반 NotificationSender adapter.
  *
  * Telegram Bot API 응답은 HTTP status와 별개로 JSON body의 ok/error_code/parameters.retry_after를 같이 확인해야 한다.
+ * coroutine 취소는 외부 채널 장애가 아니므로 failure 결과로 변환하지 않는다.
  */
 class TelegramNotificationSender internal constructor(
     private val client: TelegramSendMessageClient,
@@ -63,6 +64,8 @@ class TelegramNotificationSender internal constructor(
             )
 
             classify(response)
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: WebClientRequestException) {
             if (VendorHttpExceptionClassifier.isTimeout(exception)) {
                 return SendNotificationResult.TransientFailure(

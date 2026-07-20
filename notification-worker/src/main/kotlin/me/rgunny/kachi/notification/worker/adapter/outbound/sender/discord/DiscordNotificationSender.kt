@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord
 
+import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
@@ -19,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
  *
  * Discord webhook은 wait=false 기본값에서 성공 시 204 No Content를 반환할 수 있고,
  * rate limit은 429와 Retry-After/X-RateLimit-Reset-After header로 표현된다.
+ * coroutine 취소는 외부 채널 장애가 아니므로 failure 결과로 변환하지 않는다.
  */
 class DiscordNotificationSender internal constructor(
     private val client: DiscordWebhookClient,
@@ -38,6 +40,8 @@ class DiscordNotificationSender internal constructor(
             val response = client.send(content = command.message)
 
             classify(response)
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: WebClientRequestException) {
             if (VendorHttpExceptionClassifier.isTimeout(exception)) {
                 return SendNotificationResult.TransientFailure(

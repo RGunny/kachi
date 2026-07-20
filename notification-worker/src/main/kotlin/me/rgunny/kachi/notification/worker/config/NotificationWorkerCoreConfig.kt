@@ -15,6 +15,8 @@ import me.rgunny.kachi.notification.application.service.NotificationSenderRouter
 import me.rgunny.kachi.notification.application.service.PersistNotificationDltMessageService
 import me.rgunny.kachi.notification.application.service.RecoverStaleProcessingDispatchService
 import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.outbound.sender.MeteredNotificationSender
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -81,18 +83,25 @@ class NotificationWorkerCoreConfig {
 
     /**
      * 채널별 sender 구현체를 core router에 전달한다.
-     * 현재 단계에서는 sender adapter가 아직 없으므로, 실제 발송 채널 구현 시 이 List에 bean들이 자동 주입된다.
+     * Spring이 주입한 sender adapter를 metric decorator로 감싼 뒤 router에 전달한다.
      */
     @Bean
-    fun notificationSenderRouter(senders: List<NotificationSender>): NotificationSenderRouter {
-        return NotificationSenderRouter(senders)
+    fun notificationSenderRouter(
+        senders: List<NotificationSender>,
+        metrics: NotificationWorkerMetrics,
+    ): NotificationSenderRouter {
+        return NotificationSenderRouter(
+            senders.map { sender ->
+                MeteredNotificationSender(
+                    delegate = sender,
+                    metrics = metrics,
+                )
+            }
+        )
     }
 
     /**
      * notification.dispatch 메시지를 실제 발송 use case에 연결한다.
-     *
-     * 이 bean이 요구하는 outbound port들이 모두 구현되어야 worker 애플리케이션이 완전히 기동된다.
-     * 현재 커밋은 listener/runtime 골격 단계이므로, persistence/redis/sender adapter는 다음 단계에서 채운다.
      */
     @Bean
     fun dispatchNotificationUseCase(

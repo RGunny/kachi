@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.sender.slack
 
+import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
@@ -19,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
  *
  * Slack webhook은 성공 시 2xx를 반환하고, rate limit은 429와 Retry-After header로 표현된다.
  * worker는 sender 결과를 core DispatchNotificationService에 돌려주고, core가 RetryPolicy로 RETRY_WAIT/DEAD를 결정한다.
+ * coroutine 취소는 외부 채널 장애가 아니므로 failure 결과로 변환하지 않는다.
  */
 class SlackNotificationSender internal constructor(
     private val client: SlackWebhookClient,
@@ -38,6 +40,8 @@ class SlackNotificationSender internal constructor(
             val response = client.send(text = command.message)
 
             classify(response)
+        } catch (exception: CancellationException) {
+            throw exception
         } catch (exception: WebClientRequestException) {
             if (VendorHttpExceptionClassifier.isTimeout(exception)) {
                 return SendNotificationResult.TransientFailure(
