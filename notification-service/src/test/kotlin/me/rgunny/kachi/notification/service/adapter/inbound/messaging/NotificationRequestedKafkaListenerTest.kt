@@ -1,10 +1,13 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.messaging
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import me.rgunny.kachi.notification.application.port.dto.RequestNotificationCommand
 import me.rgunny.kachi.notification.application.port.dto.RequestNotificationResult
 import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
+import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract
+import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetrics
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper
@@ -16,9 +19,11 @@ import kotlin.test.assertFailsWith
 class NotificationRequestedKafkaListenerTest {
 
     private val useCase = CapturingRequestNotificationUseCase()
+    private val registry = SimpleMeterRegistry()
     private val listener = NotificationRequestedKafkaListener(
         requestNotificationUseCase = useCase,
         jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+        metrics = NotificationServiceMetrics(registry),
     )
 
     @Test
@@ -43,6 +48,13 @@ class NotificationRequestedKafkaListenerTest {
         assertEquals("collector-service", command.requester)
         assertEquals("C123", command.recipient)
         assertEquals("hello", command.message)
+        assertEquals(
+            1.0,
+            registry.get(NotificationServiceMetricContract.Names.REQUEST)
+                .tags("source", "kafka", "channel", "SLACK", "result", "accepted")
+                .counter()
+                .count(),
+        )
     }
 
     @Test
@@ -51,6 +63,13 @@ class NotificationRequestedKafkaListenerTest {
         assertFailsWith<InvalidNotificationRequestedMessageException> {
             listener.consume("{ invalid-json")
         }
+        assertEquals(
+            1.0,
+            registry.get(NotificationServiceMetricContract.Names.REQUEST)
+                .tags("source", "kafka", "channel", "UNKNOWN", "result", "invalid")
+                .counter()
+                .count(),
+        )
     }
 
     @Test
