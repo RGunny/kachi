@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
@@ -268,15 +269,7 @@ class OpenAiLlmProviderTest {
     }
 
     private fun newsArticle(): NewsArticle {
-        return NewsArticle(
-            id = UUID.fromString("018f0000-0000-7000-8000-000000000001"),
-            source = "GOOGLE",
-            title = "NVIDIA AI GPU demand rises",
-            url = "https://news.example.com/nvidia",
-            publishedAt = Instant.parse("2026-06-02T00:00:00Z"),
-            collectedAt = Instant.parse("2026-06-02T00:01:00Z"),
-            matchedKeywords = listOf("NVIDIA")
-        )
+        return AiTestFixture.newsArticle(title = "NVIDIA AI GPU demand rises")
     }
 
     private class CapturingExchangeFunction(

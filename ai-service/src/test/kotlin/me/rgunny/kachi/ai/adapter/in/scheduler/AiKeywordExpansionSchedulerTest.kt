@@ -7,19 +7,17 @@ import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsResult
 import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Clock
 import java.time.Duration
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @DisplayName("AiKeywordExpansionScheduler")
 class AiKeywordExpansionSchedulerTest {
-    private val clock = Clock.fixed(Instant.parse("2026-06-03T12:00:00Z"), ZoneOffset.UTC)
+    private val clock = AiTestFixture.CLOCK
 
     @Test
     @DisplayName("scheduler가 비활성화되어 있으면 키워드 확장을 실행하지 않는다")
@@ -114,18 +112,9 @@ class AiKeywordExpansionSchedulerTest {
 
     private companion object {
         fun completedRun(requestedKeywords: Int): AiRun {
-            return AiRun.start(
+            return AiTestFixture.completedRun(
                 targetType = AiRunTargetType.KEYWORD_EXPANSION,
-                requestedKeywords = requestedKeywords,
-                startedAt = Instant.parse("2026-06-03T12:00:00Z")
-            ).complete(
-                succeededCount = requestedKeywords,
-                failureCount = 0,
-                failureReason = null,
-                provider = null,
-                model = null,
-                promptVersion = null,
-                finishedAt = Instant.parse("2026-06-03T12:00:05Z")
+                requestedKeywords = requestedKeywords
             )
         }
     }

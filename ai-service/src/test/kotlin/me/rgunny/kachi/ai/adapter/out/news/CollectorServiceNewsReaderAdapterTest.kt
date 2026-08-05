@@ -4,14 +4,12 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.NewsReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.support.jsonExchangeFunction
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import org.springframework.web.reactive.function.client.ClientResponse
-import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Mono
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -108,7 +106,7 @@ class CollectorServiceNewsReaderAdapterTest {
     ): CollectorServiceNewsReaderAdapter {
         return CollectorServiceNewsReaderAdapter(
             webClient = WebClient.builder()
-                .exchangeFunction(exchangeFunction(responseBody, status))
+                .exchangeFunction(jsonExchangeFunction(responseBody, status))
                 .build(),
             properties = CollectorServiceNewsProperties(
                 baseUrl = "http://collector-service",
@@ -117,16 +115,5 @@ class CollectorServiceNewsReaderAdapterTest {
                 maxInMemorySize = 256 * 1024,
             )
         )
-    }
-
-    private fun exchangeFunction(responseBody: String, status: HttpStatus): ExchangeFunction {
-        return ExchangeFunction {
-            Mono.just(
-                ClientResponse.create(status)
-                    .header("Content-Type", "application/json")
-                    .body(responseBody)
-                    .build()
-            )
-        }
     }
 }

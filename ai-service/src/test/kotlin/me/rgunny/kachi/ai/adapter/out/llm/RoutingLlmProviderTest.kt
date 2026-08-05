@@ -29,9 +29,9 @@ class RoutingLlmProviderTest {
     @DisplayName("single-random mode는 등록된 provider 중 하나를 호출한다")
     fun callSingleRandomProvider() = runBlocking {
         val providers = listOf(
-            FakeLlmProviderPort("openrouter"),
-            FakeLlmProviderPort("groq"),
-            FakeLlmProviderPort("mistral")
+            NamedLlmProviderPort("openrouter"),
+            NamedLlmProviderPort("groq"),
+            NamedLlmProviderPort("mistral")
         )
         val router = RoutingLlmProvider(
             providers = providers,
@@ -63,7 +63,7 @@ class RoutingLlmProviderTest {
     @DisplayName("aggregate mode는 아직 호출하지 않는다")
     fun aggregateModeIsNotImplemented() = runBlocking {
         val router = RoutingLlmProvider(
-            providers = listOf(FakeLlmProviderPort("openrouter")),
+            providers = listOf(NamedLlmProviderPort("openrouter")),
             mode = LlmProviderMode.AGGREGATE
         )
 
@@ -75,7 +75,7 @@ class RoutingLlmProviderTest {
         }
     }
 
-    private class FakeLlmProviderPort(
+    private class NamedLlmProviderPort(
         val provider: String
     ) : LlmProviderPort {
         var expandCallCount: Int = 0
@@ -92,7 +92,7 @@ class RoutingLlmProviderTest {
                     keyword: AiKeyword,
                     articles: List<NewsArticle>
                 ): LlmNewsSummaryResult {
-                    return this@FakeLlmProviderPort.summarizeNews(keyword, articles)
+                    return this@NamedLlmProviderPort.summarizeNews(keyword, articles)
                 }
             }
         }

@@ -2,37 +2,20 @@ package me.rgunny.kachi.ai.application.service
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
-import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
-import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
-import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
-import me.rgunny.kachi.ai.application.port.out.persistence.AiRunPersistencePort
-import me.rgunny.kachi.ai.application.port.out.persistence.KeywordExpansionPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
-import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
-import me.rgunny.kachi.ai.domain.llm.PromptVersion
-import me.rgunny.kachi.ai.domain.llm.TokenUsage
-import me.rgunny.kachi.ai.domain.run.AiRun
-import me.rgunny.kachi.ai.domain.run.AiRunId
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
-import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.fake.FakeAiRunPersistencePort
+import me.rgunny.kachi.ai.fake.FakeKeywordExpansionPersistencePort
+import me.rgunny.kachi.ai.fake.FakeKeywordReaderPort
+import me.rgunny.kachi.ai.fake.FakeLlmProviderPort
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @DisplayName("ExpandKeywordsService")
 class ExpandKeywordsServiceTest {
-    private val clock = Clock.fixed(Instant.parse("2026-06-03T00:00:00Z"), ZoneOffset.UTC)
+    private val clock = AiTestFixture.CLOCK
     private val keywordReader = FakeKeywordReaderPort()
     private val llmProvider = FakeLlmProviderPort()
     private val keywordExpansionPersistence = FakeKeywordExpansionPersistencePort()
@@ -55,11 +38,14 @@ class ExpandKeywordsServiceTest {
         assertEquals(1, result.succeededCount)
         assertEquals(0, result.failureCount)
         assertEquals(1, keywordExpansionPersistence.savedExpansions.size)
-        assertEquals(listOf("AI 반도체", "GPU"), keywordExpansionPersistence.savedExpansions.first().expandedKeywords.map { it.value })
+        assertEquals(
+            listOf("AI 반도체", "GPU"),
+            keywordExpansionPersistence.savedExpansions.first().expandedKeywords.map { it.value }
+        )
         assertEquals(2, aiRunPersistence.savedRuns.size)
-        assertEquals(LlmProviderName.of("openrouter"), aiRunPersistence.savedRuns.last().provider)
-        assertEquals(LlmModelName.of("test-model"), aiRunPersistence.savedRuns.last().model)
-        assertEquals(PromptVersion.of("keyword-expansion-v1"), aiRunPersistence.savedRuns.last().promptVersion)
+        assertEquals(AiTestFixture.PROVIDER, aiRunPersistence.savedRuns.last().provider)
+        assertEquals(AiTestFixture.MODEL, aiRunPersistence.savedRuns.last().model)
+        assertEquals(AiTestFixture.KEYWORD_EXPANSION_PROMPT_VERSION, aiRunPersistence.savedRuns.last().promptVersion)
     }
 
     @Test
@@ -114,97 +100,5 @@ class ExpandKeywordsServiceTest {
             aiRunPersistencePort = aiRunPersistence,
             clock = clock
         )
-    }
-
-    private class FakeKeywordReaderPort : KeywordReaderPort {
-        var keywords: List<AiKeyword> = emptyList()
-        var readCount: Int = 0
-
-        override suspend fun findActiveKeywords(): List<AiKeyword> {
-            readCount += 1
-            return keywords
-        }
-    }
-
-    private class FakeLlmProviderPort : LlmProviderPort {
-        var failedKeywords: Set<AiKeyword> = emptySet()
-
-        override fun prepareNewsSummary(): PreparedLlmNewsSummary {
-            return object : PreparedLlmNewsSummary {
-                override val plan: LlmNewsSummaryPlan = LlmNewsSummaryPlan(
-                    provider = LlmProviderName.of("openrouter"),
-                    model = LlmModelName.of("test-model"),
-                    promptVersion = PromptVersion.of("news-summary-v1")
-                )
-
-                override suspend fun summarize(
-                    keyword: AiKeyword,
-                    articles: List<NewsArticle>
-                ): LlmNewsSummaryResult {
-                    return this@FakeLlmProviderPort.summarizeNews(keyword, articles)
-                }
-            }
-        }
-
-        override suspend fun expandKeyword(
-            keyword: AiKeyword,
-            maxExpansions: Int
-        ): LlmKeywordExpansionResult {
-            if (keyword in failedKeywords) {
-                throw IllegalStateException("LLM failure")
-            }
-
-            return LlmKeywordExpansionResult(
-                expandedKeywords = listOf(
-                    ExpandedKeyword.of("AI 반도체"),
-                    ExpandedKeyword.of("GPU")
-                ).take(maxExpansions),
-                metadata = LlmGenerationMetadata(
-                    provider = LlmProviderName.of("openrouter"),
-                    model = LlmModelName.of("test-model"),
-                    promptVersion = PromptVersion.of("keyword-expansion-v1"),
-                    tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20)
-                )
-            )
-        }
-
-        override suspend fun summarizeNews(
-            keyword: AiKeyword,
-            articles: List<NewsArticle>
-        ): LlmNewsSummaryResult {
-            return LlmNewsSummaryResult(
-                title = "요약",
-                content = "본문",
-                sentiment = NewsSummarySentiment.UNKNOWN,
-                metadata = LlmGenerationMetadata(
-                    provider = LlmProviderName.of("openrouter"),
-                    model = LlmModelName.of("test-model"),
-                    promptVersion = PromptVersion.of("news-summary-v1"),
-                    tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
-                )
-            )
-        }
-    }
-
-    private class FakeKeywordExpansionPersistencePort : KeywordExpansionPersistencePort {
-        val savedExpansions: MutableList<KeywordExpansion> = mutableListOf()
-
-        override suspend fun save(keywordExpansion: KeywordExpansion): KeywordExpansion {
-            savedExpansions.add(keywordExpansion)
-            return keywordExpansion
-        }
-    }
-
-    private class FakeAiRunPersistencePort : AiRunPersistencePort {
-        val savedRuns: MutableList<AiRun> = mutableListOf()
-
-        override suspend fun findById(id: AiRunId): AiRun? {
-            return savedRuns.firstOrNull { it.id == id }
-        }
-
-        override suspend fun save(aiRun: AiRun): AiRun {
-            savedRuns.add(aiRun)
-            return aiRun
-        }
     }
 }
