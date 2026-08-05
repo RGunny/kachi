@@ -12,6 +12,8 @@ kachi:
     scheduler:
       news-summary:
         enabled: false
+      keyword-expansion:
+        enabled: false
     clients:
       user-service:
         base-url: http://localhost:8080
