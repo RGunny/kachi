@@ -93,6 +93,15 @@ user-service
 docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
 ```
 
+notification 운영 모니터링 스택 실행:
+
+```sh
+docker compose -f infra/docker-compose.observability.yml up -d
+```
+
+Grafana는 `http://localhost:3000`, Prometheus는 `http://localhost:9094`에서 확인한다.
+notification metric은 `notification-service`와 `notification-worker`의 `/actuator/prometheus`를 Prometheus가 scrape한다.
+
 로컬 환경변수는 `.env.example`을 기준으로 `.env.local`에 둔다.
 실행 전에 shell에 로드하면 각 서비스가 같은 값을 사용한다.
 
@@ -123,6 +132,7 @@ set +a
 | [용어사전](./docs/용어사전.md) | Kachi 도메인 용어 정의 |
 | [도메인 모델](./docs/도메인모델.md) | bounded context, aggregate, value object, 도메인 규칙 |
 | [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
+| [포트 구성](./docs/포트-구성.md) | 로컬 호스트 공개 포트, 컨테이너 인바운드 포트, 서비스 간 연결 계약 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
 | [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |
 | [001. user-service에 Keyword 포함](./docs/decisions/001-user-service에-keyword-포함.md) | Keyword 경계 결정 |
@@ -142,3 +152,4 @@ set +a
 | [016. notification-worker vendor sender 구조와 설정 구성](./docs/decisions/016-notification-worker-vendor-sender-구조.md) | Slack/Discord/Telegram sender 구조와 non-secret/secret 설정 분리 |
 | [017. MongoDB replica set 전환과 트랜잭션 전제](./docs/decisions/017-mongodb-replica-set-전환과-트랜잭션-전제.md) | MongoDB multi-document transaction을 위한 로컬 replica set 전환과 transaction boundary 원칙 |
 | [018. 재시도 폭주 방지와 복구 트래픽 제어](./docs/decisions/018-재시도-폭주-방지와-복구-트래픽-제어.md) | retry storm, retry budget, circuit breaker, slow start, bulkhead 공통 설계 원칙 |
+| [019. notification 운영 모니터링 및 관측성 설계](./docs/decisions/019-notification-운영-모니터링-및-observability-설계.md) | notification metric contract, Prometheus/Grafana, 후속 trace/log 설계 |
