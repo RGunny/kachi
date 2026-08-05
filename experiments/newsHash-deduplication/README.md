@@ -78,6 +78,16 @@ MongoDB 시작:
 docker compose -f experiments/newsHash-deduplication/docker-compose.yml up -d
 ```
 
+실험용 Docker Compose는 `kachi-experiment` project name을 사용한다.
+Docker Desktop에서는 `kachi-experiment` 묶음 아래에 `kachi-experiment-news-hash-mongo` 컨테이너로 표시된다.
+
+기본 host port는 메인 로컬 MongoDB(`27017`)와 충돌하지 않도록 `27018`을 사용한다.
+필요하면 다음처럼 바꿀 수 있다.
+
+```sh
+NEWS_HASH_EXPERIMENT_MONGO_PORT=27019 docker compose -f experiments/newsHash-deduplication/docker-compose.yml up -d
+```
+
 실제 LLM raw 수집:
 
 ```sh
@@ -95,6 +105,14 @@ java --source 21 experiments/newsHash-deduplication/scripts/CollectRawLlmSamples
 ```sh
 ./experiments/newsHash-deduplication/scripts/run.sh 1000000
 ```
+
+실험 인프라 정리:
+
+```sh
+docker compose -f experiments/newsHash-deduplication/docker-compose.yml down -v
+```
+
+`-v`는 실험 MongoDB volume을 함께 삭제한다.
 
 ## 결과 파일
 

@@ -6,6 +6,6 @@ import java.time.Duration
 @ConfigurationProperties(prefix = "kachi.jwt")
 data class JwtProperties(
     val secret: String,
-    val accessTokenTtl: Duration = Duration.ofMinutes(15),
-    val refreshTokenTtl: Duration = Duration.ofDays(14)
+    val accessTokenTtl: Duration,
+    val refreshTokenTtl: Duration,
 )

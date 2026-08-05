@@ -2,6 +2,7 @@ services:
   mongo:
     image: mongo:7.0
     container_name: kachi-mongo
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET:-rs0}", "--bind_ip_all"]
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kachi_collector}
       TZ: Asia/Seoul
@@ -12,7 +13,14 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "try { rs.status().ok } catch (e) { rs.initiate({_id: '${MONGO_REPLICA_SET:-rs0}', members: [{ _id: 0, host: 'localhost:27017' }] }).ok }"
+        ]
       interval: 10s
       timeout: 5s
       retries: 10

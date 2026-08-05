@@ -31,8 +31,8 @@ class NewsCollectionScheduler(
     }
 
     @Scheduled(
-        fixedDelayString = "\${kachi.collector.scheduler.news.fixed-delay:10m}",
-        initialDelayString = "\${kachi.collector.scheduler.news.initial-delay:30s}"
+        fixedDelayString = "\${kachi.collector.scheduler.news.fixed-delay}",
+        initialDelayString = "\${kachi.collector.scheduler.news.initial-delay}"
     )
     suspend fun collectNews() {
         // 1. local/test처럼 자동 외부 호출을 피해야 하는 환경에서는 scheduler 실행을 건너뛴다.

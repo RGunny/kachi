@@ -1,0 +1,79 @@
+spring:
+  application:
+    name: notification-worker
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mongodb:
+    representation:
+      uuid: standard
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      group-id: notification-worker
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: manual
+
+server:
+  port: 8085
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+kachi:
+  notification:
+    worker:
+      worker-id: notification-worker-local
+    dispatch:
+      topic: notification.dispatch
+      group-id: notification-worker
+      dedupe-ttl: PT5M
+      idempotency-key-ttl: PT24H
+      processing-visibility-timeout: PT30S
+      recovery:
+        enabled: true
+        interval: PT30S
+        batch-size: 100
+      retry:
+        max-attempts: 3
+        backoff: PT1S
+      dlt:
+        topic: notification.dispatch.dlt
+        group-id: notification-worker-dlt
+    sender:
+      mock:
+        enabled: true
+        channels: SLACK,DISCORD,TELEGRAM,SMS,KAKAO,EMAIL
+        mode: SUCCESS
+      slack:
+        enabled: true
+        connect-timeout: PT2S
+        response-timeout: PT5S
+        read-timeout: PT5S
+        write-timeout: PT5S
+        max-in-memory-size: 262144
+      discord:
+        enabled: true
+        connect-timeout: PT2S
+        response-timeout: PT5S
+        read-timeout: PT5S
+        write-timeout: PT5S
+        max-in-memory-size: 262144
+      telegram:
+        enabled: true
+        base-url: https://api.telegram.org
+        send-message-path: /sendMessage
+        connect-timeout: PT2S
+        response-timeout: PT5S
+        read-timeout: PT5S
+        write-timeout: PT5S
+        max-in-memory-size: 262144

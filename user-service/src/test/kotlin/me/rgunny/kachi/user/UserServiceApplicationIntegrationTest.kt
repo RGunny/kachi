@@ -1,6 +1,5 @@
 package me.rgunny.kachi.user
 
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -9,11 +8,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
-import org.testcontainers.containers.GenericContainer
 import kotlin.test.assertContains
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -41,26 +37,5 @@ class UserServiceApplicationIntegrationTest @Autowired constructor(
         }.andReturn()
 
         assertContains(result.response.contentAsString, "\"status\":\"UP\"")
-    }
-
-    companion object {
-        private const val REDIS_PORT = 6379
-
-        private val redisContainer = GenericContainer("redis:7-alpine")
-            .withExposedPorts(REDIS_PORT)
-
-        @JvmStatic
-        @DynamicPropertySource
-        fun redisProperties(registry: DynamicPropertyRegistry) {
-            redisContainer.start()
-            registry.add("spring.data.redis.host") { redisContainer.host }
-            registry.add("spring.data.redis.port") { redisContainer.getMappedPort(REDIS_PORT) }
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun stopRedis() {
-            redisContainer.stop()
-        }
     }
 }

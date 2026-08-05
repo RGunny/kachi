@@ -7,34 +7,34 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties(prefix = "kachi.ai.providers")
 data class LlmProviderProperties(
-    val mode: String = LlmProviderMode.SINGLE_RANDOM.value,
-    val keywordExpansionPromptVersion: String = "keyword-expansion-v1",
-    val newsSummaryPromptVersion: String = "news-summary-v1",
-    val openrouter: OpenAiProviderProperties = OpenAiProviderProperties(),
-    val groq: OpenAiProviderProperties = OpenAiProviderProperties(),
-    val together: OpenAiProviderProperties = OpenAiProviderProperties(),
-    val cerebras: OpenAiProviderProperties = OpenAiProviderProperties(),
-    val mistral: OpenAiProviderProperties = OpenAiProviderProperties(),
-    val gemini: GeminiProviderProperties = GeminiProviderProperties()
+    val mode: String,
+    val keywordExpansionPromptVersion: String,
+    val newsSummaryPromptVersion: String,
+    val openrouter: OpenAiProviderProperties,
+    val groq: OpenAiProviderProperties,
+    val together: OpenAiProviderProperties,
+    val cerebras: OpenAiProviderProperties,
+    val mistral: OpenAiProviderProperties,
+    val gemini: GeminiProviderProperties,
 )
 
 data class OpenAiProviderProperties(
-    val enabled: Boolean = false,
-    val apiKey: String = "",
-    val baseUrl: String = "",
-    val chatCompletionsPath: String = "/chat/completions",
-    val model: String = "",
-    val connectTimeout: java.time.Duration = java.time.Duration.ofSeconds(2),
-    val responseTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
-    val readTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
-    val writeTimeout: java.time.Duration = java.time.Duration.ofSeconds(10),
-    val maxInMemorySize: Int = 524288
+    val enabled: Boolean,
+    val apiKey: String,
+    val baseUrl: String,
+    val chatCompletionsPath: String,
+    val model: String,
+    val connectTimeout: java.time.Duration,
+    val responseTimeout: java.time.Duration,
+    val readTimeout: java.time.Duration,
+    val writeTimeout: java.time.Duration,
+    val maxInMemorySize: Int,
 )
 
 data class GeminiProviderProperties(
-    val enabled: Boolean = false,
-    val apiKey: String = "",
-    val baseUrl: String = "",
-    val generateContentPath: String = "/v1beta/models/{model}:generateContent",
-    val model: String = ""
+    val enabled: Boolean,
+    val apiKey: String,
+    val baseUrl: String,
+    val generateContentPath: String,
+    val model: String,
 )

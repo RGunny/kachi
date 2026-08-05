@@ -8,3 +8,4 @@ volumes:
   redis-data:
   mysql-data:
   mongo-data:
+  kafka-data:

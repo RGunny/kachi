@@ -1,8 +1,21 @@
+name: kachi-experiment
+
 services:
   mongo:
     image: mongo:7.0
-    container_name: kachi-news-hash-experiment-mongo
+    container_name: kachi-experiment-news-hash-mongo
     ports:
-      - "27018:27017"
+      - "${NEWS_HASH_EXPERIMENT_MONGO_PORT:-27018}:27017"
     volumes:
       - ./:/experiment
+      - news-hash-mongo-data:/data/db
+      - news-hash-mongo-config:/data/configdb
+    networks:
+      - experiment-network
+
+volumes:
+  news-hash-mongo-data:
+  news-hash-mongo-config:
+
+networks:
+  experiment-network:

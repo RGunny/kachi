@@ -23,8 +23,15 @@ class FinnhubNewsProviderTest {
 
     private val properties = FinnhubNewsProperties(
         enabled = true,
+        baseUrl = "https://finnhub.io",
+        companyNewsPath = "/api/v1/company-news",
         apiKey = "api-key",
-        lookbackDays = 7
+        lookbackDays = 7,
+        connectTimeout = java.time.Duration.ofSeconds(2),
+        responseTimeout = java.time.Duration.ofSeconds(5),
+        readTimeout = java.time.Duration.ofSeconds(5),
+        writeTimeout = java.time.Duration.ofSeconds(5),
+        maxInMemorySize = 512 * 1024,
     )
 
     private val clock = Clock.fixed(Instant.parse("2026-05-30T00:00:00Z"), ZoneOffset.UTC)

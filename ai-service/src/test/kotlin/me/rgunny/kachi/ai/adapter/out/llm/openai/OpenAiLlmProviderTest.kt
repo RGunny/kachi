@@ -1,6 +1,5 @@
 package me.rgunny.kachi.ai.adapter.out.llm.openai
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.config.OpenAiProviderProperties
@@ -15,6 +14,8 @@ import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import tools.jackson.databind.json.JsonMapper
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -27,7 +28,13 @@ class OpenAiLlmProviderTest {
         enabled = true,
         apiKey = "api-key",
         baseUrl = "https://llm.example.com/v1",
-        model = "test-model"
+        chatCompletionsPath = "/chat/completions",
+        model = "test-model",
+        connectTimeout = Duration.ofSeconds(2),
+        responseTimeout = Duration.ofSeconds(10),
+        readTimeout = Duration.ofSeconds(10),
+        writeTimeout = Duration.ofSeconds(10),
+        maxInMemorySize = 512 * 1024,
     )
 
     @Test
@@ -174,6 +181,36 @@ class OpenAiLlmProviderTest {
     }
 
     @Test
+    @DisplayName("뉴스 요약 JSON 객체에 추가 필드가 있어도 필요한 필드만 변환한다")
+    fun summarizeNewsWithUnknownJsonFields() = runBlocking {
+        val provider = providerOf(
+            CapturingExchangeFunction(
+                """
+                {
+                  "model": "test-model",
+                  "choices": [
+                    {
+                      "message": {
+                        "content": "{\"title\":\"요약\",\"content\":\"본문\",\"sentiment\":\"NEUTRAL\",\"reason\":\"extra\"}"
+                      }
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        )
+
+        val result = provider.summarizeNews(
+            keyword = AiKeyword.of("NVIDIA"),
+            articles = listOf(newsArticle())
+        )
+
+        assertEquals("요약", result.title)
+        assertEquals("본문", result.content)
+        assertEquals(NewsSummarySentiment.NEUTRAL, result.sentiment)
+    }
+
+    @Test
     @DisplayName("뉴스 요약 응답에 JSON 객체가 없으면 실패한다")
     fun failWhenNewsSummaryResponseDoesNotContainJsonObject() = runBlocking {
         val provider = providerOf(
@@ -222,7 +259,7 @@ class OpenAiLlmProviderTest {
                 .baseUrl(properties.baseUrl)
                 .exchangeFunction(exchangeFunction)
                 .build(),
-            objectMapper = jacksonObjectMapper(),
+            jsonMapper = JsonMapper.builder().build(),
             providerType = OpenAiProviderType.OPENROUTER,
             properties = properties,
             keywordExpansionPromptVersion = PromptVersion.of("keyword-expansion-v1"),

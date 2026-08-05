@@ -6,7 +6,7 @@ import java.time.Duration
 @ConfigurationProperties(prefix = "kachi.ai.clients.collector-service")
 data class CollectorServiceNewsProperties(
     val baseUrl: String,
-    val newsPath: String = "/api/v1/internal/news",
-    val timeout: Duration = Duration.ofSeconds(3),
-    val maxInMemorySize: Int = 256 * 1024
+    val newsPath: String,
+    val timeout: Duration,
+    val maxInMemorySize: Int,
 )

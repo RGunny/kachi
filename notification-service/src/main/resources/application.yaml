@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: notification-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mongodb:
+    representation:
+      uuid: standard
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        acks: all
+
+server:
+  port: 8084
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+kachi:
+  notification:
+    request:
+      topic: notification.requested
+      group-id: notification-service
+      dedupe-ttl: PT24H
+      dlt:
+        topic: notification.requested.dlt
+      retry:
+        max-attempts: 3
+        backoff: PT1S
+    dispatch:
+      topic: notification.dispatch
+    outbox:
+      publisher-id: notification-service-local
+      batch-size: 100
+      poll-interval: PT1S
+      publishing-visibility-timeout: PT30S
+      scheduler:
+        enabled: true
+      retry:
+        max-attempts: 3
+        base-delay: PT1S
+        max-delay: PT1M
