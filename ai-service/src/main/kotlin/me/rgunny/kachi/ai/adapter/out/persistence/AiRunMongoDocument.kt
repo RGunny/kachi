@@ -30,7 +30,10 @@ data class AiRunMongoDocument(
     val failureReason: AiFailureReason?,
     val provider: String?,
     val model: String?,
-    val promptVersion: String?
+    val promptVersion: String?,
+    val windowFrom: Instant?,
+    val windowTo: Instant?,
+    val watermarkAdvanced: Boolean
 ) {
 
     fun toDomain(): AiRun {
@@ -46,7 +49,10 @@ data class AiRunMongoDocument(
             failureReason = failureReason,
             provider = provider?.let(LlmProviderName::of),
             model = model?.let(LlmModelName::of),
-            promptVersion = promptVersion?.let(PromptVersion::of)
+            promptVersion = promptVersion?.let(PromptVersion::of),
+            windowFrom = windowFrom,
+            windowTo = windowTo,
+            watermarkAdvanced = watermarkAdvanced
         )
     }
 
@@ -64,7 +70,10 @@ data class AiRunMongoDocument(
                 failureReason = aiRun.failureReason,
                 provider = aiRun.provider?.value,
                 model = aiRun.model?.value,
-                promptVersion = aiRun.promptVersion?.value
+                promptVersion = aiRun.promptVersion?.value,
+                windowFrom = aiRun.windowFrom,
+                windowTo = aiRun.windowTo,
+                watermarkAdvanced = aiRun.watermarkAdvanced
             )
         }
     }

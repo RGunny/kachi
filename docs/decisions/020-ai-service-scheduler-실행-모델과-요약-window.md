@@ -116,14 +116,38 @@ watermark는 실행이 끝난 뒤 조건부로 전진한다.
 
 ```text
 격리되지 않은 키워드가 모두 성공 -> watermark = window.to
-하나라도 실패                    -> watermark 유지
+하나라도 실패                -> watermark 유지
 ```
 
 실패 시 watermark를 유지하면 다음 tick이 같은 구간을 다시 처리한다. 이때 이미 성공한 키워드는 `newsHash`로 기존 요약을 재사용하므로 LLM을 호출하지 않고, 실패했던 키워드만 다시 시도한다. 즉 **재시도가 별도 장치 없이 성립한다.**
 
+이 재사용은 `newsHash`가 조회 구간에 묶여 있지 않아야 성립한다. watermark 방식의 `to`는 항상 `now`라 실행마다 달라지므로, hash에 `from`/`to`가 남아 있으면 기사 묶음이 같아도 매번 다른 hash가 나온다. ADR 011을 개정해 hash 입력을 `keyword + sourceNewsIds`로 줄인 이유가 여기에 있다.
+
+요약 대상이 0개인 실행(활성 키워드가 없거나 전부 격리된 경우)도 실패가 없으므로 전진한다. 처리할 것이 없던 구간을 붙잡고 있으면 window만 계속 커지다 `maxLookback` 하한에 걸린다.
+
 watermark가 없는 최초 기동에서는 `now - overlap`을 시작점으로 삼는다.
 
 `from`이 `maxLookback` 하한에 걸리면 그 사이 구간은 처리되지 않는다. 이 경우 건너뛴 구간을 warn 로그와 `AiRun`에 남겨 조용히 사라지지 않게 한다.
+
+### window를 정하는 주체
+
+watermark는 저장된 상태라 조회에 출력 포트가 필요하다. 진입점(scheduler, internal API)은 `adapter.in`이므로 출력 포트를 직접 호출하지 않는다.
+
+그래서 진입점은 **구간 정책만** 실어 보내고, 실제 계산과 전진은 유스케이스가 맡는다.
+
+```kotlin
+sealed interface SummaryWindowRequest {
+    // 수동 실행: 지정 구간만 처리하고 watermark를 읽지도 전진시키지도 않는다
+    data class Explicit(val from: Instant?, val to: Instant?) : SummaryWindowRequest
+
+    // scheduler 실행: watermark에서 이어받고, 실패가 없으면 전진시킨다
+    data class FromWatermark(val overlap: Duration, val maxLookback: Duration) : SummaryWindowRequest
+}
+```
+
+`overlap`과 `maxLookback`의 설정 소유는 `AiNewsSummarySchedulerProperties`에 남고, 상태 접근은 application 안에 남는다.
+
+부수 효과로 **수동 실행이 watermark를 움직이지 못한다는 규칙이 타입으로 강제된다.** 운영자가 임의 구간을 지정해 재처리했는데 watermark가 그 구간의 끝으로 움직이면, 지정하지 않은 구간까지 처리된 것으로 기록된다. 진입점이 실수로 전진을 요청할 방법 자체를 없앴다.
 
 ### 실행 이력 기록
 
@@ -153,7 +177,19 @@ watermark는 현재 위치만 갖는 값이라, 그것만으로는 "왜 여기 �
 ```text
 ai_keyword_quarantines
   targetType, keyword, consecutiveFailures, lastFailureReason,
-  quarantinedAt, releasedAt, status(ACTIVE | RELEASED)
+  quarantinedAt, releasedAt, status(TRACKING | QUARANTINED | RELEASED)
+  unique index: targetType + keyword
+```
+
+상태를 셋으로 둔 이유는 연속 실패 횟수가 격리 **이전부터** 실행을 넘겨가며 누적되어야 하기 때문이다. 아직 임계치에 닿지 않은 키워드도 카운터를 들고 있어야 하므로, 격리되지 않은 추적 상태(`TRACKING`)가 격리 상태(`QUARANTINED`)와 별도로 필요하다. `quarantinedAt`/`releasedAt`은 현재 상태가 아니라 마지막 격리/해제 시각이고, 현재 상태의 판단 기준은 `status` 하나다.
+
+실패한 적 없는 키워드는 문서를 만들지 않는다. 실행마다 전 키워드를 기록하면 정상 동작이 쓰기 부하가 된다.
+
+임계치는 scheduler 실행뿐 아니라 internal API 실행에도 함께 적용되므로 scheduler 설정과 분리한다.
+
+```yaml
+kachi.ai.quarantine:
+  failure-threshold: 3
 ```
 
 격리된 키워드는 요약 대상에서 빠지고, watermark 전진 판단에서도 제외된다. 해제는 운영자가 결정한다. 자동 해제는 두지 않는다.
@@ -215,6 +251,24 @@ lookback을 실행 주기보다 길게 두어 연속한 tick의 구간을 의도
 
 `overlap`을 5분으로 둔 근거는 collector가 `collectedAt` 기준으로 뉴스를 조회하기 때문이다(`NewsPersistenceAdapter`). `collectedAt`은 수집 시점이라 거의 단조 증가하고, 늦게 도착하는 폭은 수집 run의 길이와 저장 지연 정도다. 발행 시각 기준이었다면 며칠 전 기사가 지금 수집될 수 있어 훨씬 큰 마진이 필요했겠지만, 수집 시각 축에서는 5분이면 충분하다.
 
+### window 계산을 유스케이스에 둔 이유
+
+`from`을 저장된 값에서 시작하는 순간, window 계산은 더 이상 시각 산술이 아니라 상태 조회가 된다. 그래서 "누가 그 상태를 읽는가"를 정해야 했다.
+
+**1. scheduler가 watermark를 직접 읽는다**
+
+기존 코드가 window를 계산하던 자리라 변경이 가장 작다. 하지만 `adapter.in`이 출력 포트를 직접 호출하게 되고, 같은 진입점이 둘(scheduler, internal API)이라 watermark 접근 코드가 양쪽에 생긴다. 전진 시점도 진입점마다 따로 판단하게 되어, 지금은 같은 규칙이어도 갈라지기 쉽다.
+
+**2. 정책 값까지 application 설정으로 옮긴다**
+
+`overlap`/`maxLookback`을 application 계층 설정으로 옮기고 command에는 "watermark를 쓸지" 여부만 담는 방식이다. 계층은 깔끔해지지만 실행 주기와 함께 조정해야 하는 값들이 서로 다른 설정 묶음으로 흩어진다. `fixedDelay`가 10분인데 `overlap`이 5분이라는 관계를 한 화면에서 볼 수 없게 된다.
+
+**3. 진입점이 정책만 실어 보내고 유스케이스가 계산한다 (선택)**
+
+설정 소유는 진입점에, 상태 접근은 application에 남는다. 두 진입점이 같은 계산 경로를 공유하므로 규칙이 갈라지지 않는다.
+
+무엇보다 요청 종류가 전진 여부를 함께 결정하게 되어, "수동 실행은 watermark를 움직이지 않는다"가 문서가 아니라 타입으로 남는다. 1번과 2번은 이 규칙을 진입점이 지켜주기를 기대해야 한다.
+
 ### 강제 전진 대신 격리를 택한 이유
 
 watermark 방식에는 새 실패 모드가 있다. 특정 키워드가 영구적으로 실패하면 watermark가 전진하지 않고, window가 계속 커지다 `maxLookback` 하한에 걸려 앞쪽부터 잘려나간다.
@@ -253,7 +307,9 @@ watermark가 격리 이후에도 정체한다면 그건 격리로도 걸러지�
 - 반복 실패하는 키워드가 전체 진행을 막지 않는다.
 - 어느 구간을 언제 처리했고 watermark가 어디서 멈췄는지가 `AiRun`과 격리 기록으로 DB에 남는다.
 - 처리하지 못한 구간은 `maxLookback` 하한에 걸릴 때 기록과 함께 드러난다.
-- watermark 되감기가 문서 한 건 수정으로 가능하다.
+- 운영자가 구간을 지정해 실행해도 watermark는 움직이지 않는다. 수동 재처리가 주기 실행의 진행 상태를 흔들지 않는다.
+- `overlap`이 `maxLookback`보다 길게 설정되면 기동 시점에 실패한다. 매 실행이 잘린 구간을 만드는 설정으로는 뜨지 않는다.
+- 이미 지나간 구간을 다시 처리시켜야 할 때(요약 결과가 잘못 생성된 경우 등) watermark를 과거로 되돌리는 것이 문서 한 건 수정으로 끝난다. `_id`가 `targetType`이라 대상 문서가 한 건으로 정해진다.
 
 ## 제외한 것
 
@@ -268,6 +324,10 @@ watermark가 격리 이후에도 정체한다면 그건 격리로도 걸러지�
 현재는 격리 자동 해제를 두지 않는다.
 
 TTL 기반 자동 재시도는 원인이 해소되지 않은 상태에서 같은 실패를 반복시킨다. 해제는 운영자가 원인을 확인한 뒤 결정한다.
+
+현재는 격리 해제 API를 두지 않는다.
+
+해제 규칙은 도메인(`KeywordQuarantine.release`)에 있지만 이를 호출하는 진입점은 만들지 않았다. watermark를 과거로 되돌릴 때와 마찬가지로 문서 한 건 수정으로 처리한다. 격리가 실제로 얼마나 자주 발생하고 어떤 판단을 거쳐 풀리는지 보기 전에 운영 API 형태를 정하면, 쓰지 않는 진입점만 남는다. 격리 발생을 관리자 알림으로 받게 되는 시점(C4)에 함께 판단한다.
 
 현재는 scheduler 단위의 distributed lock을 도입하지 않는다. ADR 008과 같은 이유로, 단일 인스턴스 배포 모델에서는 `Executor`의 JVM lock으로 충분하다. 다만 watermark는 인스턴스가 늘어나면 경합 대상이 되므로, 그 시점에 lock과 함께 다시 다룬다.
 

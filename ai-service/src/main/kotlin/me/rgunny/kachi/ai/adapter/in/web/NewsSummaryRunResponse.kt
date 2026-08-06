@@ -12,6 +12,9 @@ data class NewsSummaryRunResponse(
     val requestedKeywords: Int,
     val succeededCount: Int,
     val failureCount: Int,
+    val windowFrom: Instant?,
+    val windowTo: Instant?,
+    val watermarkAdvanced: Boolean,
     val summaries: List<NewsSummaryResponse>
 ) {
     companion object {
@@ -25,6 +28,9 @@ data class NewsSummaryRunResponse(
                 requestedKeywords = result.requestedKeywords,
                 succeededCount = result.succeededCount,
                 failureCount = result.failureCount,
+                windowFrom = result.windowFrom,
+                windowTo = result.windowTo,
+                watermarkAdvanced = result.watermarkAdvanced,
                 summaries = result.summaries.map {
                     NewsSummaryResponse(
                         id = it.id.value.toString(),

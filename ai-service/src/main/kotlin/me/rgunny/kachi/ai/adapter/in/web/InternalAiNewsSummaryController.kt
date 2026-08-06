@@ -31,10 +31,9 @@ class InternalAiNewsSummaryController(
         }
 
         log.info(
-            "Manual news summary requested: keywords={}, from={}, to={}, maxArticlesPerKeyword={}",
+            "Manual news summary requested: keywords={}, window={}, maxArticlesPerKeyword={}",
             command.keywords.size,
-            command.from,
-            command.to,
+            command.window,
             command.maxArticlesPerKeyword
         )
 

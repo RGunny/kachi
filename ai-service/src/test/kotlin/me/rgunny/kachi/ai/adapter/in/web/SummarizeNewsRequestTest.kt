@@ -1,11 +1,13 @@
 package me.rgunny.kachi.ai.adapter.`in`.web
 
+import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 @DisplayName("SummarizeNewsRequest")
 class SummarizeNewsRequestTest {
@@ -23,10 +25,22 @@ class SummarizeNewsRequestTest {
             maxArticlesPerKeyword = 10
         ).toCommand()
 
+        val window = assertIs<SummaryWindowRequest.Explicit>(command.window)
         assertEquals(listOf(AiKeyword.of("NVIDIA")), command.keywords)
-        assertEquals(from, command.from)
-        assertEquals(to, command.to)
+        assertEquals(from, window.from)
+        assertEquals(to, window.to)
         assertEquals(10, command.maxArticlesPerKeyword)
+    }
+
+    @Test
+    @DisplayName("시작 시각이 종료 시각보다 이후이면 실패한다")
+    fun rejectInvertedWindow() {
+        assertFailsWith<IllegalArgumentException> {
+            SummarizeNewsRequest(
+                from = Instant.parse("2026-06-02T00:00:00Z"),
+                to = Instant.parse("2026-06-01T00:00:00Z")
+            ).toCommand()
+        }
     }
 
     @Test

@@ -43,6 +43,9 @@ data class SummarizeNewsResult(
     val requestedKeywords: Int,
     val succeededCount: Int,
     val failureCount: Int,
+    val windowFrom: Instant?,
+    val windowTo: Instant?,
+    val watermarkAdvanced: Boolean,
     val summaries: List<SummarizedNewsResult>
 ) {
     companion object {
@@ -58,6 +61,9 @@ data class SummarizeNewsResult(
                 requestedKeywords = aiRun.requestedKeywords,
                 succeededCount = aiRun.succeededCount,
                 failureCount = aiRun.failureCount,
+                windowFrom = aiRun.windowFrom,
+                windowTo = aiRun.windowTo,
+                watermarkAdvanced = aiRun.watermarkAdvanced,
                 summaries = summaries
             )
         }

@@ -5,6 +5,13 @@ import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import java.time.Instant
 
+/**
+ * AI 실행 이력.
+ *
+ * windowFrom/windowTo/watermarkAdvanced는 뉴스 요약 실행에만 채워진다.
+ * watermark는 현재 위치만 갖는 값이라 그것만으로는 왜 거기 있는지 알 수 없다.
+ * 어느 구간을 언제 처리했고 어디서 멈췄는지의 판단 근거를 로그가 아니라 DB에 둔다.
+ */
 class AiRun private constructor(
     val id: AiRunId,
     val targetType: AiRunTargetType,
@@ -17,7 +24,10 @@ class AiRun private constructor(
     val failureReason: AiFailureReason?,
     val provider: LlmProviderName?,
     val model: LlmModelName?,
-    val promptVersion: PromptVersion?
+    val promptVersion: PromptVersion?,
+    val windowFrom: Instant?,
+    val windowTo: Instant?,
+    val watermarkAdvanced: Boolean
 ) {
 
     companion object {
@@ -25,9 +35,14 @@ class AiRun private constructor(
         fun start(
             targetType: AiRunTargetType,
             requestedKeywords: Int,
-            startedAt: Instant
+            startedAt: Instant,
+            windowFrom: Instant? = null,
+            windowTo: Instant? = null
         ): AiRun {
             require(requestedKeywords >= 0) { "요청 키워드 수는 0 이상이어야 합니다" }
+            if (windowFrom != null && windowTo != null) {
+                require(!windowFrom.isAfter(windowTo)) { "실행 구간의 시작은 종료보다 이후일 수 없습니다" }
+            }
 
             return AiRun(
                 id = AiRunId.newId(),
@@ -41,7 +56,10 @@ class AiRun private constructor(
                 failureReason = null,
                 provider = null,
                 model = null,
-                promptVersion = null
+                promptVersion = null,
+                windowFrom = windowFrom,
+                windowTo = windowTo,
+                watermarkAdvanced = false
             )
         }
 
@@ -57,7 +75,10 @@ class AiRun private constructor(
             failureReason: AiFailureReason?,
             provider: LlmProviderName?,
             model: LlmModelName?,
-            promptVersion: PromptVersion?
+            promptVersion: PromptVersion?,
+            windowFrom: Instant?,
+            windowTo: Instant?,
+            watermarkAdvanced: Boolean
         ): AiRun {
             return AiRun(
                 id = id,
@@ -71,7 +92,10 @@ class AiRun private constructor(
                 failureReason = failureReason,
                 provider = provider,
                 model = model,
-                promptVersion = promptVersion
+                promptVersion = promptVersion,
+                windowFrom = windowFrom,
+                windowTo = windowTo,
+                watermarkAdvanced = watermarkAdvanced
             )
         }
     }
@@ -83,7 +107,8 @@ class AiRun private constructor(
         provider: LlmProviderName?,
         model: LlmModelName?,
         promptVersion: PromptVersion?,
-        finishedAt: Instant
+        finishedAt: Instant,
+        watermarkAdvanced: Boolean = false
     ): AiRun {
         require(status == AiRunStatus.RUNNING) { "RUNNING 상태의 AI 실행만 완료할 수 있습니다" }
         require(!finishedAt.isBefore(startedAt)) { "완료 시각은 시작 시각보다 이전일 수 없습니다" }
@@ -113,7 +138,10 @@ class AiRun private constructor(
             failureReason = completedFailureReason,
             provider = provider,
             model = model,
-            promptVersion = promptVersion
+            promptVersion = promptVersion,
+            windowFrom = windowFrom,
+            windowTo = windowTo,
+            watermarkAdvanced = watermarkAdvanced
         )
 
     }

@@ -5,6 +5,7 @@ import me.rgunny.kachi.ai.adapter.`in`.news.AiNewsSummaryExecutor
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
+import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -13,12 +14,11 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 @DisplayName("AiNewsSummaryScheduler")
 class AiNewsSummarySchedulerTest {
-    private val now = AiTestFixture.NOW
     private val clock = AiTestFixture.CLOCK
 
     @Test
@@ -33,16 +33,19 @@ class AiNewsSummarySchedulerTest {
     }
 
     @Test
-    @DisplayName("lookback 기간을 요약 대상 window로 계산해서 전달한다")
-    fun passLookbackWindowToCommand() = runBlocking {
+    @DisplayName("구간 정책을 watermark 기반 요청으로 전달한다")
+    fun passWatermarkWindowRequest() = runBlocking {
         val useCase = RecordingSummarizeNewsUseCase()
-        val scheduler = schedulerOf(useCase, properties(lookback = Duration.ofMinutes(30)))
+        val scheduler = schedulerOf(
+            useCase,
+            properties(overlap = Duration.ofMinutes(5), maxLookback = Duration.ofHours(6))
+        )
 
         scheduler.summarizeNews()
 
-        val command = requireNotNull(useCase.lastCommand)
-        assertEquals(now.minus(Duration.ofMinutes(30)), command.from)
-        assertEquals(now, command.to)
+        val window = assertIs<SummaryWindowRequest.FromWatermark>(requireNotNull(useCase.lastCommand).window)
+        assertEquals(Duration.ofMinutes(5), window.overlap)
+        assertEquals(Duration.ofHours(6), window.maxLookback)
     }
 
     @Test
@@ -70,23 +73,21 @@ class AiNewsSummarySchedulerTest {
     }
 
     @Test
-    @DisplayName("lookback이 실행 주기보다 짧으면 tick 사이 뉴스 누락 가능성을 알린다")
-    fun detectWindowGap() {
-        val gapped = properties(fixedDelay = Duration.ofMinutes(10), lookback = Duration.ofMinutes(5))
-        val overlapped = properties(fixedDelay = Duration.ofMinutes(10), lookback = Duration.ofMinutes(30))
-
-        assertTrue(gapped.hasWindowGap())
-        assertFalse(overlapped.hasWindowGap())
+    @DisplayName("overlap이 maxLookback보다 길면 매 실행이 잘린 구간을 만들므로 설정을 만들 수 없다")
+    fun rejectOverlapLongerThanMaxLookback() {
+        assertFailsWith<IllegalArgumentException> {
+            properties(overlap = Duration.ofHours(7), maxLookback = Duration.ofHours(6))
+        }
     }
 
     @Test
-    @DisplayName("lookback이 0 이하이면 설정을 만들 수 없다")
-    fun rejectNonPositiveLookback() {
+    @DisplayName("overlap이 음수이거나 maxLookback이 0 이하이면 설정을 만들 수 없다")
+    fun rejectInvalidWindowPolicy() {
         assertFailsWith<IllegalArgumentException> {
-            properties(lookback = Duration.ZERO)
+            properties(overlap = Duration.ofMinutes(-1))
         }
         assertFailsWith<IllegalArgumentException> {
-            properties(lookback = Duration.ofMinutes(-1))
+            properties(maxLookback = Duration.ZERO)
         }
     }
 
@@ -107,8 +108,7 @@ class AiNewsSummarySchedulerTest {
     ): AiNewsSummaryScheduler {
         return AiNewsSummaryScheduler(
             executor = AiNewsSummaryExecutor(useCase, clock),
-            properties = properties,
-            clock = clock
+            properties = properties
         )
     }
 
@@ -116,14 +116,16 @@ class AiNewsSummarySchedulerTest {
         enabled: Boolean = true,
         fixedDelay: Duration = Duration.ofMinutes(10),
         initialDelay: Duration = Duration.ofSeconds(30),
-        lookback: Duration = Duration.ofMinutes(30),
+        overlap: Duration = Duration.ofMinutes(5),
+        maxLookback: Duration = Duration.ofHours(6),
         maxArticlesPerKeyword: Int = SummarizeNewsCommand.DEFAULT_MAX_ARTICLES_PER_KEYWORD
     ): AiNewsSummarySchedulerProperties {
         return AiNewsSummarySchedulerProperties(
             enabled = enabled,
             fixedDelay = fixedDelay,
             initialDelay = initialDelay,
-            lookback = lookback,
+            overlap = overlap,
+            maxLookback = maxLookback,
             maxArticlesPerKeyword = maxArticlesPerKeyword
         )
     }

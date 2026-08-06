@@ -2,7 +2,9 @@ package me.rgunny.kachi.ai.fixture
 
 import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
@@ -12,6 +14,7 @@ import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -99,12 +102,17 @@ object AiTestFixture {
         failureCount: Int = 0,
         failureReason: AiFailureReason? = null,
         startedAt: Instant = NOW,
-        finishedAt: Instant = NOW.plusSeconds(5)
+        finishedAt: Instant = NOW.plusSeconds(5),
+        windowFrom: Instant? = null,
+        windowTo: Instant? = null,
+        watermarkAdvanced: Boolean = false
     ): AiRun {
         return AiRun.start(
             targetType = targetType,
             requestedKeywords = requestedKeywords,
-            startedAt = startedAt
+            startedAt = startedAt,
+            windowFrom = windowFrom,
+            windowTo = windowTo
         ).complete(
             succeededCount = succeededCount,
             failureCount = failureCount,
@@ -112,7 +120,50 @@ object AiTestFixture {
             provider = null,
             model = null,
             promptVersion = null,
-            finishedAt = finishedAt
+            finishedAt = finishedAt,
+            watermarkAdvanced = watermarkAdvanced
         )
     }
+
+    fun watermark(
+        position: Instant,
+        targetType: AiRunTargetType = AiRunTargetType.NEWS_SUMMARY,
+        updatedAt: Instant = position
+    ): SummaryWatermark {
+        return SummaryWatermark.initial(
+            targetType = targetType,
+            position = position,
+            updatedAt = updatedAt
+        )
+    }
+
+    /**
+     * 연속 실패가 [consecutiveFailures]회 누적된 격리 기록을 만든다.
+     * [failureThreshold]에 도달하면 격리 상태가 된다.
+     */
+    fun quarantine(
+        keyword: AiKeyword = keyword(),
+        consecutiveFailures: Int,
+        failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD,
+        targetType: AiRunTargetType = AiRunTargetType.NEWS_SUMMARY,
+        updatedAt: Instant = NOW
+    ): KeywordQuarantine {
+        return (1..consecutiveFailures).fold(
+            KeywordQuarantine.track(targetType = targetType, keyword = keyword, updatedAt = updatedAt)
+        ) { quarantine, _ ->
+            quarantine.recordFailure(
+                reason = AiFailureReason.UNKNOWN,
+                failureThreshold = failureThreshold,
+                updatedAt = updatedAt
+            )
+        }
+    }
+
+    fun quarantineProperties(
+        failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD
+    ): KeywordQuarantineProperties {
+        return KeywordQuarantineProperties(failureThreshold = failureThreshold)
+    }
+
+    const val DEFAULT_QUARANTINE_FAILURE_THRESHOLD = 3
 }

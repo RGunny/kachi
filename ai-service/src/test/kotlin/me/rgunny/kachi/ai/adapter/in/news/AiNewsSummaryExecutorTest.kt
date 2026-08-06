@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
+import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
@@ -28,8 +29,7 @@ class AiNewsSummaryExecutorTest {
         val executor = AiNewsSummaryExecutor(useCase, clock)
         val command = SummarizeNewsCommand(
             keywords = listOf(AiKeyword.of("NVIDIA")),
-            from = null,
-            to = null
+            window = SummaryWindowRequest.Explicit(from = null, to = null)
         )
 
         val firstExecution = async {

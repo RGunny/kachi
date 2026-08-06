@@ -7,38 +7,28 @@ import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.Instant
 
 /**
  * 설정된 주기마다 뉴스 요약을 자동 실행하는 scheduler.
  *
- * 요약 대상 기간만 이 계층에서 정하고, 중복 실행 방지와 유스케이스 호출은 AiNewsSummaryExecutor에 위임한다.
+ * 요약 구간은 저장된 watermark에서 정해지므로 이 계층은 구간 정책만 전달하고, 실제 계산과 전진은 유스케이스가 맡는다.
+ * 중복 실행 방지와 유스케이스 호출은 AiNewsSummaryExecutor에 위임한다.
  */
 @Component
 class AiNewsSummaryScheduler(
     private val executor: AiNewsSummaryExecutor,
-    private val properties: AiNewsSummarySchedulerProperties,
-    private val clock: Clock
+    private val properties: AiNewsSummarySchedulerProperties
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
-            "AI news summary scheduler configured: enabled={}, initialDelay={}, fixedDelay={}, lookback={}",
+            "AI news summary scheduler configured: enabled={}, initialDelay={}, fixedDelay={}, overlap={}, maxLookback={}",
             properties.enabled,
             properties.initialDelay,
             properties.fixedDelay,
-            properties.lookback
+            properties.overlap,
+            properties.maxLookback
         )
-
-        // lookback이 실행 주기보다 짧으면 tick 사이 뉴스가 어느 요약에도 들어가지 않으므로 설정 오류를 드러낸다.
-        if (properties.hasWindowGap()) {
-            log.warn(
-                "AI news summary lookback is shorter than fixed delay. News collected between ticks can be missed: lookback={}, fixedDelay={}",
-                properties.lookback,
-                properties.fixedDelay
-            )
-        }
     }
 
     @Scheduled(
@@ -51,18 +41,19 @@ class AiNewsSummaryScheduler(
             return
         }
 
-        // 2. 이번 tick이 요약할 뉴스 수집 기간을 확정한다.
-        // lookback을 실행 주기보다 길게 두어 겹치게 조회하고, 겹침으로 생기는 중복 요약은 newsHash 재사용이 막는다.
-        val to = Instant.now(clock)
-        val from = to.minus(properties.lookback)
+        // 2. 마지막으로 처리를 끝낸 지점에서 이어받도록 요청한다.
+        // 실행이 지연되거나 서비스가 멈춰 있었어도 그 구간이 다음 실행에 그대로 들어온다.
         val command = SummarizeNewsCommand(
             keywords = emptyList(),
-            from = from,
-            to = to,
+            window = properties.toWindowRequest(),
             maxArticlesPerKeyword = properties.maxArticlesPerKeyword
         )
 
-        log.info("Scheduled news summary started: from={}, to={}", from, to)
+        log.info(
+            "Scheduled news summary started: overlap={}, maxLookback={}",
+            properties.overlap,
+            properties.maxLookback
+        )
         runCatching {
             executor.execute(command)
         }.onSuccess { result ->
@@ -76,12 +67,15 @@ class AiNewsSummaryScheduler(
 
                 is AiNewsSummaryExecutionResult.Started ->
                     log.info(
-                        "Scheduled news summary finished: runId={}, status={}, requested={}, succeeded={}, failures={}",
+                        "Scheduled news summary finished: runId={}, status={}, requested={}, succeeded={}, failures={}, window={}~{}, watermarkAdvanced={}",
                         result.result.runId.value,
                         result.result.status,
                         result.result.requestedKeywords,
                         result.result.succeededCount,
-                        result.result.failureCount
+                        result.result.failureCount,
+                        result.result.windowFrom,
+                        result.result.windowTo,
+                        result.result.watermarkAdvanced
                     )
             }
         }.onFailure { error ->

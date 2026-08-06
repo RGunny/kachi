@@ -11,6 +11,8 @@ import org.springframework.test.context.ActiveProfiles
     AiRunPersistenceAdapter::class,
     KeywordExpansionPersistenceAdapter::class,
     NewsSummaryPersistenceAdapter::class,
+    SummaryWatermarkPersistenceAdapter::class,
+    KeywordQuarantinePersistenceAdapter::class,
     AiServiceTestContainersConfig::class
 )
 abstract class PersistenceAdapterIntegrationTest

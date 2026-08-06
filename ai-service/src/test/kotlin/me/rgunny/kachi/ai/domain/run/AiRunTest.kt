@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 @DisplayName("AiRun")
 class AiRunTest {
@@ -89,6 +90,48 @@ class AiRunTest {
                 model = LlmModelName.of("gpt-4.1-mini"),
                 promptVersion = PromptVersion.of("news-summary-v1"),
                 finishedAt = Instant.parse("2026-06-01T23:59:59Z")
+            )
+        }
+    }
+
+    @Test
+    @DisplayName("처리한 구간과 watermark 전진 여부를 실행 기록에 남긴다")
+    fun keepWindowAndWatermarkAdvanced() {
+        val windowFrom = Instant.parse("2026-06-01T23:55:00Z")
+        val windowTo = Instant.parse("2026-06-02T00:00:00Z")
+
+        val completed = AiRun.start(
+            targetType = AiRunTargetType.NEWS_SUMMARY,
+            requestedKeywords = 1,
+            startedAt = windowTo,
+            windowFrom = windowFrom,
+            windowTo = windowTo
+        ).complete(
+            succeededCount = 1,
+            failureCount = 0,
+            failureReason = null,
+            provider = null,
+            model = null,
+            promptVersion = null,
+            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            watermarkAdvanced = true
+        )
+
+        assertEquals(windowFrom, completed.windowFrom)
+        assertEquals(windowTo, completed.windowTo)
+        assertTrue(completed.watermarkAdvanced)
+    }
+
+    @Test
+    @DisplayName("구간 시작이 종료보다 이후이면 실행을 시작할 수 없다")
+    fun rejectInvertedWindow() {
+        assertFailsWith<IllegalArgumentException> {
+            AiRun.start(
+                targetType = AiRunTargetType.NEWS_SUMMARY,
+                requestedKeywords = 1,
+                startedAt = Instant.parse("2026-06-02T00:00:00Z"),
+                windowFrom = Instant.parse("2026-06-02T00:00:00Z"),
+                windowTo = Instant.parse("2026-06-01T23:55:00Z")
             )
         }
     }
