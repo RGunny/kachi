@@ -24,13 +24,16 @@ kachi:
         enabled: true
         fixed-delay: 10m
         initial-delay: 30s
-        lookback: 30m
+        overlap: 5m
+        max-lookback: 6h
         max-articles-per-keyword: 20
       keyword-expansion:
         enabled: false
         fixed-delay: 24h
         initial-delay: 5m
         max-expansions-per-keyword: 5
+    quarantine:
+      failure-threshold: 3
     clients:
       user-service:
         active-keywords-path: /api/v1/internal/keywords/active
