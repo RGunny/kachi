@@ -14,18 +14,18 @@ import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 
 @DisplayName("UserController")
 class UserControllerTest {
     private val userId = UserId.of(UUID.randomUUID())
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
 
     @Nested
     @DisplayName("getMe()")

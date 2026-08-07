@@ -11,18 +11,16 @@ import me.rgunny.kachi.collector.domain.CollectionRunId
 import me.rgunny.kachi.collector.domain.CollectionRunStatus
 import me.rgunny.kachi.collector.domain.CollectionTargetType
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
 @DisplayName("InternalCollectionController")
 class InternalCollectionControllerTest {
-    private val clock = Clock.fixed(Instant.parse("2026-05-30T00:00:00Z"), ZoneOffset.UTC)
+    private val clock = CollectorTestFixture.CLOCK
 
     @Test
     @DisplayName("수동 뉴스 수집 요청을 command로 변환해 실행한다")
@@ -101,7 +99,7 @@ class InternalCollectionControllerTest {
 
     private companion object {
         fun result(): CollectionRunResult {
-            val now = Instant.parse("2026-05-30T00:00:00Z")
+            val now = CollectorTestFixture.NOW
 
             return CollectionRunResult(
                 id = CollectionRunId.newId(),

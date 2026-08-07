@@ -1,9 +1,10 @@
 package me.rgunny.kachi.user.domain
 
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -14,7 +15,7 @@ import kotlin.test.assertNull
 class KeywordTest {
     private val userId = UserId.of(UUID.randomUUID())
     private val name = KeywordName.of("NVIDIA")
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
 
     @Nested
     @DisplayName("create()")
@@ -44,7 +45,7 @@ class KeywordTest {
         @DisplayName("키워드를 복원하면 저장된 상태를 그대로 가진다")
         fun restoreKeywordFromPersistedState() {
             val id = KeywordId.of(UUID.randomUUID())
-            val disabledAt = Instant.parse("2026-05-20T01:00:00Z")
+            val disabledAt = registeredAt.plus(Duration.ofHours(1))
 
             val keyword = Keyword.restore(
                 id = id,
@@ -87,7 +88,7 @@ class KeywordTest {
         @Test
         @DisplayName("비활성 키워드를 활성화하고 비활성 시간을 제거한다")
         fun enableKeyword() {
-            val disabledKeyword = activeKeyword().disable(Instant.parse("2026-05-20T01:00:00Z"))
+            val disabledKeyword = activeKeyword().disable(registeredAt.plus(Duration.ofHours(1)))
 
             val enabledKeyword = disabledKeyword.enable()
 
@@ -103,7 +104,7 @@ class KeywordTest {
         @DisplayName("활성 키워드를 비활성화한다")
         fun disableKeyword() {
             val keyword = activeKeyword()
-            val disabledAt = Instant.parse("2026-05-20T01:00:00Z")
+            val disabledAt = registeredAt.plus(Duration.ofHours(1))
 
             val disabledKeyword = keyword.disable(disabledAt)
 
@@ -114,10 +115,10 @@ class KeywordTest {
         @Test
         @DisplayName("이미 비활성화된 키워드는 다시 비활성화할 수 없다")
         fun rejectDisablingAlreadyDisabledKeyword() {
-            val disabledKeyword = activeKeyword().disable(Instant.parse("2026-05-20T01:00:00Z"))
+            val disabledKeyword = activeKeyword().disable(registeredAt.plus(Duration.ofHours(1)))
 
             assertFailsWith<IllegalArgumentException> {
-                disabledKeyword.disable(Instant.parse("2026-05-20T02:00:00Z"))
+                disabledKeyword.disable(registeredAt.plus(Duration.ofHours(2)))
             }
         }
     }

@@ -7,11 +7,13 @@ import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 
@@ -24,9 +26,13 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
     @Autowired
     private lateinit var repository: NewsMongoRepository
 
-    private val collectedAt = Instant.parse("2026-05-28T00:00:00Z")
-    private val publishedAt = Instant.parse("2026-05-27T10:00:00Z")
+    private val collectedAt = CollectorTestFixture.NOW
+    private val publishedAt = collectedAt.minus(Duration.ofHours(14))
     private val keyword = CollectedKeyword.of("NVIDIA")
+
+    // 조회 구간 경계를 그대로 쓰는 뉴스가 있어야 from/to 포함 여부를 검증할 수 있다.
+    private val windowFrom = collectedAt.plus(Duration.ofDays(4))
+    private val windowTo = windowFrom.plus(Duration.ofDays(1))
 
     @BeforeEach
     fun cleanUp() {
@@ -117,18 +123,18 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
             val older = news(
                 url = "https://kachi.com/news/1",
                 title = "NVIDIA 이전 뉴스",
-                collectedAt = Instant.parse("2026-06-01T00:00:00Z")
+                collectedAt = windowFrom
             )
             val newer = news(
                 url = "https://kachi.com/news/2",
                 title = "NVIDIA 최신 뉴스",
-                collectedAt = Instant.parse("2026-06-02T00:00:00Z")
+                collectedAt = windowTo
             )
             val otherKeyword = news(
                 url = "https://kachi.com/news/3",
                 title = "TESLA 뉴스",
                 keyword = CollectedKeyword.of("TESLA"),
-                collectedAt = Instant.parse("2026-06-02T01:00:00Z")
+                collectedAt = windowTo.plus(Duration.ofHours(1))
             )
             adapter.save(older)
             adapter.save(newer)
@@ -136,8 +142,8 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
 
             val found = adapter.findByKeyword(
                 keyword = keyword,
-                from = Instant.parse("2026-06-01T00:00:00Z"),
-                to = Instant.parse("2026-06-02T00:00:00Z"),
+                from = windowFrom,
+                to = windowTo,
                 limit = 20
             )
 

@@ -3,6 +3,7 @@ package me.rgunny.kachi.collector.adapter.out.client.finnhub
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -12,9 +13,7 @@ import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
-import java.time.Clock
 import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
@@ -34,7 +33,7 @@ class FinnhubNewsProviderTest {
         maxInMemorySize = 512 * 1024,
     )
 
-    private val clock = Clock.fixed(Instant.parse("2026-05-30T00:00:00Z"), ZoneOffset.UTC)
+    private val clock = CollectorTestFixture.CLOCK
     private val keyword = CollectedKeyword.of(" nvda ")
 
     @Nested

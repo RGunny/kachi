@@ -8,18 +8,19 @@ import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
 
 @DisplayName("UserJpaEntity")
 class UserJpaEntityTest {
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
-    private val lastLoginAt = Instant.parse("2026-05-20T01:00:00Z")
-    private val deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
+    private val lastLoginAt = UserTestFixture.NOW.plus(Duration.ofHours(1))
+    private val deactivatedAt = UserTestFixture.NOW.plus(Duration.ofHours(2))
 
     @Nested
     @DisplayName("from()")

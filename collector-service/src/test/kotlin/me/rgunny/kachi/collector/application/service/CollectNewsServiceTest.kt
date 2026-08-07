@@ -16,17 +16,16 @@ import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsUrl
 import me.rgunny.kachi.collector.domain.ProviderFailureReason
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Clock
 import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @DisplayName("CollectNewsService")
 class CollectNewsServiceTest {
-    private val clock = Clock.fixed(Instant.parse("2026-05-27T00:00:00Z"), ZoneOffset.UTC)
+    private val clock = CollectorTestFixture.CLOCK
     private val keyword = CollectedKeyword.of("NVIDIA")
     private val keywordReader = FakeKeywordReaderPort()
     private val newsPersistence = FakeNewsPersistencePort()
@@ -199,7 +198,7 @@ class CollectNewsServiceTest {
             source = source,
             title = title,
             url = url,
-            publishedAt = Instant.parse("2026-05-27T00:00:00Z")
+            publishedAt = CollectorTestFixture.NOW
         )
     }
 

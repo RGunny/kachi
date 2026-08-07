@@ -7,6 +7,7 @@ import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
 import java.time.Instant
+import me.rgunny.kachi.user.fixture.UserTestFixture
 
 class FakeRegisterUserUseCase : RegisterUserUseCase {
     var exception: RuntimeException? = null
@@ -26,6 +27,6 @@ class FakeRegisterUserUseCase : RegisterUserUseCase {
     }
 
     companion object {
-        private val REGISTERED_AT: Instant = Instant.parse("2026-05-20T00:00:00Z")
+        private val REGISTERED_AT: Instant = UserTestFixture.NOW
     }
 }

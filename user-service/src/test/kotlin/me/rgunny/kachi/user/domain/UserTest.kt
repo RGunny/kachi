@@ -1,9 +1,10 @@
 package me.rgunny.kachi.user.domain
 
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -15,7 +16,7 @@ class UserTest {
 
     private val email = Email.of("rgunny@kachi.com")
     private val nickname = Nickname.of("rgunny")
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
 
     @Nested
     @DisplayName("register()")
@@ -81,8 +82,8 @@ class UserTest {
         @DisplayName("사용자를 복원하면 저장된 상태를 그대로 가진다")
         fun restoreRebuildsUserFromPersistedState() {
             val id = UserId.of(UUID.randomUUID())
-            val lastLoginAt = Instant.parse("2026-05-20T01:00:00Z")
-            val deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
+            val lastLoginAt = registeredAt.plus(Duration.ofHours(1))
+            val deactivatedAt = registeredAt.plus(Duration.ofHours(2))
 
             val user = User.restore(
                 id = id,
@@ -123,8 +124,8 @@ class UserTest {
                 authProvider = AuthProvider.NAVER,
                 providerUserId = ProviderUserId.of("naver-123"),
                 registeredAt = registeredAt,
-                lastLoginAt = Instant.parse("2026-05-20T01:00:00Z"),
-                deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
+                lastLoginAt = registeredAt.plus(Duration.ofHours(1)),
+                deactivatedAt = registeredAt.plus(Duration.ofHours(2))
             )
 
             val activatedUser = inactiveUser.activate()
@@ -153,7 +154,7 @@ class UserTest {
         @DisplayName("활성 사용자는 로그인 시각을 기록할 수 있다")
         fun activeUserCanRecordLoginTime() {
             val user = activeUser()
-            val loggedInAt = Instant.parse("2026-05-20T03:00:00Z")
+            val loggedInAt = registeredAt.plus(Duration.ofHours(3))
 
             val loggedInUser = user.recordLogin(loggedInAt)
 
@@ -178,7 +179,7 @@ class UserTest {
             )
 
             assertFailsWith<IllegalArgumentException> {
-                inactiveUser.recordLogin(Instant.parse("2026-05-20T03:00:00Z"))
+                inactiveUser.recordLogin(registeredAt.plus(Duration.ofHours(3)))
             }
         }
     }
@@ -190,8 +191,8 @@ class UserTest {
         @Test
         @DisplayName("활성 사용자는 탈퇴할 수 있다")
         fun activeUserCanBeDeactivated() {
-            val user = activeUser().recordLogin(Instant.parse("2026-05-20T03:00:00Z"))
-            val deactivatedAt = Instant.parse("2026-05-20T04:00:00Z")
+            val user = activeUser().recordLogin(registeredAt.plus(Duration.ofHours(3)))
+            val deactivatedAt = registeredAt.plus(Duration.ofHours(4))
 
             val deactivatedUser = user.deactivate(deactivatedAt)
 
@@ -206,7 +207,7 @@ class UserTest {
             val deletedUser = deletedUser()
 
             assertFailsWith<IllegalArgumentException> {
-                deletedUser.deactivate(Instant.parse("2026-05-20T04:00:00Z"))
+                deletedUser.deactivate(registeredAt.plus(Duration.ofHours(4)))
             }
         }
     }
@@ -232,7 +233,7 @@ class UserTest {
             providerUserId = ProviderUserId.of("google-123"),
             registeredAt = registeredAt,
             lastLoginAt = null,
-            deactivatedAt = Instant.parse("2026-05-20T02:00:00Z")
+            deactivatedAt = registeredAt.plus(Duration.ofHours(2))
         )
     }
 }

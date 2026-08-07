@@ -9,13 +9,18 @@ import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 
 @DisplayName("NewsQueryService")
 class NewsQueryServiceTest {
+
+    private val from = CollectorTestFixture.NOW
+    private val to = from.plus(Duration.ofDays(1))
 
     @Test
     @DisplayName("키워드와 기간으로 저장 뉴스를 조회한다")
@@ -29,15 +34,15 @@ class NewsQueryServiceTest {
         val result = service.listNews(
             ListNewsQuery(
                 keyword = keyword,
-                from = Instant.parse("2026-06-01T00:00:00Z"),
-                to = Instant.parse("2026-06-02T00:00:00Z"),
+                from = from,
+                to = to,
                 limit = 20
             )
         )
 
         assertEquals(keyword, persistence.keyword)
-        assertEquals(Instant.parse("2026-06-01T00:00:00Z"), persistence.from)
-        assertEquals(Instant.parse("2026-06-02T00:00:00Z"), persistence.to)
+        assertEquals(from, persistence.from)
+        assertEquals(to, persistence.to)
         assertEquals(20, persistence.limit)
         assertEquals(1, result.size)
         assertEquals("GOOGLE", result.first().source)
@@ -80,8 +85,8 @@ class NewsQueryServiceTest {
             source = NewsSource.GOOGLE,
             title = NewsTitle.of(title),
             url = NewsUrl.of(url),
-            publishedAt = Instant.parse("2026-06-01T10:00:00Z"),
-            collectedAt = Instant.parse("2026-06-01T10:05:00Z"),
+            publishedAt = from.plus(Duration.ofHours(10)),
+            collectedAt = from.plus(Duration.ofHours(10)).plusSeconds(300),
             matchedKeywords = listOf(keyword)
         )
     }

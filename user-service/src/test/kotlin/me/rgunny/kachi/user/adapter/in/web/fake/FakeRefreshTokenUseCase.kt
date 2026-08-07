@@ -3,7 +3,9 @@ package me.rgunny.kachi.user.adapter.`in`.web.fake
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenUseCase
+import java.time.Duration
 import java.time.Instant
+import me.rgunny.kachi.user.fixture.UserTestFixture
 
 class FakeRefreshTokenUseCase : RefreshTokenUseCase {
     lateinit var command: RefreshTokenCommand
@@ -22,7 +24,7 @@ class FakeRefreshTokenUseCase : RefreshTokenUseCase {
     }
 
     companion object {
-        private val ACCESS_TOKEN_EXPIRES_AT: Instant = Instant.parse("2026-05-20T00:15:00Z")
-        private val REFRESH_TOKEN_EXPIRES_AT: Instant = Instant.parse("2026-06-03T00:00:00Z")
+        private val ACCESS_TOKEN_EXPIRES_AT: Instant = UserTestFixture.NOW.plus(Duration.ofMinutes(15))
+        private val REFRESH_TOKEN_EXPIRES_AT: Instant = UserTestFixture.NOW.plus(Duration.ofDays(14))
     }
 }

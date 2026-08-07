@@ -7,10 +7,11 @@ import me.rgunny.kachi.user.application.port.`in`.LogoutUseCase
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
 import me.rgunny.kachi.user.application.port.`in`.RefreshTokenUseCase
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 
 @DisplayName("AuthController")
@@ -61,9 +62,9 @@ class AuthControllerTest {
 
             return RefreshTokenResult(
                 accessToken = "access-token",
-                accessTokenExpiresAt = Instant.parse("2026-05-20T00:15:00Z"),
+                accessTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofMinutes(15)),
                 refreshToken = "refresh-token",
-                refreshTokenExpiresAt = Instant.parse("2026-06-03T00:00:00Z")
+                refreshTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofDays(14))
             )
         }
     }

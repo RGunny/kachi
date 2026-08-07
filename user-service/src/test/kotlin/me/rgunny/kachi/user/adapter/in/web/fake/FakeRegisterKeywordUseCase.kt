@@ -5,6 +5,7 @@ import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordResult
 import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordUseCase
 import me.rgunny.kachi.user.domain.KeywordId
 import java.time.Instant
+import me.rgunny.kachi.user.fixture.UserTestFixture
 
 class FakeRegisterKeywordUseCase : RegisterKeywordUseCase {
     var exception: RuntimeException? = null
@@ -22,6 +23,6 @@ class FakeRegisterKeywordUseCase : RegisterKeywordUseCase {
     }
 
     companion object {
-        private val REGISTERED_AT: Instant = Instant.parse("2026-05-20T00:00:00Z")
+        private val REGISTERED_AT: Instant = UserTestFixture.NOW
     }
 }

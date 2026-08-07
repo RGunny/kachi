@@ -11,6 +11,7 @@ import me.rgunny.kachi.user.application.port.`in`.ResolveOAuthUserCommand
 import me.rgunny.kachi.user.application.port.`in`.ResolveOAuthUserResult
 import me.rgunny.kachi.user.application.port.`in`.ResolveOAuthUserUseCase
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.security.oauth2.client.registration.ClientRegistration
@@ -19,7 +20,7 @@ import org.springframework.security.oauth2.client.registration.InMemoryClientReg
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest
-import java.time.Instant
+import java.time.Duration
 
 @TestConfiguration(proxyBeanMethods = false)
 class WebMvcFakeOAuth2Config {
@@ -70,9 +71,9 @@ class WebMvcFakeOAuth2Config {
         override fun issue(command: IssueAuthTokensCommand): IssueAuthTokensResult {
             return IssueAuthTokensResult(
                 accessToken = "access-token",
-                accessTokenExpiresAt = Instant.parse("2026-05-20T03:15:00Z"),
+                accessTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofHours(3)).plus(Duration.ofMinutes(15)),
                 refreshToken = "refresh-token",
-                refreshTokenExpiresAt = Instant.parse("2026-06-03T03:00:00Z")
+                refreshTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofDays(14)).plus(Duration.ofHours(3))
             )
         }
     }

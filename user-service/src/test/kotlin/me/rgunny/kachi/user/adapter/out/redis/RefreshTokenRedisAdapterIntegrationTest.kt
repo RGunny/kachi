@@ -3,6 +3,7 @@ package me.rgunny.kachi.user.adapter.out.redis
 import me.rgunny.kachi.user.application.token.StoredRefreshToken
 import me.rgunny.kachi.user.config.RedisScriptConfig
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -13,17 +14,15 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.testcontainers.containers.GenericContainer
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @DisplayName("RefreshTokenRedisAdapter 통합 테스트")
 class RefreshTokenRedisAdapterIntegrationTest {
-    private val now = Instant.parse("2026-05-20T00:00:00Z")
-    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val now = UserTestFixture.NOW
+    private val clock = UserTestFixture.CLOCK
     private val redisTemplate = StringRedisTemplate(connectionFactory)
     private val refreshTokenRedisAdapter = RefreshTokenRedisAdapter(
         redisTemplate = redisTemplate,

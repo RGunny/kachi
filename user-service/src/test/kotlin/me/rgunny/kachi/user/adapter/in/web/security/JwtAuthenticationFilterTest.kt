@@ -2,6 +2,7 @@ package me.rgunny.kachi.user.adapter.`in`.web.security
 
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -11,10 +12,7 @@ import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
-import java.time.Clock
 import java.time.Duration
-import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -24,12 +22,12 @@ import kotlin.test.assertTrue
 
 @DisplayName("JwtAuthenticationFilter")
 class JwtAuthenticationFilterTest {
-    private val issuedAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val issuedAt = UserTestFixture.NOW
     private val tokenProvider = JwtTokenProvider(
         secret = SECRET,
         accessTokenTtl = Duration.ofMinutes(15),
         refreshTokenTtl = Duration.ofDays(14),
-        clock = Clock.fixed(issuedAt, ZoneOffset.UTC)
+        clock = UserTestFixture.CLOCK
     )
     private val filter = JwtAuthenticationFilter(tokenProvider)
 

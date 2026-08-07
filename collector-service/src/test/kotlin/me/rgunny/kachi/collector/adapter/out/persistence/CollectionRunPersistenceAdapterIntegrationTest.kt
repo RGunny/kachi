@@ -7,12 +7,12 @@ import me.rgunny.kachi.collector.domain.CollectionTargetType
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.ProviderCollectionResult
 import me.rgunny.kachi.collector.domain.ProviderFailureReason
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -26,8 +26,8 @@ class CollectionRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegra
     @Autowired
     private lateinit var repository: CollectionRunMongoRepository
 
-    private val startedAt = Instant.parse("2026-05-28T00:00:00Z")
-    private val finishedAt = Instant.parse("2026-05-28T00:01:00Z")
+    private val startedAt = CollectorTestFixture.NOW
+    private val finishedAt = startedAt.plusSeconds(60)
 
     @BeforeEach
     fun cleanUp() {

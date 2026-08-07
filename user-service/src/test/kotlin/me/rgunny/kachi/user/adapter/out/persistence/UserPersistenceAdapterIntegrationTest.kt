@@ -7,11 +7,11 @@ import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.springframework.beans.factory.annotation.Autowired
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -25,7 +25,7 @@ class UserPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
     @Autowired
     private lateinit var entityManager: EntityManager
 
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
 
     @Nested
     @DisplayName("save()")

@@ -4,6 +4,7 @@ import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordResult
 import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordUseCase
 import java.time.Instant
+import me.rgunny.kachi.user.fixture.UserTestFixture
 
 class FakeUpdateKeywordUseCase : UpdateKeywordUseCase {
     var exception: RuntimeException? = null
@@ -22,6 +23,6 @@ class FakeUpdateKeywordUseCase : UpdateKeywordUseCase {
     }
 
     companion object {
-        private val REGISTERED_AT: Instant = Instant.parse("2026-05-20T00:00:00Z")
+        private val REGISTERED_AT: Instant = UserTestFixture.NOW
     }
 }

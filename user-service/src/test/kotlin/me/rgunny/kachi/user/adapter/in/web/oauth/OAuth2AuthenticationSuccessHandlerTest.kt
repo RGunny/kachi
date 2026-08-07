@@ -4,12 +4,13 @@ import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensCommand
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensResult
 import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensUseCase
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.authentication.TestingAuthenticationToken
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 
 @DisplayName("OAuth2AuthenticationSuccessHandler")
@@ -51,9 +52,9 @@ class OAuth2AuthenticationSuccessHandlerTest {
 
             return IssueAuthTokensResult(
                 accessToken = "access-token",
-                accessTokenExpiresAt = Instant.parse("2026-05-20T03:15:00Z"),
+                accessTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofHours(3)).plus(Duration.ofMinutes(15)),
                 refreshToken = "refresh-token",
-                refreshTokenExpiresAt = Instant.parse("2026-06-03T03:00:00Z")
+                refreshTokenExpiresAt = UserTestFixture.NOW.plus(Duration.ofDays(14)).plus(Duration.ofHours(3))
             )
         }
     }

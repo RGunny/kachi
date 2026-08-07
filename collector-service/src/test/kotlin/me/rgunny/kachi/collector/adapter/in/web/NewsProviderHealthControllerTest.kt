@@ -6,10 +6,10 @@ import me.rgunny.kachi.collector.application.port.out.CollectedArticle
 import me.rgunny.kachi.collector.application.port.out.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import java.time.Instant
 import kotlin.test.assertEquals
 
 @DisplayName("NewsProviderHealthController")
@@ -84,7 +84,7 @@ class NewsProviderHealthControllerTest {
             source = NewsSource.GOOGLE,
             title = title,
             url = url,
-            publishedAt = Instant.parse("2026-05-30T00:00:00Z")
+            publishedAt = CollectorTestFixture.NOW
         )
     }
 }

@@ -13,12 +13,11 @@ import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -27,8 +26,8 @@ import kotlin.test.assertTrue
 
 @DisplayName("UserCommandService")
 class UserCommandServiceTest {
-    private val now = Instant.parse("2026-05-20T00:00:00Z")
-    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val now = UserTestFixture.NOW
+    private val clock = UserTestFixture.CLOCK
 
     @Nested
     @DisplayName("register()")
@@ -166,7 +165,7 @@ class UserCommandServiceTest {
             role = UserRole.USER,
             authProvider = AuthProvider.GOOGLE,
             providerUserId = ProviderUserId.of("google-123"),
-            registeredAt = Instant.parse("2026-05-19T00:00:00Z"),
+            registeredAt = UserTestFixture.NOW.minus(Duration.ofDays(1)),
             lastLoginAt = null,
             deactivatedAt = if (status == UserStatus.DELETED) now else null
         )

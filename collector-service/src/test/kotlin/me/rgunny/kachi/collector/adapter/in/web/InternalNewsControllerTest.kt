@@ -6,15 +6,19 @@ import me.rgunny.kachi.collector.application.port.`in`.ListNewsQuery
 import me.rgunny.kachi.collector.application.port.`in`.ListNewsResult
 import me.rgunny.kachi.collector.application.port.`in`.ListNewsUseCase
 import me.rgunny.kachi.collector.domain.CollectedKeyword
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
-import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
 
 @DisplayName("InternalNewsController")
 class InternalNewsControllerTest {
+
+    private val from = CollectorTestFixture.NOW
+    private val to = from.plus(Duration.ofDays(1))
 
     @Test
     @DisplayName("저장 뉴스 조회 요청을 query로 변환해 실행한다")
@@ -26,8 +30,8 @@ class InternalNewsControllerTest {
                     source = "GOOGLE",
                     title = "NVIDIA 실적 발표",
                     url = "https://kachi.com/news/1",
-                    publishedAt = Instant.parse("2026-06-01T10:00:00Z"),
-                    collectedAt = Instant.parse("2026-06-01T10:05:00Z"),
+                    publishedAt = from.plus(Duration.ofHours(10)),
+                    collectedAt = from.plus(Duration.ofHours(10)).plusSeconds(300),
                     matchedKeywords = listOf("NVIDIA")
                 )
             )
@@ -36,15 +40,15 @@ class InternalNewsControllerTest {
 
         val response = controller.listNews(
             keyword = " NVIDIA ",
-            from = Instant.parse("2026-06-01T00:00:00Z"),
-            to = Instant.parse("2026-06-02T00:00:00Z"),
+            from = from,
+            to = to,
             limit = 10
         )
 
         assertEquals(HttpStatus.OK, response.statusCode)
         assertEquals(CollectedKeyword.of("NVIDIA"), useCase.query.keyword)
-        assertEquals(Instant.parse("2026-06-01T00:00:00Z"), useCase.query.from)
-        assertEquals(Instant.parse("2026-06-02T00:00:00Z"), useCase.query.to)
+        assertEquals(from, useCase.query.from)
+        assertEquals(to, useCase.query.to)
         assertEquals(10, useCase.query.limit)
 
         val body = response.body as ApiResponse<*>
@@ -78,8 +82,8 @@ class InternalNewsControllerTest {
 
         val response = controller.listNews(
             keyword = "NVIDIA",
-            from = Instant.parse("2026-06-02T00:00:00Z"),
-            to = Instant.parse("2026-06-01T00:00:00Z"),
+            from = to,
+            to = from,
             limit = 20
         )
 

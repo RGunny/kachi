@@ -4,17 +4,18 @@ import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import java.util.UUID
 import kotlin.test.assertEquals
 
 @DisplayName("KeywordJpaEntity")
 class KeywordJpaEntityTest {
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
-    private val disabledAt = Instant.parse("2026-05-20T01:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
+    private val disabledAt = UserTestFixture.NOW.plus(Duration.ofHours(1))
 
     @Nested
     @DisplayName("from()")
