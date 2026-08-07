@@ -5,10 +5,10 @@ import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
-import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
-import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.RegisterKeywordCommand
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.UpdateKeywordCommand
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword

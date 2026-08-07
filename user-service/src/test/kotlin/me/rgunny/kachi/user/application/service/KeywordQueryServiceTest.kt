@@ -1,9 +1,9 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.InactiveUserException
-import me.rgunny.kachi.user.application.port.`in`.ListKeywordsQuery
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.ListKeywordsQuery
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword

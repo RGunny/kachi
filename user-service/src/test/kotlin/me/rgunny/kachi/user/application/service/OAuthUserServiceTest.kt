@@ -1,8 +1,8 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
-import me.rgunny.kachi.user.application.port.`in`.ResolveOAuthUserCommand
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.auth.model.ResolveOAuthUserCommand
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname

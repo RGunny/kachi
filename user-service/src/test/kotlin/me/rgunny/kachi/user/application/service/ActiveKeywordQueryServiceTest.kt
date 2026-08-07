@@ -1,6 +1,6 @@
 package me.rgunny.kachi.user.application.service
 
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName

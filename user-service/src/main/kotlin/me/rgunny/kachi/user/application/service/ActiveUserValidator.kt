@@ -2,7 +2,7 @@ package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserStatus

@@ -1,10 +1,10 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.`in`.web.ApiPaths
-import me.rgunny.kachi.user.adapter.`in`.web.oauth.CustomOAuth2UserService
-import me.rgunny.kachi.user.adapter.`in`.web.oauth.OAuth2AuthenticationSuccessHandler
-import me.rgunny.kachi.user.adapter.`in`.web.security.JwtAuthenticationFilter
-import me.rgunny.kachi.user.adapter.`in`.web.security.JwtTokenProvider
+import me.rgunny.kachi.user.adapter.inbound.web.ApiPaths
+import me.rgunny.kachi.user.adapter.inbound.web.oauth.CustomOAuth2UserService
+import me.rgunny.kachi.user.adapter.inbound.web.oauth.OAuth2AuthenticationSuccessHandler
+import me.rgunny.kachi.user.adapter.inbound.web.security.JwtAuthenticationFilter
+import me.rgunny.kachi.user.adapter.inbound.web.security.JwtTokenProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus

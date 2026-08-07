@@ -53,14 +53,14 @@ class ArchitectureTest {
         @ArchTest
         @JvmField
         val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()
-            .that().resideInAPackage("..adapter.in..")
+            .that().resideInAPackage("..adapter.inbound..")
             .should().dependOnClassesThat()
-            .resideInAPackage("..adapter.out..")
+            .resideInAPackage("..adapter.outbound..")
 
         @ArchTest
         @JvmField
         val outbound_adapters_do_not_depend_on_each_other: ArchRule = slices()
-            .matching("..adapter.out.(*)..")
+            .matching("..adapter.outbound.(*)..")
             .should().notDependOnEachOther()
 
         @ArchTest
@@ -82,14 +82,14 @@ class ArchitectureTest {
         @ArchTest
         @JvmField
         val outbound_ports_are_interfaces: ArchRule = classes()
-            .that().resideInAPackage("..application.port.out..")
+            .that().resideInAPackage("..application.port.outbound..")
             .and().areNotEnums()
             .should().beInterfaces()
 
         @ArchTest
         @JvmField
         val inbound_use_case_ports_are_interfaces: ArchRule = classes()
-            .that().resideInAPackage("..application.port.in..")
+            .that().resideInAPackage("..application.port.inbound..")
             .and().haveSimpleNameEndingWith("UseCase")
             .should().beInterfaces()
 
@@ -97,25 +97,25 @@ class ArchitectureTest {
         @JvmField
         val rest_controllers_only_in_web_inbound_adapter: ArchRule = classes()
             .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestController")
-            .should().resideInAPackage("..adapter.in.web..")
+            .should().resideInAPackage("..adapter.inbound.web..")
 
         @ArchTest
         @JvmField
         val rest_controller_advice_only_in_web_exception: ArchRule = classes()
             .that().areAnnotatedWith("org.springframework.web.bind.annotation.RestControllerAdvice")
-            .should().resideInAPackage("..adapter.in.web.exception..")
+            .should().resideInAPackage("..adapter.inbound.web.exception..")
 
         @ArchTest
         @JvmField
         val jpa_entities_only_in_persistence_adapter: ArchRule = classes()
             .that().areAnnotatedWith("jakarta.persistence.Entity")
-            .should().resideInAPackage("..adapter.out.persistence..")
+            .should().resideInAPackage("..adapter.outbound.persistence..")
 
         @ArchTest
         @JvmField
         val jpa_repositories_only_in_persistence_adapter: ArchRule = classes()
             .that().haveSimpleNameEndingWith("JpaRepository")
-            .should().resideInAPackage("..adapter.out.persistence..")
+            .should().resideInAPackage("..adapter.outbound.persistence..")
 
         @ArchTest
         @JvmField

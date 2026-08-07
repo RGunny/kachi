@@ -1,8 +1,8 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.`in`.web.oauth.CookieOAuth2AuthorizationRequestRepository
-import me.rgunny.kachi.user.adapter.`in`.web.oauth.OAuth2AuthenticationSuccessHandler
-import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensUseCase
+import me.rgunny.kachi.user.adapter.inbound.web.oauth.CookieOAuth2AuthorizationRequestRepository
+import me.rgunny.kachi.user.adapter.inbound.web.oauth.OAuth2AuthenticationSuccessHandler
+import me.rgunny.kachi.user.application.port.inbound.auth.IssueAuthTokensUseCase
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

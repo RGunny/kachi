@@ -1,11 +1,11 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.`in`.web.AuthController
-import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
-import me.rgunny.kachi.user.adapter.`in`.web.UserController
-import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeOAuth2Config
-import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
-import me.rgunny.kachi.user.adapter.`in`.web.security.JwtTokenProvider
+import me.rgunny.kachi.user.adapter.inbound.web.AuthController
+import me.rgunny.kachi.user.adapter.inbound.web.KeywordController
+import me.rgunny.kachi.user.adapter.inbound.web.UserController
+import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeOAuth2Config
+import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
+import me.rgunny.kachi.user.adapter.inbound.web.security.JwtTokenProvider
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole

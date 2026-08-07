@@ -1,9 +1,9 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.`in`.web.AuthController
-import me.rgunny.kachi.user.adapter.`in`.web.KeywordController
-import me.rgunny.kachi.user.adapter.`in`.web.UserController
-import me.rgunny.kachi.user.adapter.`in`.web.fake.WebMvcFakeUseCaseConfig
+import me.rgunny.kachi.user.adapter.inbound.web.AuthController
+import me.rgunny.kachi.user.adapter.inbound.web.KeywordController
+import me.rgunny.kachi.user.adapter.inbound.web.UserController
+import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

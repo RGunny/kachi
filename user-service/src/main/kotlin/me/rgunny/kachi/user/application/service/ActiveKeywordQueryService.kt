@@ -1,8 +1,8 @@
 package me.rgunny.kachi.user.application.service
 
-import me.rgunny.kachi.user.application.port.`in`.ListActiveKeywordResult
-import me.rgunny.kachi.user.application.port.`in`.ListActiveKeywordsUseCase
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.ListActiveKeywordResult
+import me.rgunny.kachi.user.application.port.inbound.keyword.ListActiveKeywordsUseCase
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
 import org.springframework.stereotype.Service
 
 @Service

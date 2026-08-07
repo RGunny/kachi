@@ -1,8 +1,8 @@
 package me.rgunny.kachi.user.application.service
 
-import me.rgunny.kachi.user.application.port.`in`.GetUserQuery
-import me.rgunny.kachi.user.application.port.`in`.GetUserResult
-import me.rgunny.kachi.user.application.port.`in`.GetUserUseCase
+import me.rgunny.kachi.user.application.port.inbound.user.model.GetUserQuery
+import me.rgunny.kachi.user.application.port.inbound.user.model.GetUserResult
+import me.rgunny.kachi.user.application.port.inbound.user.GetUserUseCase
 import org.springframework.stereotype.Service
 
 @Service

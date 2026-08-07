@@ -1,6 +1,6 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.`in`.web.ApiVersions
+import me.rgunny.kachi.user.adapter.inbound.web.ApiVersions
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer
@@ -11,7 +11,7 @@ class ApiVersionConfig : WebMvcConfigurer {
 
     override fun configurePathMatch(configurer: PathMatchConfigurer) {
         configurer.addPathPrefix(ApiVersions.PATH_PREFIX) { handlerType ->
-            handlerType.packageName.startsWith("me.rgunny.kachi.user.adapter.in.web")
+            handlerType.packageName.startsWith("me.rgunny.kachi.user.adapter.inbound.web")
         }
     }
 
