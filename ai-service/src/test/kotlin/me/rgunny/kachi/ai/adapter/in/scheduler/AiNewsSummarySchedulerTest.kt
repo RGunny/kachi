@@ -2,12 +2,11 @@ package me.rgunny.kachi.ai.adapter.`in`.scheduler
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.adapter.`in`.news.AiNewsSummaryExecutor
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
-import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
-import me.rgunny.kachi.ai.domain.run.AiRun
-import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.fake.FailingSummarizeNewsUseCase
+import me.rgunny.kachi.ai.fake.RecordingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -130,33 +129,4 @@ class AiNewsSummarySchedulerTest {
         )
     }
 
-    private class RecordingSummarizeNewsUseCase : SummarizeNewsUseCase {
-        var invokeCount = 0
-        var lastCommand: SummarizeNewsCommand? = null
-
-        override suspend fun summarize(command: SummarizeNewsCommand): SummarizeNewsResult {
-            invokeCount += 1
-            lastCommand = command
-
-            return SummarizeNewsResult.from(completedRun(command.keywords.size))
-        }
-    }
-
-    private class FailingSummarizeNewsUseCase : SummarizeNewsUseCase {
-        var invokeCount = 0
-
-        override suspend fun summarize(command: SummarizeNewsCommand): SummarizeNewsResult {
-            invokeCount += 1
-            throw IllegalStateException("news summary failed")
-        }
-    }
-
-    private companion object {
-        fun completedRun(requestedKeywords: Int): AiRun {
-            return AiTestFixture.completedRun(
-                targetType = AiRunTargetType.NEWS_SUMMARY,
-                requestedKeywords = requestedKeywords
-            )
-        }
-    }
 }

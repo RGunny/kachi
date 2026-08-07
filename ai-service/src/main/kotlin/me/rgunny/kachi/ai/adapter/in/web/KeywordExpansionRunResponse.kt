@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.`in`.web
 
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsResult
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsResult
 import java.time.Instant
 
 data class KeywordExpansionRunResponse(

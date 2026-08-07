@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.`in`.scheduler
 
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 

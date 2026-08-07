@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.`in`.scheduler
 
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 

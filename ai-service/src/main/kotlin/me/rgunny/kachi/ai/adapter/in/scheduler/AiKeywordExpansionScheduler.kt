@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.adapter.`in`.scheduler
 import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.ai.adapter.`in`.keyword.AiKeywordExpansionExecutionResult.*
 import me.rgunny.kachi.ai.adapter.`in`.keyword.AiKeywordExpansionExecutor
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

@@ -1,7 +1,7 @@
-package me.rgunny.kachi.ai.application.service
+package me.rgunny.kachi.ai.application.service.keyword
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.fake.FakeAiRunPersistencePort

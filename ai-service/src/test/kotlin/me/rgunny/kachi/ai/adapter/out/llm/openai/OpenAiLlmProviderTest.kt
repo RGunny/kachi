@@ -1,26 +1,34 @@
 package me.rgunny.kachi.ai.adapter.out.llm.openai
 
+import io.netty.handler.timeout.ReadTimeoutException
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.exception.LlmProviderException
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
+import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import me.rgunny.kachi.ai.fixture.AiTestFixture
+import me.rgunny.kachi.ai.support.CapturingExchangeFunction
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
-import org.springframework.web.reactive.function.client.ClientRequest
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientRequestException
 import reactor.core.publisher.Mono
 import tools.jackson.databind.json.JsonMapper
+import java.net.URI
 import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @DisplayName("OpenAiLlmProvider")
 class OpenAiLlmProviderTest {
@@ -212,8 +220,8 @@ class OpenAiLlmProviderTest {
     }
 
     @Test
-    @DisplayName("뉴스 요약 응답에 JSON 객체가 없으면 실패한다")
-    fun failWhenNewsSummaryResponseDoesNotContainJsonObject() = runBlocking {
+    @DisplayName("뉴스 요약 응답에 JSON 객체가 없으면 INVALID_RESPONSE로 분류한다")
+    fun classifyMissingJsonObjectAsInvalidResponse() = runBlocking {
         val provider = providerOf(
             CapturingExchangeFunction(
                 """
@@ -231,13 +239,141 @@ class OpenAiLlmProviderTest {
             )
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        val exception = assertFailsWith<LlmProviderException> {
             provider.summarizeNews(
                 keyword = AiKeyword.of("NVIDIA"),
                 articles = listOf(newsArticle())
             )
         }
-        Unit
+
+        assertEquals(LlmFailureCategory.INVALID_RESPONSE, exception.failure.category)
+        // provider가 살아 있다는 응답이므로 재시도 대상이 아니고, 이 키워드에 책임을 물을 수 있다.
+        assertFalse(exception.failure.retryable)
+        assertTrue(exception.failure.keywordBound)
+        assertEquals("openrouter", exception.failure.provider.value)
+    }
+
+    @Test
+    @DisplayName("응답 content가 비어 있으면 INVALID_RESPONSE로 분류한다")
+    fun classifyEmptyContentAsInvalidResponse() = runBlocking {
+        val provider = providerOf(
+            CapturingExchangeFunction("""{"model":"test-model","choices":[{"message":{"content":"   "}}]}""")
+        )
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.INVALID_RESPONSE, exception.failure.category)
+    }
+
+    @Test
+    @DisplayName("429 응답을 RATE_LIMITED로 분류하고 Retry-After를 보존한다")
+    fun classifyTooManyRequestsAsRateLimited() = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.TOO_MANY_REQUESTS, retryAfterSeconds = 30))
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.RATE_LIMITED, exception.failure.category)
+        assertEquals(429, exception.failure.statusCode)
+        assertEquals(30_000L, exception.failure.retryAfterMillis)
+        assertTrue(exception.failure.retryable)
+        assertFalse(exception.failure.keywordBound)
+    }
+
+    @Test
+    @DisplayName("401 응답을 AUTHORIZATION_ERROR로 분류해 키워드에 책임을 묻지 않는다")
+    fun classifyUnauthorizedAsAuthorizationError() = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.UNAUTHORIZED))
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.AUTHORIZATION_ERROR, exception.failure.category)
+        assertEquals(401, exception.failure.statusCode)
+        assertFalse(exception.failure.keywordBound)
+        assertFalse(exception.failure.retryable)
+    }
+
+    @Test
+    @DisplayName("그 외 4xx 응답을 VALIDATION_ERROR로 분류한다")
+    fun classifyClientErrorAsValidationError() = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.BAD_REQUEST))
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.VALIDATION_ERROR, exception.failure.category)
+        assertTrue(exception.failure.keywordBound)
+        assertFalse(exception.failure.retryable)
+    }
+
+    @Test
+    @DisplayName("5xx 응답을 TRANSIENT_ERROR로 분류한다")
+    fun classifyServerErrorAsTransientError() = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.SERVICE_UNAVAILABLE))
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.TRANSIENT_ERROR, exception.failure.category)
+        assertEquals(503, exception.failure.statusCode)
+        assertTrue(exception.failure.retryable)
+        assertFalse(exception.failure.keywordBound)
+    }
+
+    @Test
+    @DisplayName("timeout 예외가 cause 체인에 있으면 TIMEOUT으로 분류한다")
+    fun classifyTimeoutFromCauseChain() = runBlocking {
+        val provider = providerOf(
+            ExchangeFunction {
+                Mono.error(
+                    WebClientRequestException(
+                        IllegalStateException("wrapped", ReadTimeoutException.INSTANCE),
+                        HttpMethod.POST,
+                        URI.create("https://llm.example.com/v1/chat/completions"),
+                        HttpHeaders.EMPTY
+                    )
+                )
+            }
+        )
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.TIMEOUT, exception.failure.category)
+        assertEquals(LlmFailureSource.NETWORK, exception.failure.source)
+        assertTrue(exception.failure.retryable)
+    }
+
+    @Test
+    @DisplayName("timeout이 아닌 연결 실패는 NETWORK 원천의 TRANSIENT_ERROR로 분류한다")
+    fun classifyConnectionFailureAsNetworkTransientError() = runBlocking {
+        val provider = providerOf(
+            ExchangeFunction {
+                Mono.error(
+                    WebClientRequestException(
+                        java.net.ConnectException("connection refused"),
+                        HttpMethod.POST,
+                        URI.create("https://llm.example.com/v1/chat/completions"),
+                        HttpHeaders.EMPTY
+                    )
+                )
+            }
+        )
+
+        val exception = assertFailsWith<LlmProviderException> {
+            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
+        }
+
+        assertEquals(LlmFailureCategory.TRANSIENT_ERROR, exception.failure.category)
+        assertEquals(LlmFailureSource.NETWORK, exception.failure.source)
     }
 
     @Test
@@ -272,21 +408,19 @@ class OpenAiLlmProviderTest {
         return AiTestFixture.newsArticle(title = "NVIDIA AI GPU demand rises")
     }
 
-    private class CapturingExchangeFunction(
-        private val body: String
-    ) : ExchangeFunction {
+    private fun errorExchangeFunction(
+        status: HttpStatus,
+        retryAfterSeconds: Long? = null
+    ): ExchangeFunction {
+        return ExchangeFunction {
+            val response = ClientResponse.create(status)
+                .header("Content-Type", "application/json")
+                .body("""{"error":{"message":"provider rejected the request"}}""")
 
-        lateinit var request: ClientRequest
+            retryAfterSeconds?.let { response.header(HttpHeaders.RETRY_AFTER, it.toString()) }
 
-        override fun exchange(request: ClientRequest): Mono<ClientResponse> {
-            this.request = request
-
-            return Mono.just(
-                ClientResponse.create(HttpStatus.OK)
-                    .header("Content-Type", "application/json")
-                    .body(body)
-                    .build()
-            )
+            Mono.just(response.build())
         }
     }
+
 }

@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.application.port.out.news
+package me.rgunny.kachi.ai.application.port.dto.news
 
 import java.time.Instant
 import java.util.UUID

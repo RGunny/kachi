@@ -79,6 +79,63 @@ class AiRunTest {
     }
 
     @Test
+    @DisplayName("전부 건너뛰고 끝나도 실패가 없으면 SUCCEEDED 상태로 완료한다")
+    fun completeAsSucceededWhenAllKeywordsAreSkipped() {
+        val completed = runningRun().complete(
+            succeededCount = 0,
+            failureCount = 0,
+            failureReason = null,
+            provider = null,
+            model = null,
+            promptVersion = null,
+            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            skippedCount = 2,
+            skipReason = AiSkipReason.NO_INPUT
+        )
+
+        assertEquals(AiRunStatus.SUCCEEDED, completed.status)
+        assertEquals(2, completed.skippedCount)
+        assertEquals(AiSkipReason.NO_INPUT, completed.skipReason)
+        assertEquals(null, completed.failureReason)
+    }
+
+    @Test
+    @DisplayName("건너뛴 건수가 없으면 skip 사유를 남기지 않는다")
+    fun dropSkipReasonWhenNothingIsSkipped() {
+        val completed = runningRun().complete(
+            succeededCount = 2,
+            failureCount = 0,
+            failureReason = null,
+            provider = null,
+            model = null,
+            promptVersion = null,
+            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            skippedCount = 0,
+            skipReason = AiSkipReason.NO_INPUT
+        )
+
+        assertEquals(0, completed.skippedCount)
+        assertEquals(null, completed.skipReason)
+    }
+
+    @Test
+    @DisplayName("건너뛴 건수는 음수일 수 없다")
+    fun rejectNegativeSkippedCount() {
+        assertFailsWith<IllegalArgumentException> {
+            runningRun().complete(
+                succeededCount = 1,
+                failureCount = 0,
+                failureReason = null,
+                provider = null,
+                model = null,
+                promptVersion = null,
+                finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+                skippedCount = -1
+            )
+        }
+    }
+
+    @Test
     @DisplayName("완료 시각이 시작 시각보다 이전이면 완료할 수 없다")
     fun rejectFinishedAtBeforeStartedAt() {
         assertFailsWith<IllegalArgumentException> {

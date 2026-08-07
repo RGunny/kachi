@@ -1,6 +1,8 @@
 package me.rgunny.kachi.ai.application.port.out.llm
 
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryPlan
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 
 /**

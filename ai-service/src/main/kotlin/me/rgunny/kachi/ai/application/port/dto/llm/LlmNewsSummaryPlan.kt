@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.application.port.out.llm
+package me.rgunny.kachi.ai.application.port.dto.llm
 
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName

@@ -8,6 +8,7 @@ import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunId
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.domain.run.AiSkipReason
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
@@ -33,7 +34,10 @@ data class AiRunMongoDocument(
     val promptVersion: String?,
     val windowFrom: Instant?,
     val windowTo: Instant?,
-    val watermarkAdvanced: Boolean
+    val watermarkAdvanced: Boolean,
+    // skip 집계는 ADR 021에서 추가됐다. 그 이전 문서에는 필드가 없으므로 기본값을 둔다.
+    val skippedCount: Int = 0,
+    val skipReason: AiSkipReason? = null
 ) {
 
     fun toDomain(): AiRun {
@@ -46,7 +50,9 @@ data class AiRunMongoDocument(
             requestedKeywords = requestedKeywords,
             succeededCount = succeededCount,
             failureCount = failureCount,
+            skippedCount = skippedCount,
             failureReason = failureReason,
+            skipReason = skipReason,
             provider = provider?.let(LlmProviderName::of),
             model = model?.let(LlmModelName::of),
             promptVersion = promptVersion?.let(PromptVersion::of),
@@ -73,7 +79,9 @@ data class AiRunMongoDocument(
                 promptVersion = aiRun.promptVersion?.value,
                 windowFrom = aiRun.windowFrom,
                 windowTo = aiRun.windowTo,
-                watermarkAdvanced = aiRun.watermarkAdvanced
+                watermarkAdvanced = aiRun.watermarkAdvanced,
+                skippedCount = aiRun.skippedCount,
+                skipReason = aiRun.skipReason
             )
         }
     }

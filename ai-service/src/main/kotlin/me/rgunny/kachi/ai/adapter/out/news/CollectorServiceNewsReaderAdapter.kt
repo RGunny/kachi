@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.adapter.out.news
 import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.ai.application.exception.NewsReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.NewsReaderException
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.application.port.out.news.NewsReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import org.springframework.beans.factory.annotation.Qualifier

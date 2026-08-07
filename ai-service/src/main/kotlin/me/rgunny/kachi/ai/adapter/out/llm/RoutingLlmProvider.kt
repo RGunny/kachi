@@ -1,10 +1,10 @@
 package me.rgunny.kachi.ai.adapter.out.llm
 
-import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import kotlin.random.Random

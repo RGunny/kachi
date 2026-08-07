@@ -1,39 +1,16 @@
-package me.rgunny.kachi.ai.application.port.`in`.news
+package me.rgunny.kachi.ai.application.port.dto.news
 
-import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.run.AiRunId
 import me.rgunny.kachi.ai.domain.run.AiRun
+import me.rgunny.kachi.ai.domain.run.AiRunId
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
-import me.rgunny.kachi.ai.domain.summary.NewsSummary
-import me.rgunny.kachi.ai.domain.summary.NewsSummaryId
-import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.domain.run.AiSkipReason
 import java.time.Instant
 
-data class SummarizedNewsResult(
-    val id: NewsSummaryId,
-    val keyword: AiKeyword,
-    val title: String,
-    val sentiment: NewsSummarySentiment,
-    val reused: Boolean
-) {
-    companion object {
-        fun from(
-            summary: NewsSummary,
-            reused: Boolean
-        ): SummarizedNewsResult {
-            return SummarizedNewsResult(
-                id = summary.id,
-                keyword = summary.keyword,
-                title = summary.title,
-                sentiment = summary.sentiment,
-                reused = reused
-            )
-        }
-    }
-}
-
 /**
- * 뉴스 요약 실행 결과
+ * 뉴스 요약 실행 결과.
+ *
+ * 처리 건수를 성공/실패/skip 셋으로 나눠 담는다. skip은 조치할 것이 없는 결과이므로
+ * 실패와 합치면 실행 하나를 보고 조치가 필요한지 판단할 수 없다(ADR 021).
  */
 data class SummarizeNewsResult(
     val runId: AiRunId,
@@ -43,6 +20,8 @@ data class SummarizeNewsResult(
     val requestedKeywords: Int,
     val succeededCount: Int,
     val failureCount: Int,
+    val skippedCount: Int,
+    val skipReason: AiSkipReason?,
     val windowFrom: Instant?,
     val windowTo: Instant?,
     val watermarkAdvanced: Boolean,
@@ -61,6 +40,8 @@ data class SummarizeNewsResult(
                 requestedKeywords = aiRun.requestedKeywords,
                 succeededCount = aiRun.succeededCount,
                 failureCount = aiRun.failureCount,
+                skippedCount = aiRun.skippedCount,
+                skipReason = aiRun.skipReason,
                 windowFrom = aiRun.windowFrom,
                 windowTo = aiRun.windowTo,
                 watermarkAdvanced = aiRun.watermarkAdvanced,

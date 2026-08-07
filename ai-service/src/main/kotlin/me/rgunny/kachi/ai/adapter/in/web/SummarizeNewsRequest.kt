@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.`in`.web
 
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import java.time.Instant
 

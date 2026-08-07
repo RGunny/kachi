@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.`in`.web
 
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsResult
 import java.time.Instant
 
 data class NewsSummaryRunResponse(
@@ -12,6 +12,8 @@ data class NewsSummaryRunResponse(
     val requestedKeywords: Int,
     val succeededCount: Int,
     val failureCount: Int,
+    val skippedCount: Int,
+    val skipReason: String?,
     val windowFrom: Instant?,
     val windowTo: Instant?,
     val watermarkAdvanced: Boolean,
@@ -28,6 +30,8 @@ data class NewsSummaryRunResponse(
                 requestedKeywords = result.requestedKeywords,
                 succeededCount = result.succeededCount,
                 failureCount = result.failureCount,
+                skippedCount = result.skippedCount,
+                skipReason = result.skipReason?.name,
                 windowFrom = result.windowFrom,
                 windowTo = result.windowTo,
                 watermarkAdvanced = result.watermarkAdvanced,

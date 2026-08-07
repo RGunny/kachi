@@ -1,10 +1,10 @@
-package me.rgunny.kachi.ai.application.service
+package me.rgunny.kachi.ai.application.service.keyword
 
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsResult
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsResult
 import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
 import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
-import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.out.persistence.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.out.persistence.KeywordExpansionPersistencePort

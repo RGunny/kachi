@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.application.port.`in`.news
+package me.rgunny.kachi.ai.application.port.dto.news
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 

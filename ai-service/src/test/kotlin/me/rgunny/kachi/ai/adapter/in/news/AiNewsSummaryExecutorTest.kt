@@ -1,15 +1,11 @@
 package me.rgunny.kachi.ai.adapter.`in`.news
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
-import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.run.AiRun
-import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fake.BlockingSummarizeNewsUseCase
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -46,31 +42,4 @@ class AiNewsSummaryExecutorTest {
         assertEquals(1, useCase.executeCount)
     }
 
-    private class BlockingSummarizeNewsUseCase : SummarizeNewsUseCase {
-        val started = CompletableDeferred<Unit>()
-        val release = CompletableDeferred<Unit>()
-        var executeCount = 0
-
-        override suspend fun summarize(command: SummarizeNewsCommand): SummarizeNewsResult {
-            executeCount += 1
-            started.complete(Unit)
-            release.await()
-
-            return SummarizeNewsResult.from(
-                AiRun.start(
-                    targetType = AiRunTargetType.NEWS_SUMMARY,
-                    requestedKeywords = command.keywords.size,
-                    startedAt = Instant.parse("2026-06-03T00:00:00Z")
-                ).complete(
-                    succeededCount = command.keywords.size,
-                    failureCount = 0,
-                    failureReason = null,
-                    provider = null,
-                    model = null,
-                    promptVersion = null,
-                    finishedAt = Instant.parse("2026-06-03T00:00:01Z")
-                )
-            )
-        }
-    }
 }

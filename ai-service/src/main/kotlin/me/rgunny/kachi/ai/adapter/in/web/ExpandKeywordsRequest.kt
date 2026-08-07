@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.`in`.web
 
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 
 data class ExpandKeywordsRequest(

@@ -1,15 +1,19 @@
-package me.rgunny.kachi.ai.application.service
+package me.rgunny.kachi.ai.application.service.news
 
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsResult
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizedNewsResult
+import kotlinx.coroutines.CancellationException
+import me.rgunny.kachi.ai.application.exception.KeywordReaderException
+import me.rgunny.kachi.ai.application.exception.LlmProviderException
+import me.rgunny.kachi.ai.application.exception.NewsReaderException
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsResult
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizedNewsResult
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
-import me.rgunny.kachi.ai.application.port.`in`.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
-import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.application.port.out.news.NewsReaderPort
 import me.rgunny.kachi.ai.application.port.out.persistence.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.out.persistence.KeywordQuarantinePersistencePort
@@ -17,10 +21,14 @@ import me.rgunny.kachi.ai.application.port.out.persistence.NewsSummaryPersistenc
 import me.rgunny.kachi.ai.application.port.out.persistence.SummaryWatermarkPersistencePort
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmFailure
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
+import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.domain.run.AiSkipReason
 import me.rgunny.kachi.ai.domain.summary.NewsHash
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
@@ -66,9 +74,7 @@ class SummarizeNewsService(
             )
         )
         val outcome = NewsSummaryOutcome.of(
-            keywords.map { keyword ->
-                summarizeKeyword(keyword, window, command.maxArticlesPerKeyword, quarantines[keyword], now)
-            }
+            summarizeKeywords(keywords, window, command.maxArticlesPerKeyword, quarantines, now)
         )
 
         // 4. 격리 제외 키워드가 모두 성공했을 때만 watermark를 전진시킨다.
@@ -127,39 +133,118 @@ class SummarizeNewsService(
     }
 
     /**
+     * 키워드를 순서대로 요약한다.
+     *
+     * 전역 LLM 장애를 만나면 남은 키워드는 호출하지 않고 건너뛴다.
+     * 장애 중에 같은 호출을 반복해도 결과는 같고 provider 압력만 올라간다.
+     * watermark는 실패 때문에 유지되므로, 건너뛴 키워드는 다음 실행이 그대로 다시 처리한다.
+     */
+    private suspend fun summarizeKeywords(
+        keywords: List<AiKeyword>,
+        window: ResolvedSummaryWindow,
+        maxArticlesPerKeyword: Int,
+        quarantines: Map<AiKeyword, KeywordQuarantine>,
+        now: Instant
+    ): List<KeywordOutcome> {
+        val outcomes = mutableListOf<KeywordOutcome>()
+        var aborted = false
+
+        for (keyword in keywords) {
+            if (aborted) {
+                outcomes += KeywordOutcome.Skipped(AiSkipReason.PROVIDER_UNAVAILABLE)
+                continue
+            }
+
+            val outcome = summarizeKeyword(keyword, window, maxArticlesPerKeyword, quarantines[keyword], now)
+            outcomes += outcome
+
+            if (outcome is KeywordOutcome.Failed && outcome.abortsRun) {
+                log.warn(
+                    "Aborting remaining keywords in this run by global LLM failure: keyword={}, reason={}, remaining={}",
+                    keyword.value,
+                    outcome.reason,
+                    keywords.size - outcomes.size
+                )
+                aborted = true
+            }
+        }
+
+        return outcomes
+    }
+
+    /**
      * 키워드 하나를 요약하고 결과에 따라 연속 실패 누적을 갱신한다.
      *
      * 키워드 하나의 실패가 나머지 키워드를 막지 않도록 예외를 여기서 가둔다.
      */
     private suspend fun summarizeKeyword(
         keyword: AiKeyword,
-        window: ResolvedWindow,
+        window: ResolvedSummaryWindow,
         maxArticlesPerKeyword: Int,
         quarantine: KeywordQuarantine?,
         now: Instant
-    ): Result<SummarizedKeyword> {
-        return runCatching {
-            summarizeCollectedNews(keyword, window, maxArticlesPerKeyword)
-        }.onSuccess {
+    ): KeywordOutcome {
+        return try {
+            val articles = newsReaderPort.findNews(
+                keyword = keyword,
+                from = window.from,
+                to = window.to,
+                limit = maxArticlesPerKeyword
+            )
+
+            // 요약할 뉴스가 없는 것은 장애가 아니다. 실패로 세면 뉴스가 뜸한 키워드 하나가 watermark 전체를 붙잡는다.
+            if (articles.isEmpty()) {
+                return KeywordOutcome.Skipped(AiSkipReason.NO_INPUT)
+            }
+
+            val succeeded = summarizeCollectedNews(keyword, articles)
             resetKeywordFailures(quarantine, now)
-        }.onFailure { error ->
-            recordKeywordFailure(quarantine, keyword, failureReasonOf(error), now)
+
+            succeeded
+        } catch (error: CancellationException) {
+            // coroutine 취소는 요약 실패가 아니므로 결과로 변환하지 않는다.
+            throw error
+        } catch (error: Exception) {
+            recordFailedKeyword(quarantine, keyword, error, now)
         }
+    }
+
+    /**
+     * 실패를 분류해 실행 기록에 남길 원인을 정하고, 키워드 귀속 실패일 때만 격리 카운트를 올린다.
+     *
+     * rate limit이나 timeout은 다음 실행이 같은 구간을 다시 처리하면 해소된다.
+     * 이런 실패까지 카운트하면 provider 장애 몇 번으로 정상 키워드가 영구 격리된다.
+     */
+    private suspend fun recordFailedKeyword(
+        quarantine: KeywordQuarantine?,
+        keyword: AiKeyword,
+        error: Exception,
+        now: Instant
+    ): KeywordOutcome.Failed {
+        val failure = (error as? LlmProviderException)?.failure
+        val reason = failureReasonOf(error)
+
+        if (keywordBound(error)) {
+            recordKeywordFailure(quarantine, keyword, reason, now)
+        } else {
+            log.warn(
+                "News summary failed by infrastructure error. Keyword quarantine counter is not updated: keyword={}, reason={}",
+                keyword.value,
+                reason,
+                error
+            )
+        }
+
+        return KeywordOutcome.Failed(
+            reason = reason,
+            abortsRun = failure != null && abortsRun(failure)
+        )
     }
 
     private suspend fun summarizeCollectedNews(
         keyword: AiKeyword,
-        window: ResolvedWindow,
-        maxArticlesPerKeyword: Int
-    ): SummarizedKeyword {
-        val articles = newsReaderPort.findNews(
-            keyword = keyword,
-            from = window.from,
-            to = window.to,
-            limit = maxArticlesPerKeyword
-        )
-        require(articles.isNotEmpty()) { "news summary input articles are empty" }
-
+        articles: List<NewsArticle>
+    ): KeywordOutcome.Succeeded {
         // newsHash는 같은 keyword/news id 묶음을 식별하는 LLM 호출 전 cache key다.
         // 조회 구간은 실행마다 달라지므로 hash에 넣지 않는다. 그래야 실패 후 재시도에서 성공분을 재사용한다.
         val newsHash = NewsHash.calculate(
@@ -181,8 +266,8 @@ class SummarizeNewsService(
     /**
      * 기존 요약을 재사용하면 이번 실행에서는 LLM을 호출하지 않으므로 token 사용량도 0으로 남긴다.
      */
-    private fun reuseSummary(existingSummary: NewsSummary): SummarizedKeyword {
-        return SummarizedKeyword(
+    private fun reuseSummary(existingSummary: NewsSummary): KeywordOutcome.Succeeded {
+        return KeywordOutcome.Succeeded(
             summary = SummarizedNewsResult.from(existingSummary, reused = true),
             metadata = LlmGenerationMetadata(
                 provider = existingSummary.provider,
@@ -198,7 +283,7 @@ class SummarizeNewsService(
         articles: List<NewsArticle>,
         newsHash: String,
         preparedLlm: PreparedLlmNewsSummary
-    ): SummarizedKeyword {
+    ): KeywordOutcome.Succeeded {
         val llmResult = preparedLlm.summarize(
             keyword = keyword,
             articles = articles
@@ -219,7 +304,7 @@ class SummarizeNewsService(
         // 선조회 이후 다른 요청이 먼저 저장했으면, 새로 저장하지 않고 기존 요약을 사용한다.
         val savedSummary = newsSummaryPersistencePort.saveOrFindExisting(summary)
 
-        return SummarizedKeyword(
+        return KeywordOutcome.Succeeded(
             summary = SummarizedNewsResult.from(savedSummary, reused = savedSummary.id != summary.id),
             metadata = llmResult.metadata
         )
@@ -239,6 +324,8 @@ class SummarizeNewsService(
                 model = outcome.metadata?.model,
                 promptVersion = outcome.metadata?.promptVersion,
                 finishedAt = Instant.now(clock),
+                skippedCount = outcome.skippedCount,
+                skipReason = outcome.skipReason,
                 watermarkAdvanced = watermarkAdvanced
             )
         )
@@ -248,10 +335,10 @@ class SummarizeNewsService(
         request: SummaryWindowRequest,
         watermark: Instant?,
         now: Instant
-    ): ResolvedWindow {
+    ): ResolvedSummaryWindow {
         return when (request) {
             // 수동 실행은 지정 구간을 그대로 쓴다. 지정하지 않으면 collector가 전체 기간을 조회한다.
-            is SummaryWindowRequest.Explicit -> ResolvedWindow(from = request.from, to = request.to)
+            is SummaryWindowRequest.Explicit -> ResolvedSummaryWindow(from = request.from, to = request.to)
 
             is SummaryWindowRequest.FromWatermark -> {
                 val resolved = SummaryWindow.resolve(
@@ -271,7 +358,7 @@ class SummarizeNewsService(
                     )
                 }
 
-                ResolvedWindow(from = resolved.from, to = resolved.to)
+                ResolvedSummaryWindow(from = resolved.from, to = resolved.to)
             }
         }
     }
@@ -279,7 +366,7 @@ class SummarizeNewsService(
     private suspend fun advanceWatermarkIfCompleted(
         request: SummaryWindowRequest,
         watermark: SummaryWatermark?,
-        window: ResolvedWindow,
+        window: ResolvedSummaryWindow,
         failureCount: Int,
         now: Instant
     ): Boolean {
@@ -348,59 +435,56 @@ class SummarizeNewsService(
         keywordQuarantinePersistencePort.save(quarantine.recordSuccess(now))
     }
 
-    /**
-     * 확정된 조회 구간. 수동 실행은 구간을 지정하지 않을 수 있어 null을 허용한다.
-     */
-    private data class ResolvedWindow(
-        val from: Instant?,
-        val to: Instant?
-    )
-
-    /**
-     * 키워드 하나의 요약 결과.
-     *
-     * 실행 기록에는 이번 실행이 어떤 provider/model을 썼는지도 남아야 하므로 생성 메타데이터를 함께 들고 간다.
-     */
-    private data class SummarizedKeyword(
-        val summary: SummarizedNewsResult,
-        val metadata: LlmGenerationMetadata
-    )
-
-    /**
-     * 키워드별 결과를 실행 기록에 남길 집계로 접은 값.
-     */
-    private class NewsSummaryOutcome(
-        val succeededCount: Int,
-        val failureCount: Int,
-        val failureReason: AiFailureReason?,
-        val metadata: LlmGenerationMetadata?,
-        val summaries: List<SummarizedNewsResult>
-    ) {
-        companion object {
-            fun of(results: List<Result<SummarizedKeyword>>): NewsSummaryOutcome {
-                val succeeded = results.mapNotNull { it.getOrNull() }
-
-                return NewsSummaryOutcome(
-                    succeededCount = succeeded.size,
-                    failureCount = results.size - succeeded.size,
-                    // 실행 기록에는 실패 원인을 하나만 남기므로 가장 먼저 발생한 것을 대표로 쓴다.
-                    failureReason = results.firstNotNullOfOrNull { it.exceptionOrNull() }?.let(::failureReasonOf),
-                    metadata = succeeded.firstOrNull()?.metadata,
-                    summaries = succeeded.map { it.summary }
-                )
-            }
-        }
-    }
-
     private companion object {
         val TARGET_TYPE = AiRunTargetType.NEWS_SUMMARY
         val log = LoggerFactory.getLogger(SummarizeNewsService::class.java)
 
         fun failureReasonOf(error: Throwable): AiFailureReason {
             return when (error) {
-                is IllegalArgumentException -> AiFailureReason.EMPTY_INPUT
+                is LlmProviderException -> failureReasonOf(error.failure)
+                is NewsReaderException, is KeywordReaderException -> AiFailureReason.SERVER_ERROR
+                // 도메인 불변식 위반은 이 키워드의 입력이나 응답에서 온다.
+                is IllegalArgumentException -> AiFailureReason.INVALID_RESPONSE
                 else -> AiFailureReason.UNKNOWN
             }
+        }
+
+        fun failureReasonOf(failure: LlmFailure): AiFailureReason {
+            return when (failure.category) {
+                LlmFailureCategory.TIMEOUT -> AiFailureReason.TIMEOUT
+                LlmFailureCategory.RATE_LIMITED -> AiFailureReason.RATE_LIMITED
+                LlmFailureCategory.TRANSIENT_ERROR -> when (failure.source) {
+                    LlmFailureSource.NETWORK -> AiFailureReason.NETWORK_ERROR
+                    else -> AiFailureReason.SERVER_ERROR
+                }
+
+                LlmFailureCategory.VALIDATION_ERROR,
+                LlmFailureCategory.AUTHORIZATION_ERROR -> AiFailureReason.CLIENT_ERROR
+
+                LlmFailureCategory.INVALID_RESPONSE -> AiFailureReason.INVALID_RESPONSE
+                LlmFailureCategory.UNKNOWN -> AiFailureReason.UNKNOWN
+            }
+        }
+
+        /**
+         * 키워드에 책임을 물을 수 있는 실패인지 판단한다.
+         *
+         * 판별할 수 없는 실패는 인프라 쪽으로 본다. 잘못 세면 정상 키워드가 영구 격리되고, 놓치면 다음 실행이 다시 시도한다.
+         */
+        fun keywordBound(error: Throwable): Boolean {
+            return when (error) {
+                is LlmProviderException -> error.failure.keywordBound
+                is NewsReaderException, is KeywordReaderException -> false
+                is IllegalArgumentException -> true
+                else -> false
+            }
+        }
+
+        /**
+         * 이번 실행의 남은 키워드까지 막는 전역 장애인지 판단한다.
+         */
+        fun abortsRun(failure: LlmFailure): Boolean {
+            return failure.category == LlmFailureCategory.RATE_LIMITED
         }
     }
 }

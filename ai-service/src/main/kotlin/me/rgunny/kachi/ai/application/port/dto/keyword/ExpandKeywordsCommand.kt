@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.application.port.`in`.keyword
+package me.rgunny.kachi.ai.application.port.dto.keyword
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 

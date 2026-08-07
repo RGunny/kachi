@@ -1,21 +1,9 @@
 package me.rgunny.kachi.ai.adapter.out.llm
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
-import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
-import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
 import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
-import me.rgunny.kachi.ai.domain.llm.PromptVersion
-import me.rgunny.kachi.ai.domain.llm.TokenUsage
-import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.fake.NamedLlmProviderPort
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -75,59 +63,4 @@ class RoutingLlmProviderTest {
         }
     }
 
-    private class NamedLlmProviderPort(
-        val provider: String
-    ) : LlmProviderPort {
-        var expandCallCount: Int = 0
-
-        override fun prepareNewsSummary(): PreparedLlmNewsSummary {
-            return object : PreparedLlmNewsSummary {
-                override val plan: LlmNewsSummaryPlan = LlmNewsSummaryPlan(
-                    provider = LlmProviderName.of(provider),
-                    model = LlmModelName.of("test-model"),
-                    promptVersion = PromptVersion.of("news-summary-v1")
-                )
-
-                override suspend fun summarize(
-                    keyword: AiKeyword,
-                    articles: List<NewsArticle>
-                ): LlmNewsSummaryResult {
-                    return this@NamedLlmProviderPort.summarizeNews(keyword, articles)
-                }
-            }
-        }
-
-        override suspend fun expandKeyword(
-            keyword: AiKeyword,
-            maxExpansions: Int
-        ): LlmKeywordExpansionResult {
-            expandCallCount += 1
-
-            return LlmKeywordExpansionResult(
-                expandedKeywords = listOf(ExpandedKeyword.of("AI 반도체")),
-                metadata = metadata(PromptVersion.of("keyword-expansion-v1"))
-            )
-        }
-
-        override suspend fun summarizeNews(
-            keyword: AiKeyword,
-            articles: List<NewsArticle>
-        ): LlmNewsSummaryResult {
-            return LlmNewsSummaryResult(
-                title = "요약",
-                content = "본문",
-                sentiment = NewsSummarySentiment.UNKNOWN,
-                metadata = metadata(PromptVersion.of("news-summary-v1"))
-            )
-        }
-
-        private fun metadata(promptVersion: PromptVersion): LlmGenerationMetadata {
-            return LlmGenerationMetadata(
-                provider = LlmProviderName.of(provider),
-                model = LlmModelName.of("test-model"),
-                promptVersion = promptVersion,
-                tokenUsage = TokenUsage(inputTokens = 1, outputTokens = 1)
-            )
-        }
-    }
 }

@@ -2,11 +2,10 @@ package me.rgunny.kachi.ai.adapter.`in`.scheduler
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.adapter.`in`.keyword.AiKeywordExpansionExecutor
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsResult
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
-import me.rgunny.kachi.ai.domain.run.AiRun
-import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fake.FailingExpandKeywordsUseCase
+import me.rgunny.kachi.ai.fake.RecordingExpandKeywordsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -89,33 +88,4 @@ class AiKeywordExpansionSchedulerTest {
         )
     }
 
-    private class RecordingExpandKeywordsUseCase : ExpandKeywordsUseCase {
-        var invokeCount = 0
-        var lastCommand: ExpandKeywordsCommand? = null
-
-        override suspend fun expand(command: ExpandKeywordsCommand): ExpandKeywordsResult {
-            invokeCount += 1
-            lastCommand = command
-
-            return ExpandKeywordsResult.from(completedRun(command.keywords.size))
-        }
-    }
-
-    private class FailingExpandKeywordsUseCase : ExpandKeywordsUseCase {
-        var invokeCount = 0
-
-        override suspend fun expand(command: ExpandKeywordsCommand): ExpandKeywordsResult {
-            invokeCount += 1
-            throw IllegalStateException("keyword expansion failed")
-        }
-    }
-
-    private companion object {
-        fun completedRun(requestedKeywords: Int): AiRun {
-            return AiTestFixture.completedRun(
-                targetType = AiRunTargetType.KEYWORD_EXPANSION,
-                requestedKeywords = requestedKeywords
-            )
-        }
-    }
 }

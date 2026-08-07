@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.adapter.`in`.scheduler
 import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.ai.adapter.`in`.news.AiNewsSummaryExecutionResult
 import me.rgunny.kachi.ai.adapter.`in`.news.AiNewsSummaryExecutor
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

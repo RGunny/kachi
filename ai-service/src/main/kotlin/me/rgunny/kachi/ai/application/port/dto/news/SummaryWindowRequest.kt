@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.application.port.`in`.news
+package me.rgunny.kachi.ai.application.port.dto.news
 
 import java.time.Duration
 import java.time.Instant
@@ -11,6 +11,17 @@ import java.time.Instant
  *
  * 어느 쪽을 골랐는지가 watermark 전진 여부를 함께 결정한다. 임의 구간을 지정한 수동 실행이
  * watermark를 움직이면 지정하지 않은 구간까지 처리된 것으로 기록되므로, 전진은 [FromWatermark]에만 허용한다.
+ *
+ * sealed로 둔 이유는 두 요청이 담는 값이 다르고(지정 구간 vs 정책 값), 요청 종류마다
+ * watermark를 읽는지/전진시키는지가 갈리기 때문이다. 한 타입으로 합치면
+ * "구간도 지정하고 watermark도 전진시키는" 조합이 표현 가능해진다.
+ *
+ * 컴파일 강제 지점은 `SummarizeNewsService`의 두 when이다.
+ * - `loadWatermark`: watermark를 읽을지 결정
+ * - `resolveWindow`: 구간을 계산하는 방식 결정
+ *
+ * 요청 종류가 늘어나면 두 곳이 함께 컴파일되지 않으므로, watermark 읽기와 구간 계산 규칙이
+ * 서로 어긋난 채 추가될 수 없다.
  */
 sealed interface SummaryWindowRequest {
 

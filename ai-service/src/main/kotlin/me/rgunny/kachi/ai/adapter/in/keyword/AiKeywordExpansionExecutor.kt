@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.`in`.keyword
 
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
 import org.springframework.stereotype.Component
 import java.time.Clock

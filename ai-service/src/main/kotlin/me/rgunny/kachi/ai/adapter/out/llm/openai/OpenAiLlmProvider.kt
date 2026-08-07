@@ -1,22 +1,31 @@
 package me.rgunny.kachi.ai.adapter.out.llm.openai
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.reactor.awaitSingle
-import me.rgunny.kachi.ai.application.port.out.llm.LlmGenerationMetadata
-import me.rgunny.kachi.ai.application.port.out.llm.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryPlan
-import me.rgunny.kachi.ai.application.port.out.llm.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.adapter.out.llm.LlmHttpExceptionClassifier
+import me.rgunny.kachi.ai.application.exception.LlmProviderException
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryPlan
+import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.out.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
 import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmFailure
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
-import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import org.springframework.http.HttpHeaders
+import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientRequestException
+import org.springframework.web.reactive.function.client.bodyToMono
+import reactor.core.publisher.Mono
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
@@ -26,6 +35,9 @@ import tools.jackson.databind.json.JsonMapper
  *
  * OpenRouter, Groq, Together, Cerebras, Mistral처럼 같은 `/chat/completions`
  * 계약을 제공하는 provider를 하나의 adapter로 연결한다.
+ *
+ * 호출 실패는 모두 [LlmProviderException]으로 변환해 원천과 성격을 application 계층에 전달한다.
+ * 여기서 재시도하지 않는다. 재시도 구동은 scheduler tick이 맡는다(ADR 021).
  */
 class OpenAiLlmProvider(
     private val webClient: WebClient,
@@ -37,22 +49,14 @@ class OpenAiLlmProvider(
 ) : LlmProviderPort {
 
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
-        val preparedPlan = LlmNewsSummaryPlan(
-            provider = LlmProviderName.of(providerType.value),
-            model = LlmModelName.of(properties.model),
-            promptVersion = newsSummaryPromptVersion
+        return OpenAiPreparedNewsSummary(
+            plan = LlmNewsSummaryPlan(
+                provider = LlmProviderName.of(providerType.value),
+                model = LlmModelName.of(properties.model),
+                promptVersion = newsSummaryPromptVersion
+            ),
+            provider = this
         )
-
-        return object : PreparedLlmNewsSummary {
-            override val plan: LlmNewsSummaryPlan = preparedPlan
-
-            override suspend fun summarize(
-                keyword: AiKeyword,
-                articles: List<NewsArticle>
-            ): LlmNewsSummaryResult {
-                return this@OpenAiLlmProvider.summarizeNews(keyword, articles)
-            }
-        }
     }
 
     override suspend fun expandKeyword(
@@ -75,7 +79,9 @@ class OpenAiLlmProvider(
             .map(ExpandedKeyword::of)
             .take(maxExpansions)
 
-        require(expandedKeywords.isNotEmpty()) { "LLM keyword expansion response is empty" }
+        if (expandedKeywords.isEmpty()) {
+            throw invalidResponse("LLM keyword expansion response is empty")
+        }
 
         return LlmKeywordExpansionResult(
             expandedKeywords = expandedKeywords,
@@ -110,22 +116,123 @@ class OpenAiLlmProvider(
         userPrompt: String,
         maxTokens: Int
     ): OpenAiChatResponse {
-        return webClient.post()
-            .uri(properties.chatCompletionsPath)
-            .header(AUTHORIZATION_HEADER, "Bearer ${properties.apiKey}")
-            .bodyValue(
-                OpenAiChatRequest(
-                    model = properties.model,
-                    messages = listOf(
-                        OpenAiChatMessage(role = "system", content = systemPrompt),
-                        OpenAiChatMessage(role = "user", content = userPrompt)
-                    ),
-                    max_tokens = maxTokens
+        return try {
+            webClient.post()
+                .uri(properties.chatCompletionsPath)
+                .header(AUTHORIZATION_HEADER, "Bearer ${properties.apiKey}")
+                .bodyValue(
+                    OpenAiChatRequest(
+                        model = properties.model,
+                        messages = listOf(
+                            OpenAiChatMessage(role = "system", content = systemPrompt),
+                            OpenAiChatMessage(role = "user", content = userPrompt)
+                        ),
+                        max_tokens = maxTokens
+                    )
                 )
+                // status와 Retry-After를 함께 봐야 rate limit을 분류할 수 있어 retrieve() 대신 exchangeToMono를 쓴다.
+                .exchangeToMono { response ->
+                    if (response.statusCode().isError) {
+                        errorResponse(response)
+                    } else {
+                        response.bodyToMono<OpenAiChatResponse>()
+                    }
+                }
+                .awaitSingle()
+        } catch (exception: CancellationException) {
+            // coroutine 취소는 provider 장애가 아니므로 실패로 변환하지 않는다.
+            throw exception
+        } catch (exception: LlmProviderException) {
+            throw exception
+        } catch (exception: Exception) {
+            throw transportException(exception)
+        }
+    }
+
+    /**
+     * 오류 응답의 status와 header를 body보다 먼저 읽어 분류에 사용한다.
+     */
+    private fun errorResponse(response: ClientResponse): Mono<OpenAiChatResponse> {
+        val statusCode = response.statusCode().value()
+        val retryAfterMillis = retryAfterMillis(response.headers().asHttpHeaders())
+
+        return response.bodyToMono<String>()
+            .defaultIfEmpty("")
+            .flatMap { body ->
+                Mono.error<OpenAiChatResponse>(httpException(statusCode, retryAfterMillis, body))
+            }
+    }
+
+    private fun httpException(
+        statusCode: Int,
+        retryAfterMillis: Long?,
+        body: String
+    ): LlmProviderException {
+        val detail = "status=$statusCode, body=${body.take(MAX_ERROR_BODY_LENGTH)}"
+        val code = when {
+            statusCode == HTTP_TOO_MANY_REQUESTS -> LlmFailureCode.LLM_RATE_LIMITED
+            // 인증 실패는 4xx지만 키워드가 아니라 credential 문제이므로 따로 분류한다.
+            statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN -> LlmFailureCode.LLM_AUTHORIZATION_ERROR
+            statusCode in HTTP_CLIENT_ERROR_RANGE -> LlmFailureCode.LLM_CLIENT_ERROR
+            else -> LlmFailureCode.LLM_TRANSIENT_ERROR
+        }
+
+        return LlmProviderException(
+            failure(
+                code = code,
+                message = "${code.defaultMessage}. $detail",
+                statusCode = statusCode,
+                retryAfterMillis = retryAfterMillis.takeIf { code == LlmFailureCode.LLM_RATE_LIMITED }
             )
-            .retrieve()
-            .bodyToMono(OpenAiChatResponse::class.java)
-            .awaitSingle()
+        )
+    }
+
+    /**
+     * 응답을 받지 못했거나 읽지 못한 실패를 분류한다.
+     *
+     * timeout은 예외 체인 안쪽에 숨어 있어 타입만 보고는 판별할 수 없다.
+     */
+    private fun transportException(exception: Exception): LlmProviderException {
+        val code = when {
+            LlmHttpExceptionClassifier.isTimeout(exception) -> LlmFailureCode.LLM_TIMEOUT
+            exception is WebClientRequestException -> LlmFailureCode.LLM_NETWORK_ERROR
+            // 응답 body를 읽지 못한 것은 provider가 계약을 어긴 것이므로 재시도 대상으로 보지 않는다.
+            else -> LlmFailureCode.LLM_INVALID_RESPONSE
+        }
+
+        return LlmProviderException(
+            failure = failure(
+                code = code,
+                message = exception.message?.takeIf { it.isNotBlank() } ?: code.defaultMessage
+            ),
+            cause = exception
+        )
+    }
+
+    private fun retryAfterMillis(headers: HttpHeaders): Long? {
+        return headers.getFirst(HttpHeaders.RETRY_AFTER)
+            ?.toLongOrNull()
+            ?.takeIf { it >= 0 }
+            ?.let { it * MILLIS_PER_SECOND }
+    }
+
+    private fun failure(
+        code: LlmFailureCode,
+        message: String = code.defaultMessage,
+        statusCode: Int? = null,
+        retryAfterMillis: Long? = null
+    ): LlmFailure {
+        return LlmFailure.of(
+            code = code,
+            provider = LlmProviderName.of(providerType.value),
+            message = message,
+            statusCode = statusCode,
+            retryAfterMillis = retryAfterMillis
+        )
+    }
+
+    private fun invalidResponse(message: String): LlmProviderException {
+        return LlmProviderException(failure(code = LlmFailureCode.LLM_INVALID_RESPONSE, message = message))
     }
 
     private fun OpenAiChatResponse.firstContent(): String {
@@ -134,13 +241,15 @@ class OpenAiLlmProvider(
             ?.content
             ?.trim()
             ?.takeIf { it.isNotBlank() }
-            ?: error("LLM response content is empty")
+            ?: throw invalidResponse("LLM response content is empty")
     }
 
     private fun parseJsonStringArray(content: String): List<String> {
         val jsonArray = extractJsonArray(content)
+        val parsed = runCatching { jsonMapper.readValue(jsonArray, STRING_LIST_TYPE) }
+            .getOrElse { throw invalidResponse("LLM keyword expansion response is not a JSON string array") }
 
-        return jsonMapper.readValue(jsonArray, STRING_LIST_TYPE)
+        return parsed
             .map { it.trim() }
             .filter { it.isNotBlank() }
     }
@@ -153,8 +262,8 @@ class OpenAiLlmProvider(
         val startIndex = content.indexOf('[')
         val endIndex = content.lastIndexOf(']')
 
-        require(startIndex >= 0 && endIndex > startIndex) {
-            "LLM keyword expansion response must contain a JSON string array"
+        if (startIndex !in 0..<endIndex) {
+            throw invalidResponse("LLM keyword expansion response must contain a JSON string array")
         }
 
         return content.substring(startIndex, endIndex + 1)
@@ -191,13 +300,19 @@ class OpenAiLlmProvider(
 
     private fun parseNewsSummary(content: String): ParsedNewsSummary {
         val jsonObject = extractJsonObject(content)
-        val parsed = jsonMapper
-            .readerFor(ParsedNewsSummary::class.java)
-            .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .readValue<ParsedNewsSummary>(jsonObject)
+        val parsed = runCatching {
+            jsonMapper
+                .readerFor(ParsedNewsSummary::class.java)
+                .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .readValue<ParsedNewsSummary>(jsonObject)
+        }.getOrElse { throw invalidResponse("LLM news summary response is not a valid JSON object") }
 
-        require(parsed.title.isNotBlank()) { "LLM news summary title is empty" }
-        require(parsed.content.isNotBlank()) { "LLM news summary content is empty" }
+        if (parsed.title.isBlank()) {
+            throw invalidResponse("LLM news summary title is empty")
+        }
+        if (parsed.content.isBlank()) {
+            throw invalidResponse("LLM news summary content is empty")
+        }
 
         return parsed
     }
@@ -210,8 +325,8 @@ class OpenAiLlmProvider(
         val startIndex = content.indexOf('{')
         val endIndex = content.lastIndexOf('}')
 
-        require(startIndex >= 0 && endIndex > startIndex) {
-            "LLM news summary response must contain a JSON object"
+        if (startIndex !in 0..<endIndex) {
+            throw invalidResponse("LLM news summary response must contain a JSON object")
         }
 
         return content.substring(startIndex, endIndex + 1)
@@ -234,22 +349,17 @@ class OpenAiLlmProvider(
 
     private companion object {
         const val AUTHORIZATION_HEADER = "Authorization"
+        const val HTTP_TOO_MANY_REQUESTS = 429
+        const val HTTP_UNAUTHORIZED = 401
+        const val HTTP_FORBIDDEN = 403
+        val HTTP_CLIENT_ERROR_RANGE = 400..499
+        const val MAX_ERROR_BODY_LENGTH = 500
+        const val MILLIS_PER_SECOND = 1_000L
         const val KEYWORD_EXPANSION_SYSTEM_PROMPT =
             "너는 뉴스 검색 키워드 확장기다. 응답은 한국어 또는 영어 키워드 문자열 JSON 배열만 반환한다."
         const val NEWS_SUMMARY_SYSTEM_PROMPT =
             "너는 뉴스 요약기다. 응답은 title, content, sentiment 필드를 가진 JSON 객체만 반환한다."
         const val NEWS_SUMMARY_MAX_TOKENS = 768
         val STRING_LIST_TYPE = object : TypeReference<List<String>>() {}
-    }
-
-    private data class ParsedNewsSummary(
-        val title: String = "",
-        val content: String = "",
-        val sentiment: String = NewsSummarySentiment.UNKNOWN.name
-    ) {
-        fun sentiment(): NewsSummarySentiment {
-            return runCatching { NewsSummarySentiment.valueOf(sentiment.trim().uppercase()) }
-                .getOrDefault(NewsSummarySentiment.UNKNOWN)
-        }
     }
 }

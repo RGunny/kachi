@@ -1,5 +1,8 @@
 package me.rgunny.kachi.ai.application.port.`in`.news
 
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsResult
+
 /**
  * 키워드별 저장 뉴스를 요약하는 입력 포트
  */
