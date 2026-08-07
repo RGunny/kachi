@@ -19,6 +19,7 @@ import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
@@ -53,8 +54,8 @@ object AiTestFixture {
             source = "GOOGLE",
             title = title,
             url = "https://news.example.com/nvidia",
-            publishedAt = Instant.parse("2026-06-02T00:00:00Z"),
-            collectedAt = Instant.parse("2026-06-02T00:01:00Z"),
+            publishedAt = NOW.minus(Duration.ofDays(1)),
+            collectedAt = NOW.minus(Duration.ofDays(1)).plusSeconds(60),
             matchedKeywords = listOf("NVIDIA")
         )
     }

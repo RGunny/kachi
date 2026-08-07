@@ -2,9 +2,10 @@ package me.rgunny.kachi.ai.adapter.`in`.web
 
 import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -12,12 +13,12 @@ import kotlin.test.assertIs
 @DisplayName("SummarizeNewsRequest")
 class SummarizeNewsRequestTest {
 
+    private val from = AiTestFixture.NOW.minus(Duration.ofDays(2))
+    private val to = from.plus(Duration.ofDays(1))
+
     @Test
     @DisplayName("뉴스 요약 요청을 command로 변환한다")
     fun convertToCommand() {
-        val from = Instant.parse("2026-06-01T00:00:00Z")
-        val to = Instant.parse("2026-06-02T00:00:00Z")
-
         val command = SummarizeNewsRequest(
             keywords = listOf("NVIDIA"),
             from = from,
@@ -37,8 +38,8 @@ class SummarizeNewsRequestTest {
     fun rejectInvertedWindow() {
         assertFailsWith<IllegalArgumentException> {
             SummarizeNewsRequest(
-                from = Instant.parse("2026-06-02T00:00:00Z"),
-                to = Instant.parse("2026-06-01T00:00:00Z")
+                from = to,
+                to = from
             ).toCommand()
         }
     }

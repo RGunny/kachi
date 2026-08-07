@@ -8,13 +8,13 @@ import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DuplicateKeyException
-import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -29,7 +29,7 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
     @Autowired
     private lateinit var repository: NewsSummaryMongoRepository
 
-    private val createdAt = Instant.parse("2026-06-03T00:00:00Z")
+    private val createdAt = AiTestFixture.NOW
     private val sourceNewsIds = listOf(
         UUID.fromString("018f0000-0000-7000-8000-000000000001"),
         UUID.fromString("018f0000-0000-7000-8000-000000000002")

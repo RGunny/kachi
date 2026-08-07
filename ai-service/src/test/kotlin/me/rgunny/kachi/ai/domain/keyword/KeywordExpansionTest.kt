@@ -3,9 +3,10 @@ package me.rgunny.kachi.ai.domain.keyword
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -51,6 +52,6 @@ class KeywordExpansionTest {
         val provider = LlmProviderName.of("openai")
         val model = LlmModelName.of("gpt-4.1-mini")
         val promptVersion = PromptVersion.of("keyword-expansion-v1")
-        val now = Instant.parse("2026-06-02T00:00:00Z")
+        val now = AiTestFixture.NOW.minus(Duration.ofDays(1))
     }
 }

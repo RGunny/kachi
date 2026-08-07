@@ -8,12 +8,13 @@ import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -27,8 +28,8 @@ class AiRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest
     @Autowired
     private lateinit var repository: AiRunMongoRepository
 
-    private val startedAt = Instant.parse("2026-06-03T00:00:00Z")
-    private val finishedAt = Instant.parse("2026-06-03T00:00:05Z")
+    private val startedAt = AiTestFixture.NOW
+    private val finishedAt = AiTestFixture.NOW.plusSeconds(5)
 
     @BeforeEach
     fun cleanUp() {
@@ -75,7 +76,7 @@ class AiRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest
         @Test
         @DisplayName("처리한 구간과 watermark 전진 여부를 함께 저장한다")
         fun saveWindowAndWatermarkAdvanced() = runBlocking {
-            val windowFrom = Instant.parse("2026-06-02T23:55:00Z")
+            val windowFrom = AiTestFixture.NOW.minus(Duration.ofMinutes(5))
             val completedRun = AiRun.start(
                 targetType = AiRunTargetType.NEWS_SUMMARY,
                 requestedKeywords = 1,

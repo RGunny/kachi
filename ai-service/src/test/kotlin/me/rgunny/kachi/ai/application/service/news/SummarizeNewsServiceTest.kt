@@ -495,8 +495,8 @@ class SummarizeNewsServiceTest {
     }
 
     private fun explicitWindow(
-        from: Instant = Instant.parse("2026-06-02T00:00:00Z"),
-        to: Instant = Instant.parse("2026-06-03T00:00:00Z")
+        from: Instant = AiTestFixture.NOW.minus(Duration.ofDays(1)),
+        to: Instant = AiTestFixture.NOW
     ): SummaryWindowRequest.Explicit {
         return SummaryWindowRequest.Explicit(from = from, to = to)
     }

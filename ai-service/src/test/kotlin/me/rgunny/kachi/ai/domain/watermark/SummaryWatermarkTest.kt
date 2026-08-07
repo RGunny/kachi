@@ -1,6 +1,7 @@
 package me.rgunny.kachi.ai.domain.watermark
 
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -11,7 +12,7 @@ import kotlin.test.assertNull
 
 @DisplayName("SummaryWatermark")
 class SummaryWatermarkTest {
-    private val now = Instant.parse("2026-06-03T00:00:00Z")
+    private val now = AiTestFixture.NOW
 
     @Test
     @DisplayName("처리를 끝낸 지점으로 전진한다")

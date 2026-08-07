@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsResult
 import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import java.time.Instant
 
 /**
@@ -41,7 +42,7 @@ class BlockingSummarizeNewsUseCase : SummarizeNewsUseCase {
     }
 
     companion object {
-        val STARTED_AT: Instant = Instant.parse("2026-06-03T00:00:00Z")
-        val FINISHED_AT: Instant = Instant.parse("2026-06-03T00:00:01Z")
+        val STARTED_AT: Instant = AiTestFixture.NOW
+        val FINISHED_AT: Instant = AiTestFixture.NOW.plusSeconds(1)
     }
 }

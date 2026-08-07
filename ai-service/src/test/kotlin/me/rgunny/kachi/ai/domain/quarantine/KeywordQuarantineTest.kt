@@ -3,9 +3,9 @@ package me.rgunny.kachi.ai.domain.quarantine
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 
 @DisplayName("KeywordQuarantine")
 class KeywordQuarantineTest {
-    private val now = Instant.parse("2026-06-03T00:00:00Z")
+    private val now = AiTestFixture.NOW
     private val failureThreshold = 3
 
     @Test

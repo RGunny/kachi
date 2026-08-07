@@ -3,15 +3,23 @@ package me.rgunny.kachi.ai.domain.run
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Instant
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @DisplayName("AiRun")
 class AiRunTest {
+
+    private val startedAt = AiTestFixture.NOW.minus(Duration.ofDays(1))
+    private val finishedAt = startedAt.plusSeconds(1)
+
+    // 요약 구간은 실행이 시작되는 시점에서 끝난다.
+    private val windowTo = startedAt
+    private val windowFrom = windowTo.minus(Duration.ofMinutes(5))
 
     @Test
     @DisplayName("AI 실행을 RUNNING 상태로 시작한다")
@@ -34,7 +42,7 @@ class AiRunTest {
             provider = LlmProviderName.of("openai"),
             model = LlmModelName.of("gpt-4.1-mini"),
             promptVersion = PromptVersion.of("news-summary-v1"),
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z")
+            finishedAt = finishedAt
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, completed.status)
@@ -54,7 +62,7 @@ class AiRunTest {
             provider = LlmProviderName.of("openai"),
             model = LlmModelName.of("gpt-4.1-mini"),
             promptVersion = PromptVersion.of("news-summary-v1"),
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z")
+            finishedAt = finishedAt
         )
 
         assertEquals(AiRunStatus.PARTIALLY_FAILED, completed.status)
@@ -71,7 +79,7 @@ class AiRunTest {
             provider = null,
             model = null,
             promptVersion = null,
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z")
+            finishedAt = finishedAt
         )
 
         assertEquals(AiRunStatus.FAILED, completed.status)
@@ -88,7 +96,7 @@ class AiRunTest {
             provider = null,
             model = null,
             promptVersion = null,
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            finishedAt = finishedAt,
             skippedCount = 2,
             skipReason = AiSkipReason.NO_INPUT
         )
@@ -109,7 +117,7 @@ class AiRunTest {
             provider = null,
             model = null,
             promptVersion = null,
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            finishedAt = finishedAt,
             skippedCount = 0,
             skipReason = AiSkipReason.NO_INPUT
         )
@@ -129,7 +137,7 @@ class AiRunTest {
                 provider = null,
                 model = null,
                 promptVersion = null,
-                finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+                finishedAt = finishedAt,
                 skippedCount = -1
             )
         }
@@ -146,7 +154,7 @@ class AiRunTest {
                 provider = LlmProviderName.of("openai"),
                 model = LlmModelName.of("gpt-4.1-mini"),
                 promptVersion = PromptVersion.of("news-summary-v1"),
-                finishedAt = Instant.parse("2026-06-01T23:59:59Z")
+                finishedAt = startedAt.minusSeconds(1)
             )
         }
     }
@@ -154,9 +162,6 @@ class AiRunTest {
     @Test
     @DisplayName("처리한 구간과 watermark 전진 여부를 실행 기록에 남긴다")
     fun keepWindowAndWatermarkAdvanced() {
-        val windowFrom = Instant.parse("2026-06-01T23:55:00Z")
-        val windowTo = Instant.parse("2026-06-02T00:00:00Z")
-
         val completed = AiRun.start(
             targetType = AiRunTargetType.NEWS_SUMMARY,
             requestedKeywords = 1,
@@ -170,7 +175,7 @@ class AiRunTest {
             provider = null,
             model = null,
             promptVersion = null,
-            finishedAt = Instant.parse("2026-06-02T00:00:01Z"),
+            finishedAt = finishedAt,
             watermarkAdvanced = true
         )
 
@@ -186,9 +191,9 @@ class AiRunTest {
             AiRun.start(
                 targetType = AiRunTargetType.NEWS_SUMMARY,
                 requestedKeywords = 1,
-                startedAt = Instant.parse("2026-06-02T00:00:00Z"),
-                windowFrom = Instant.parse("2026-06-02T00:00:00Z"),
-                windowTo = Instant.parse("2026-06-01T23:55:00Z")
+                startedAt = startedAt,
+                windowFrom = startedAt,
+                windowTo = windowFrom
             )
         }
     }
@@ -197,7 +202,7 @@ class AiRunTest {
         return AiRun.start(
             targetType = AiRunTargetType.NEWS_SUMMARY,
             requestedKeywords = 2,
-            startedAt = Instant.parse("2026-06-02T00:00:00Z")
+            startedAt = startedAt
         )
     }
 }

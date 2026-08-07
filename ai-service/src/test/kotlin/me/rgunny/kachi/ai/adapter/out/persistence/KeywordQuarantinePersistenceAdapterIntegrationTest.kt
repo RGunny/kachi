@@ -6,12 +6,12 @@ import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -25,7 +25,7 @@ class KeywordQuarantinePersistenceAdapterIntegrationTest : PersistenceAdapterInt
     @Autowired
     private lateinit var repository: KeywordQuarantineMongoRepository
 
-    private val now = Instant.parse("2026-06-03T00:00:00Z")
+    private val now = AiTestFixture.NOW
     private val keyword = AiKeyword.of("NVIDIA")
 
     @BeforeEach

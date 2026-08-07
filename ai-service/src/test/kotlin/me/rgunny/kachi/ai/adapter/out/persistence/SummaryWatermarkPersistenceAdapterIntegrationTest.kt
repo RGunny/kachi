@@ -3,13 +3,13 @@ package me.rgunny.kachi.ai.adapter.out.persistence
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.Duration
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -23,7 +23,7 @@ class SummaryWatermarkPersistenceAdapterIntegrationTest : PersistenceAdapterInte
     @Autowired
     private lateinit var repository: SummaryWatermarkMongoRepository
 
-    private val position = Instant.parse("2026-06-03T00:00:00Z")
+    private val position = AiTestFixture.NOW
 
     @BeforeEach
     fun cleanUp() {

@@ -1,5 +1,6 @@
 package me.rgunny.kachi.ai.domain.watermark
 
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -12,7 +13,7 @@ import kotlin.test.assertTrue
 
 @DisplayName("SummaryWindow")
 class SummaryWindowTest {
-    private val now = Instant.parse("2026-06-03T00:00:00Z")
+    private val now = AiTestFixture.NOW
     private val overlap = Duration.ofMinutes(5)
     private val maxLookback = Duration.ofHours(6)
 

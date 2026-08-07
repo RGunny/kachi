@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.NewsReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.jsonExchangeFunction
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Duration
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -46,8 +46,8 @@ class CollectorServiceNewsReaderAdapterTest {
 
             val articles = adapter.findNews(
                 keyword = AiKeyword.of("NVIDIA"),
-                from = Instant.parse("2026-06-03T00:00:00Z"),
-                to = Instant.parse("2026-06-04T00:00:00Z"),
+                from = AiTestFixture.NOW,
+                to = AiTestFixture.NOW.plus(Duration.ofDays(1)),
                 limit = 20
             )
 
