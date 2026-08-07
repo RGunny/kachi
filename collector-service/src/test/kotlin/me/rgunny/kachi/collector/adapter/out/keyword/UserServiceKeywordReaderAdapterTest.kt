@@ -60,7 +60,7 @@ class UserServiceKeywordReaderAdapterTest {
             }
 
             assertEquals(KeywordReaderErrorCode.USER_SERVICE_RESPONSE_FAILED, exception.errorCode)
-            assertEquals("KEYWORD_READER_002", exception.errorCode.code)
+            assertEquals("KEYWORD_READER_RESPONSE_FAILED", exception.errorCode.code)
         }
 
         @Test
@@ -73,7 +73,7 @@ class UserServiceKeywordReaderAdapterTest {
             }
 
             assertEquals(KeywordReaderErrorCode.ACTIVE_KEYWORDS_EMPTY, exception.errorCode)
-            assertEquals("KEYWORD_READER_004", exception.errorCode.code)
+            assertEquals("KEYWORD_READER_ACTIVE_KEYWORDS_EMPTY", exception.errorCode.code)
         }
 
         @Test
@@ -89,7 +89,7 @@ class UserServiceKeywordReaderAdapterTest {
             }
 
             assertEquals(KeywordReaderErrorCode.USER_SERVICE_REQUEST_FAILED, exception.errorCode)
-            assertEquals("KEYWORD_READER_001", exception.errorCode.code)
+            assertEquals("KEYWORD_READER_REQUEST_FAILED", exception.errorCode.code)
         }
     }
 
