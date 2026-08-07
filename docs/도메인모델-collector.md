@@ -1,0 +1,202 @@
+# Collector 컨텍스트 도메인 모델
+
+collector-service의 도메인 모델이다. 외부 뉴스 provider에서 뉴스를 수집·저장하고,
+수집 실행 한 번의 결과를 운영 기록으로 남긴다.
+공통 관례는 [도메인모델.md](도메인모델.md)를 따른다.
+
+## 뉴스 애그리거트
+
+### 뉴스(News)
+
+_Aggregate Root_
+
+#### 속성(Attributes)
+
+- `id`: `NewsId` 뉴스 식별자
+- `source`: `NewsSource` 뉴스 출처 provider
+- `title`: `NewsTitle` 제목
+- `url`: `NewsUrl` 원문 URL
+- `urlHash`: URL 중복 확인용 hash (생성 시 `url.hash`에서 고정)
+- `titleFingerprint`: 제목 기반 중복 후보 확인용 fingerprint (생성 시 `title.fingerprint`에서 고정)
+- `publishedAt`: 발행 시각 (provider가 주지 않으면 null)
+- `collectedAt`: 수집 시각
+- `matchedKeywords`: `List<CollectedKeyword>` 이 뉴스와 매칭된 수집 키워드 목록
+
+#### 행위(Behaviors)
+
+- `static create(source, title, url, publishedAt, collectedAt, matchedKeywords)`: 뉴스를 생성한다. 매칭 키워드 중복을 제거한다
+- `static restore(...)`: 저장소 snapshot을 복원한다
+
+#### 규칙(Rules)
+
+- 매칭 키워드는 하나 이상이어야 한다. 같은 뉴스가 여러 키워드에 매칭될 수 있고, 중복 키워드는 제거한다.
+- URL hash와 제목 fingerprint는 중복 후보를 줄이기 위한 값이다. 
+  실제 저장 중복 방어는 persistence 계층의 unique index에서 처리한다.
+- 제목의 의미 기반 중복 판단은 collector 도메인에서 과하게 처리하지 않는다.
+- 저장 후 수정하는 행위는 없다. 수집된 뉴스는 불변 기록이다.
+
+### 뉴스 식별자(NewsId)
+
+_Value Object_
+
+- `value`: 뉴스 식별 UUID
+- `newId()` / `of()`
+
+### 뉴스 제목(NewsTitle)
+
+_Value Object_
+
+- `value`: 뉴스 제목
+- `fingerprint`: 소문자화·연속 공백 축약 후 SHA-256으로 계산한 파생 프로퍼티
+- `of()`: trim 정규화. 빈 값 불가. 길이·금칙어·의미 정합성은 강하게 검증하지 않는다.
+- fingerprint는 URL이 다른 유사 제목 뉴스를 찾기 위한 후보값이며, 
+  저장을 막는 강한 중복 키로 직접 사용하지 않는다.
+
+### 뉴스 URL(NewsUrl)
+
+_Value Object_
+
+- `value`: 뉴스 원문 URL
+- `hash`: URL 문자열의 SHA-256 파생 프로퍼티
+- `of()`: trim 정규화. 빈 값 불가. URL 문법은 강하게 검증하지 않고, provider별 URL 보정은 adapter 계층에서 처리한다.
+
+### 수집 키워드(CollectedKeyword)
+
+_Value Object_
+
+- `value`: 수집 기준 키워드
+- `of()`: trim 정규화. 빈 값 불가.
+
+### 키워드 참조(KeywordReference)
+
+_Value Object_
+
+- `value`: user-service에서 조회한 활성 키워드 참조값
+- `of()`: trim 정규화. 빈 값 불가.
+- user 컨텍스트의 `Keyword`를 collector가 자기 어휘로 받아들이는 경계 값이다.
+  user-service의 도메인 타입을 직접 import하지 않는다.
+
+### 뉴스 출처(NewsSource)
+
+_Enum_
+
+뉴스를 가져온 provider를 구분한다.
+
+- `GOOGLE`: Google News RSS
+- `NAVER`: Naver Search API 뉴스 검색
+- `FINNHUB`: Finnhub Company News
+
+provider별 응답 구조, 인증 방식, URL 보정은 adapter 계층에서 처리하고,
+application/domain 계층은 `NewsSource`와 수집 결과만 다룬다.
+
+## 수집 실행 애그리거트
+
+### 수집 실행(CollectionRun)
+
+_Aggregate Root_
+
+수집 작업 한 번의 실행 기록이다. 장기 조회용 이력이 아니라, 
+scheduler·수동 API로 시작된 수집 한 번의 실행 중 상태와 완료 결과를 표현하는 운영 기록이다. 
+실패한 provider 때문에 수집 흐름이 끊겼는지 확인하고 재처리 여부를 판단하는 기준이 된다.
+
+#### 속성(Attributes)
+
+- `id`: `CollectionRunId` 수집 실행 식별자
+- `targetType`: `CollectionTargetType` 수집 대상 유형
+- `status`: `CollectionRunStatus` 실행 상태
+- `startedAt` / `finishedAt`: 시작·종료 시각
+- `requestedKeywords`: 수집 대상 키워드 수
+- `collectedCount`: 신규 저장 건수
+- `duplicateCount`: 중복 제외 건수
+- `failureCount`: 실패 provider 수
+- `failureReason`: 실패 사유 요약 (실패 provider들의 메시지를 `"; "`로 연결)
+- `providerResults`: `List<ProviderCollectionResult>` provider별 수집 결과
+
+#### 행위(Behaviors)
+
+- `static start(targetType, requestedKeywords, startedAt)`: `RUNNING` 상태로 실행을 시작한다
+- `static restore(...)`: 저장소 snapshot을 복원한다
+- `complete(providerResults, finishedAt)`: provider별 결과를 집계해 실행을 완료한다
+
+#### 규칙(Rules)
+
+- 요청 키워드 수는 0 이상이어야 한다.
+- `RUNNING` 상태의 수집 실행만 완료할 수 있다.
+- 완료 시각은 시작 시각보다 이전일 수 없다.
+- 완료 상태 결정: provider 결과가 없으면 `FAILED`, 전부 성공이면 `SUCCEEDED`, 전부 실패면 `FAILED`, 일부 실패면 `PARTIALLY_FAILED`.
+- 신규 저장·중복 제외 건수는 provider별 결과의 합으로, 실패 provider 수는 실패 결과 개수로 계산한다.
+
+### 수집 실행 식별자(CollectionRunId)
+
+_Value Object_
+
+- `value`: 수집 실행 식별 UUID
+- `newId()` / `of()`
+
+### 수집 실행 상태(CollectionRunStatus)
+
+_Enum_
+
+- `RUNNING`, `SUCCEEDED`, `PARTIALLY_FAILED`, `FAILED`
+
+### 수집 대상 유형(CollectionTargetType)
+
+_Enum_
+
+- `NEWS`: 뉴스 수집
+- `MARKET_DATA`: 시장 데이터 수집 (대상 도메인은 미구현)
+
+### Provider 수집 결과(ProviderCollectionResult)
+
+_Value Object_
+
+provider 하나의 수집 결과다.
+
+#### 속성(Attributes)
+
+- `source`: `NewsSource` 뉴스 provider
+- `status`: `ProviderCollectionStatus` provider 수집 상태
+- `fetchedCount`: provider에서 가져온 원본 건수
+- `savedCount`: 신규 저장 건수
+- `duplicateCount`: 중복 제외 건수
+- `failureReason`: `ProviderFailureReason?` 실패 사유 분류
+- `failureMessage`: 실패 메시지
+
+#### 행위(Behaviors)
+
+- `static success(source, fetchedCount, savedCount, duplicateCount)`: 성공 결과를 생성한다
+- `static failure(source, failureReason, failureMessage)`: 실패 결과를 생성한다
+
+#### 규칙(Rules)
+
+- 성공 결과의 수집/저장/중복 건수는 0 이상이어야 하고, 실패 사유와 실패 메시지를 갖지 않는다.
+- 실패 결과는 실패 사유와 빈 값이 아닌 실패 메시지를 가져야 하며, 건수는 모두 0으로 기록한다.
+
+### Provider 수집 상태(ProviderCollectionStatus)
+
+_Enum_
+
+- `SUCCEEDED`, `FAILED`
+
+### Provider 실패 사유(ProviderFailureReason)
+
+_Enum_
+
+provider 수집 실패 사유 분류다.
+
+- `TIMEOUT`: provider 응답 지연 또는 timeout
+- `RATE_LIMITED`: provider rate limit 또는 quota 제한
+- `CLIENT_ERROR`: 잘못된 요청, 인증 실패 같은 4xx 계열 오류
+- `SERVER_ERROR`: provider 5xx 계열 오류
+- `NETWORK_ERROR`: 연결 실패, DNS 오류 같은 네트워크 오류
+- `INVALID_RESPONSE`: 응답 파싱 실패 또는 필수 필드 누락
+- `UNKNOWN`: 아직 분류하지 못한 오류
+
+## 시장 데이터(MarketData) — 계획, 미구현
+
+_Aggregate Root_
+
+`CollectionTargetType.MARKET_DATA`가 가리키는 수집 대상이지만 도메인 모델은 아직 없다.
+
+- 시장 데이터는 뉴스 요약의 보조 정보로 사용한다.
+- 외부 API 실패는 전체 수집 흐름을 중단시키지 않고 실패 이력으로 남긴다.
