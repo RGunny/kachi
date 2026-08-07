@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationCommand
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus

@@ -1,8 +1,8 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
-import me.rgunny.kachi.notification.application.port.dto.dlt.DiscardNotificationDltMessageCommand
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageQuery
-import me.rgunny.kachi.notification.application.port.inbound.NotificationDltMessageAdminUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.DiscardNotificationDltMessageCommand
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageQuery
+import me.rgunny.kachi.notification.application.port.inbound.dlt.NotificationDltMessageAdminUseCase
 import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.service.adapter.inbound.web.ApiPaths

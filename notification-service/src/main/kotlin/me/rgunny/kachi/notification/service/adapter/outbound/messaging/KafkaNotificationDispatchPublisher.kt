@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.messaging
 
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPublisher
+import me.rgunny.kachi.notification.application.port.outbound.messaging.NotificationDispatchPublisher
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Component

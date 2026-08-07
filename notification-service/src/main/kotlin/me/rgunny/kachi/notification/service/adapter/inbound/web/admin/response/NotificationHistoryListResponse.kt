@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryResult
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistoryResult
 
 /**
  * Notification 상태 전이 history 목록 응답.

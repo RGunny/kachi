@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mongo
 
 import kotlinx.coroutines.reactor.awaitSingle
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDltMessagePersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDltMessagePersistencePort
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationDltMessageDocument
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mapper.NotificationDltMessageDocumentMapper

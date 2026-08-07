@@ -1,10 +1,10 @@
 package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.retry.RetryFailure

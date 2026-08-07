@@ -2,9 +2,9 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
-import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.InvalidDispatchMessageException
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException

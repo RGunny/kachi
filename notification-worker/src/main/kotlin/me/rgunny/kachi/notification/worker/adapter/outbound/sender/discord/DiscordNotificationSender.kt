@@ -1,9 +1,9 @@
 package me.rgunny.kachi.notification.worker.adapter.outbound.sender.discord
 
 import kotlinx.coroutines.CancellationException
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
-import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
+import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.retry.FailureCategory
 import me.rgunny.kachi.notification.retry.FailureSource

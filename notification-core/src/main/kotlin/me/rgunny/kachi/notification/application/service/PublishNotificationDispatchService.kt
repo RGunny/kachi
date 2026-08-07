@@ -1,10 +1,10 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.PublishNotificationDispatchResult
-import me.rgunny.kachi.notification.application.port.inbound.PublishNotificationDispatchUseCase
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPublisher
-import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.PublishNotificationDispatchResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.PublishNotificationDispatchUseCase
+import me.rgunny.kachi.notification.application.port.outbound.messaging.NotificationDispatchPublisher
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationOutboxPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPublishPersistencePort
 import java.time.Clock
 import java.time.Instant
 

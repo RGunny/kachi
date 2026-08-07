@@ -1,13 +1,13 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.NotificationDispatchMessage
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationEventSerializer
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationRequestPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.messaging.model.NotificationDispatchMessage
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.request.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.messaging.NotificationEventSerializer
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationRequestPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import java.time.Clock

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.outbox.NotificationOutboxSummary
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.NotificationOutboxSummary
 import java.time.Instant
 import java.util.UUID
 

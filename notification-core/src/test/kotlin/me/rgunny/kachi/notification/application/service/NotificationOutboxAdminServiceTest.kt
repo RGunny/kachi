@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.outbox.DeadNotificationOutboxQuery
-import me.rgunny.kachi.notification.application.port.dto.outbox.RecoverNotificationOutboxCommand
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.DeadNotificationOutboxQuery
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.RecoverNotificationOutboxCommand
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.domain.NotificationOutboxStatus

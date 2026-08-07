@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.outbox.NotificationOutboxAdminResult
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.NotificationOutboxAdminResult
 
 /**
  * Outbox 운영 목록 응답.

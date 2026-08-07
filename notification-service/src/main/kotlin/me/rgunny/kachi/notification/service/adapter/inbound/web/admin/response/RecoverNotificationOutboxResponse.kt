@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.outbox.RecoverNotificationOutboxResult
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.RecoverNotificationOutboxResult
 import java.time.Instant
 
 data class RecoverNotificationOutboxResponse(

@@ -2,8 +2,8 @@ package me.rgunny.kachi.notification.service.adapter.inbound.scheduler
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.CancellationException
-import me.rgunny.kachi.notification.application.port.dto.PublishNotificationDispatchResult
-import me.rgunny.kachi.notification.application.port.inbound.PublishNotificationDispatchUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.PublishNotificationDispatchResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.PublishNotificationDispatchUseCase
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetrics
 import org.junit.jupiter.api.DisplayName

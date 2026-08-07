@@ -3,8 +3,8 @@ package me.rgunny.kachi.notification.service.adapter.outbound.monitoring
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import me.rgunny.kachi.notification.application.port.dto.PublishNotificationDispatchResult
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.PublishNotificationDispatchResult
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus

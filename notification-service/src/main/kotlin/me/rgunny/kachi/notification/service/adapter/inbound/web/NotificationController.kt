@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.service.adapter.inbound.web
 
 import jakarta.validation.Valid
 import kotlinx.coroutines.CancellationException
-import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.request.RequestNotificationUseCase
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetrics
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract.RequestSource
 import me.rgunny.kachi.notification.service.adapter.inbound.web.response.ApiResponse

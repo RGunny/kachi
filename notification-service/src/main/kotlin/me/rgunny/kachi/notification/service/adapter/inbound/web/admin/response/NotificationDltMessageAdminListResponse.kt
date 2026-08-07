@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageAdminResult
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageAdminResult
 
 /**
  * DLT 메시지 운영 목록 응답.

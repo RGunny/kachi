@@ -1,10 +1,10 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.RecoverStaleProcessingDispatchResult
-import me.rgunny.kachi.notification.application.port.inbound.RecoverStaleProcessingDispatchUseCase
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.RecoverStaleProcessingDispatchUseCase
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.retry.RetryDecision
 import me.rgunny.kachi.notification.retry.RetryFailure
