@@ -1,9 +1,9 @@
 package me.rgunny.kachi.collector.application.service
 
-import me.rgunny.kachi.collector.application.port.`in`.ListNewsQuery
-import me.rgunny.kachi.collector.application.port.`in`.ListNewsResult
-import me.rgunny.kachi.collector.application.port.`in`.ListNewsUseCase
-import me.rgunny.kachi.collector.application.port.out.NewsPersistencePort
+import me.rgunny.kachi.collector.application.port.inbound.news.model.ListNewsQuery
+import me.rgunny.kachi.collector.application.port.inbound.news.model.ListNewsResult
+import me.rgunny.kachi.collector.application.port.inbound.news.ListNewsUseCase
+import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
 import org.springframework.stereotype.Service
 
 @Service

@@ -1,14 +1,14 @@
 package me.rgunny.kachi.collector.application.service
 
-import me.rgunny.kachi.collector.application.port.`in`.CollectNewsCommand
-import me.rgunny.kachi.collector.application.port.`in`.CollectNewsUseCase
-import me.rgunny.kachi.collector.application.port.`in`.CollectionRunResult
-import me.rgunny.kachi.collector.application.port.out.CollectedArticle
-import me.rgunny.kachi.collector.application.port.out.CollectionRunPersistencePort
-import me.rgunny.kachi.collector.application.port.out.KeywordReaderPort
-import me.rgunny.kachi.collector.application.port.out.NewsPersistencePort
-import me.rgunny.kachi.collector.application.port.out.NewsProviderPort
-import me.rgunny.kachi.collector.application.port.out.SaveNewsResult
+import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectNewsCommand
+import me.rgunny.kachi.collector.application.port.inbound.collection.CollectNewsUseCase
+import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectionRunResult
+import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedArticle
+import me.rgunny.kachi.collector.application.port.outbound.collection.CollectionRunPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.keyword.KeywordReaderPort
+import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
+import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.CollectionRun
 import me.rgunny.kachi.collector.domain.CollectionTargetType

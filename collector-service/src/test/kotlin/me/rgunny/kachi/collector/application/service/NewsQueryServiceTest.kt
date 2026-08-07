@@ -1,9 +1,9 @@
 package me.rgunny.kachi.collector.application.service
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.collector.application.port.`in`.ListNewsQuery
-import me.rgunny.kachi.collector.application.port.out.NewsPersistencePort
-import me.rgunny.kachi.collector.application.port.out.SaveNewsResult
+import me.rgunny.kachi.collector.application.port.inbound.news.model.ListNewsQuery
+import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsSource
