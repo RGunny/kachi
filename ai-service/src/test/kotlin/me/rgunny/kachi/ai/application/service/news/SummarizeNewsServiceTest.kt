@@ -4,8 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
-import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
@@ -291,7 +290,7 @@ class SummarizeNewsServiceTest {
             failed to listOf(AiTestFixture.newsArticle())
         )
         llmProvider.failureByKeyword = mapOf(
-            failed to AiTestFixture.llmProviderException(LlmFailureCategory.INVALID_RESPONSE)
+            failed to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
         )
         val service = service()
 
@@ -351,7 +350,7 @@ class SummarizeNewsServiceTest {
         quarantinePersistence.quarantines += AiTestFixture.quarantine(keyword = keyword, consecutiveFailures = 2)
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(LlmFailureCategory.INVALID_RESPONSE)
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
         )
         val service = service()
 
@@ -370,7 +369,7 @@ class SummarizeNewsServiceTest {
         quarantinePersistence.quarantines += AiTestFixture.quarantine(keyword = keyword, consecutiveFailures = 2)
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(LlmFailureCategory.RATE_LIMITED)
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_RATE_LIMITED)
         )
         val service = service()
 
@@ -394,10 +393,7 @@ class SummarizeNewsServiceTest {
         val keyword = AiKeyword.of("NVIDIA")
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(
-                category = LlmFailureCategory.TRANSIENT_ERROR,
-                source = LlmFailureSource.NETWORK
-            )
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NETWORK_ERROR)
         )
         val service = service()
 
@@ -418,7 +414,7 @@ class SummarizeNewsServiceTest {
             third to listOf(AiTestFixture.newsArticle())
         )
         llmProvider.failureByKeyword = mapOf(
-            first to AiTestFixture.llmProviderException(LlmFailureCategory.RATE_LIMITED)
+            first to AiTestFixture.llmProviderException(LlmFailureCode.LLM_RATE_LIMITED)
         )
         val service = service()
 
@@ -444,7 +440,7 @@ class SummarizeNewsServiceTest {
             succeeded to listOf(AiTestFixture.newsArticle())
         )
         llmProvider.failureByKeyword = mapOf(
-            failed to AiTestFixture.llmProviderException(LlmFailureCategory.TIMEOUT)
+            failed to AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
         )
         val service = service()
 

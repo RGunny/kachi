@@ -67,7 +67,7 @@ class CollectorServiceNewsReaderAdapterTest {
             }
 
             assertEquals(NewsReaderErrorCode.COLLECTOR_SERVICE_RESPONSE_FAILED, exception.errorCode)
-            assertEquals("NEWS_READER_002", exception.errorCode.code)
+            assertEquals("NEWS_READER_RESPONSE_FAILED", exception.errorCode.code)
         }
 
         @Test
@@ -80,7 +80,7 @@ class CollectorServiceNewsReaderAdapterTest {
             }
 
             assertEquals(NewsReaderErrorCode.COLLECTOR_SERVICE_RESPONSE_MISSING_DATA, exception.errorCode)
-            assertEquals("NEWS_READER_003", exception.errorCode.code)
+            assertEquals("NEWS_READER_RESPONSE_MISSING_DATA", exception.errorCode.code)
         }
 
         @Test
@@ -96,7 +96,7 @@ class CollectorServiceNewsReaderAdapterTest {
             }
 
             assertEquals(NewsReaderErrorCode.COLLECTOR_SERVICE_REQUEST_FAILED, exception.errorCode)
-            assertEquals("NEWS_READER_001", exception.errorCode.code)
+            assertEquals("NEWS_READER_REQUEST_FAILED", exception.errorCode.code)
         }
     }
 

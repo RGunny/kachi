@@ -3,7 +3,8 @@ package me.rgunny.kachi.ai.domain.llm
 /**
  * ai-service가 정의한 표준 LLM 실패 코드.
  *
- * provider가 내려준 고유 코드는 [LlmFailure.external]로 그대로 보존한다.
+ * [LlmFailure]의 원천/성격이 여기서 파생되므로, 이 enum이 실패 분류의 유일한 기준이다.
+ * provider 원문 코드는 우리 분류 체계와 섞지 않는다. 보존이 필요해지면 별도 필드로 추가한다.
  */
 enum class LlmFailureCode(
     val code: String,

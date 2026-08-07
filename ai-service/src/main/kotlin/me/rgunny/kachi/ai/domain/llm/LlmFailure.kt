@@ -8,24 +8,28 @@ package me.rgunny.kachi.ai.domain.llm
  * - 키워드 격리 카운트를 올릴 것인가([keywordBound])
  * - provider circuit breaker에 실패로 기록할 것인가([retryable])
  *
- * notification-core의 RetryFailure와 어휘를 맞추되 코드는 공유하지 않는다.
- * 두 bounded context는 확장 이유가 다르므로 한쪽의 요구가 다른 쪽 enum에 값을 더하는 경로를 만들지 않는다.
  * 자세한 결정 배경은 docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md 를 참고한다.
  */
 data class LlmFailure(
-    val code: String,
-    val message: String,
-    val source: LlmFailureSource,
-    val category: LlmFailureCategory,
+    val code: LlmFailureCode,
     val provider: LlmProviderName,
+    val message: String = code.defaultMessage,
     val statusCode: Int? = null,
     val retryAfterMillis: Long? = null
 ) {
     init {
-        require(code.isNotBlank()) { "LLM 실패 코드는 빈 값일 수 없습니다" }
         require(message.isNotBlank()) { "LLM 실패 메시지는 빈 값일 수 없습니다" }
         require(retryAfterMillis == null || retryAfterMillis >= 0) { "Retry-After는 음수일 수 없습니다" }
     }
+
+    /**
+     * 원천과 분류는 [code]에서 파생한다. 분류 축이 코드와 어긋난 실패를 만들 수 없게 하려는 것이다.
+     */
+    val source: LlmFailureSource
+        get() = code.source
+
+    val category: LlmFailureCategory
+        get() = code.category
 
     /**
      * 다음 tick이 같은 구간을 다시 처리하면 해소될 수 있는 실패인가.
@@ -44,59 +48,15 @@ data class LlmFailure(
     val keywordBound: Boolean
         get() = category in KEYWORD_BOUND_CATEGORIES
 
-    companion object {
-        private val RETRYABLE_CATEGORIES = setOf(
+    private companion object {
+        val RETRYABLE_CATEGORIES = setOf(
             LlmFailureCategory.TIMEOUT,
             LlmFailureCategory.RATE_LIMITED,
             LlmFailureCategory.TRANSIENT_ERROR
         )
-        private val KEYWORD_BOUND_CATEGORIES = setOf(
+        val KEYWORD_BOUND_CATEGORIES = setOf(
             LlmFailureCategory.INVALID_RESPONSE,
             LlmFailureCategory.VALIDATION_ERROR
         )
-
-        /**
-         * ai-service가 정의한 표준 실패 코드로 생성한다.
-         */
-        fun of(
-            code: LlmFailureCode,
-            provider: LlmProviderName,
-            message: String = code.defaultMessage,
-            statusCode: Int? = null,
-            retryAfterMillis: Long? = null
-        ): LlmFailure {
-            return LlmFailure(
-                code = code.code,
-                message = message,
-                source = code.source,
-                category = code.category,
-                provider = provider,
-                statusCode = statusCode,
-                retryAfterMillis = retryAfterMillis
-            )
-        }
-
-        /**
-         * provider가 내려준 고유 실패 코드를 보존해 생성한다.
-         */
-        fun external(
-            code: String,
-            message: String,
-            source: LlmFailureSource,
-            category: LlmFailureCategory,
-            provider: LlmProviderName,
-            statusCode: Int? = null,
-            retryAfterMillis: Long? = null
-        ): LlmFailure {
-            return LlmFailure(
-                code = code,
-                message = message,
-                source = source,
-                category = category,
-                provider = provider,
-                statusCode = statusCode,
-                retryAfterMillis = retryAfterMillis
-            )
-        }
     }
 }

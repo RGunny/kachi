@@ -7,8 +7,7 @@ import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
-import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
-import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
@@ -164,30 +163,24 @@ object AiTestFixture {
     }
 
     /**
-     * 분류된 LLM 실패를 만든다. 격리 카운트와 조기 중단 판단이 category에 따라 갈리므로 테스트가 직접 지정한다.
+     * 분류된 LLM 실패를 만든다. 격리 카운트와 조기 중단 판단이 코드에 따라 갈리므로 테스트가 직접 지정한다.
      */
     fun llmFailure(
-        category: LlmFailureCategory,
-        source: LlmFailureSource = LlmFailureSource.PROVIDER,
+        code: LlmFailureCode,
         statusCode: Int? = null,
         retryAfterMillis: Long? = null
     ): LlmFailure {
         return LlmFailure(
-            code = "TEST_${category.name}",
-            message = "test ${category.name} failure",
-            source = source,
-            category = category,
+            code = code,
             provider = PROVIDER,
+            message = "test ${code.name} failure",
             statusCode = statusCode,
             retryAfterMillis = retryAfterMillis
         )
     }
 
-    fun llmProviderException(
-        category: LlmFailureCategory,
-        source: LlmFailureSource = LlmFailureSource.PROVIDER
-    ): LlmProviderException {
-        return LlmProviderException(llmFailure(category = category, source = source))
+    fun llmProviderException(code: LlmFailureCode): LlmProviderException {
+        return LlmProviderException(llmFailure(code))
     }
 
     fun quarantineProperties(

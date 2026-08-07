@@ -222,7 +222,7 @@ class OpenAiLlmProvider(
         statusCode: Int? = null,
         retryAfterMillis: Long? = null
     ): LlmFailure {
-        return LlmFailure.of(
+        return LlmFailure(
             code = code,
             provider = LlmProviderName.of(providerType.value),
             message = message,
