@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.fake
 
-import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.domain.NotificationId
 import java.time.Duration
 

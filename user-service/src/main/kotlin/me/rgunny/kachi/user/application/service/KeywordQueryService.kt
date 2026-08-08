@@ -1,9 +1,9 @@
 package me.rgunny.kachi.user.application.service
 
-import me.rgunny.kachi.user.application.port.`in`.ListKeywordResult
-import me.rgunny.kachi.user.application.port.`in`.ListKeywordsQuery
-import me.rgunny.kachi.user.application.port.`in`.ListKeywordsUseCase
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.ListKeywordResult
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.ListKeywordsQuery
+import me.rgunny.kachi.user.application.port.inbound.keyword.ListKeywordsUseCase
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
 import org.springframework.stereotype.Service
 
 @Service

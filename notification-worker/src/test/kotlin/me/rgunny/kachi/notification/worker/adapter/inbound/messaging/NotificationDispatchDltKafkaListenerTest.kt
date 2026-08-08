@@ -2,9 +2,9 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.dlt.PersistNotificationDltMessageCommand
-import me.rgunny.kachi.notification.application.port.dto.dlt.PersistNotificationDltMessageResult
-import me.rgunny.kachi.notification.application.port.inbound.PersistNotificationDltMessageUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageCommand
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageResult
+import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
 import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract

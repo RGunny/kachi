@@ -1,9 +1,9 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
-import me.rgunny.kachi.notification.application.port.dto.admin.DeadNotificationQuery
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryQuery
-import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationCommand
-import me.rgunny.kachi.notification.application.port.inbound.NotificationAdminUseCase
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.DeadNotificationQuery
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistoryQuery
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.RecoverDeadNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.admin.NotificationAdminUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.service.adapter.inbound.web.ApiPaths
 import me.rgunny.kachi.notification.service.adapter.inbound.web.ApiVersions

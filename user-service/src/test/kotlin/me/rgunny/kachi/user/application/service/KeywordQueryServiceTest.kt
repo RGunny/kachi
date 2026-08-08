@@ -1,9 +1,9 @@
 package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.InactiveUserException
-import me.rgunny.kachi.user.application.port.`in`.ListKeywordsQuery
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.ListKeywordsQuery
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword
@@ -15,9 +15,11 @@ import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -25,7 +27,7 @@ import kotlin.test.assertFailsWith
 @DisplayName("KeywordQueryService")
 class KeywordQueryServiceTest {
     private val userId = UserId.newId()
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
 
     @Nested
     @DisplayName("list()")
@@ -35,7 +37,7 @@ class KeywordQueryServiceTest {
         @DisplayName("사용자 관심 키워드 목록을 등록일 역순으로 조회한다")
         fun listKeywords() {
             val olderKeyword = keyword(name = "Trump", registeredAt = registeredAt)
-            val newerKeyword = keyword(name = "Tesla", registeredAt = Instant.parse("2026-05-20T01:00:00Z"))
+            val newerKeyword = keyword(name = "Tesla", registeredAt = UserTestFixture.NOW.plus(Duration.ofHours(1)))
             val keywordPersistencePort = FakeKeywordPersistencePort(
                 keywords = listOf(olderKeyword, newerKeyword)
             )

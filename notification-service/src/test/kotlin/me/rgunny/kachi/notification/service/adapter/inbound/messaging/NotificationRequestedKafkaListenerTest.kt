@@ -1,9 +1,9 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.messaging
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.request.RequestNotificationUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract

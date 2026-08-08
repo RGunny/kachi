@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.fake
 
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPublishPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPublishPersistencePort
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import java.time.Instant
 

@@ -1,8 +1,8 @@
 package me.rgunny.kachi.notification.fake
 
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
-import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
+import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.domain.NotificationChannel
 
 class FakeSender(

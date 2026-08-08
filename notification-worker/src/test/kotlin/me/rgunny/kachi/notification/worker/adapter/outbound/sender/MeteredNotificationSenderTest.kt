@@ -3,9 +3,9 @@ package me.rgunny.kachi.notification.worker.adapter.outbound.sender
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
-import me.rgunny.kachi.notification.application.port.outbound.NotificationSender
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
+import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
-import me.rgunny.kachi.notification.application.port.dto.dlt.PersistNotificationDltMessageCommand
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageCommand
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.Headers
 import org.springframework.kafka.support.KafkaHeaders

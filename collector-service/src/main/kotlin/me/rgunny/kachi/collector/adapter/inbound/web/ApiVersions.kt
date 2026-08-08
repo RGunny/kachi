@@ -1,0 +1,7 @@
+package me.rgunny.kachi.collector.adapter.inbound.web
+
+object ApiVersions {
+    const val PATH_PREFIX = "/api/{version}"
+    const val V1 = "1"
+    const val V1_PATH_PREFIX = "/api/v$V1"
+}

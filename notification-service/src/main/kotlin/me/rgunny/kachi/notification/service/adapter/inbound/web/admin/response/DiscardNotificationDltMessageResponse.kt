@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin.response
 
-import me.rgunny.kachi.notification.application.port.dto.dlt.DiscardNotificationDltMessageResult
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.DiscardNotificationDltMessageResult
 import java.time.Instant
 import java.util.UUID
 

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
 import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId

@@ -1,8 +1,8 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId

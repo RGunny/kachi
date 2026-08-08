@@ -5,10 +5,10 @@ import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
 import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
-import me.rgunny.kachi.user.application.port.`in`.RegisterKeywordCommand
-import me.rgunny.kachi.user.application.port.`in`.UpdateKeywordCommand
-import me.rgunny.kachi.user.application.port.out.KeywordPersistencePort
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.RegisterKeywordCommand
+import me.rgunny.kachi.user.application.port.inbound.keyword.model.UpdateKeywordCommand
+import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword
@@ -20,12 +20,10 @@ import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -35,8 +33,8 @@ import kotlin.test.assertTrue
 
 @DisplayName("KeywordCommandService")
 class KeywordCommandServiceTest {
-    private val now = Instant.parse("2026-05-20T00:00:00Z")
-    private val clock = Clock.fixed(now, ZoneOffset.UTC)
+    private val now = UserTestFixture.NOW
+    private val clock = UserTestFixture.CLOCK
     private val userId = UserId.of(UUID.randomUUID())
 
     @Nested

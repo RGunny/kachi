@@ -1,15 +1,15 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.DispatchFailureClassification
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationResult
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.SendNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.DispatchNotificationUseCase
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationDispatchPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus

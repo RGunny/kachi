@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.dto.dlt.PersistNotificationDltMessageCommand
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageCommand
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.fake.FakeNotificationDltMessagePersistencePort
 import org.junit.jupiter.api.DisplayName

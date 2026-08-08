@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.service.adapter.outbound.persistence.mongo
 
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import me.rgunny.kachi.notification.application.port.outbound.NotificationOutboxPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationOutboxPersistencePort
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.domain.NotificationOutboxId
 import me.rgunny.kachi.notification.domain.NotificationOutboxStatus

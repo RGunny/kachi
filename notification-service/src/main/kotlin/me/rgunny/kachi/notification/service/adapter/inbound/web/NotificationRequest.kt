@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.service.adapter.inbound.web
 
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
-import me.rgunny.kachi.notification.application.port.dto.RequestNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationCommand
 import me.rgunny.kachi.notification.domain.NotificationChannel
 
 data class NotificationRequest(

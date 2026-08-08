@@ -49,28 +49,26 @@ Kachi는 사용자가 등록한 관심 키워드를 기준으로 뉴스와 시�
 
 ---
 
-## 4. 이벤트 흐름
+## 4. 데이터 흐름
 
 ```text
 user-service
-  └─ 관심 키워드 등록
-      -> ai-service
-          └─ 키워드 확장
-              -> collector-service
-                  └─ 뉴스/시장 데이터 수집
-                      -> ai-service
-                          └─ 뉴스 요약
-                              -> notification-service
-                                  └─ 알림 발송
-                                      -> history-service
-                                          └─ 이력 적재 / 통계 집계
+  └─ 관심 키워드 등록/관리
+      -> collector-service ── 활성 키워드 조회(HTTP internal) 후 뉴스 수집
+          -> ai-service ── 수집 뉴스를 키워드별로 LLM 요약 (newsHash 중복 방지)
+              -> notification-service ── 알림 접수, outbox 발행 (ai 연결은 예정)
+                  -> notification-worker ── Slack/Discord/Telegram 발송
+                      -> history-service ── 이력 적재 / 통계 집계 (미구현)
 ```
+
+서비스 간 경계와 전체 데이터 흐름은 [도메인모델.md의 컨텍스트 맵](./docs/도메인모델.md)을
+기준으로 관리한다. 키워드 확장(ai)은 설계만 존재하고 비활성 상태다.
 
 ---
 
 ## 5. 현재 진행 상태
 
-현재는 `user-service`, `collector-service`, `notification-service`의 기본 기능을 구현 중이다.
+현재는 `user-service`, `collector-service`, `ai-service`, `notification-service`의 기본 기능을 구현 중이다.
 
 도메인 세부 규칙은 [도메인 모델](./docs/도메인모델.md)을 기준으로 관리한다.  
 설계 결정의 배경과 trade-off는 [decisions](./docs/decisions)에 기록한다.
@@ -79,7 +77,7 @@ user-service
 | --- | --- | --- |
 | `user-service` | 사용자, 키워드, OAuth2/JWT, refresh token, MySQL/Redis 저장소 기본 흐름 구현 | [user-service README](./user-service/README.md) |
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
-| `ai-service` | 설계 착수: 키워드 확장, 뉴스 요약, AI 실행 기록, MongoDB 저장, LLM provider 연동 기준 정의 | [ai-service README](./ai-service/README.md) |
+| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동, MongoDB 저장, scheduler/internal API 진입점 | [ai-service README](./ai-service/README.md) |
 | `notification-service` | notification-core/service/worker/contract 모듈 구성, 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
 | `history-service` | 미구현 | - |
 
@@ -129,9 +127,11 @@ set +a
 
 | 문서 | 내용 |
 | --- | --- |
+| [문서 지도](./docs/README.md) | docs/ 각 문서의 책임, 축 분담, 갱신 규칙 |
 | [용어사전](./docs/용어사전.md) | Kachi 도메인 용어 정의 |
-| [도메인 모델](./docs/도메인모델.md) | bounded context, aggregate, value object, 도메인 규칙 |
+| [도메인 모델](./docs/도메인모델.md) | 도메인 이야기, 컨텍스트 맵, 컨텍스트별 상세 문서 index |
 | [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
+| [개발가이드](./docs/개발가이드.md) | 도메인/예외/패키지/어댑터/테스트 코드 관례와 네이밍 |
 | [포트 구성](./docs/포트-구성.md) | 로컬 호스트 공개 포트, 컨테이너 인바운드 포트, 서비스 간 연결 계약 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
 | [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |
@@ -145,6 +145,7 @@ set +a
 | [008. collector-service 뉴스 수집 실행 모델](./docs/decisions/008-collector-service-뉴스-수집-실행-모델.md) | scheduler/internal API 진입점과 단일 인스턴스 lock 결정 |
 | [009. 외부 뉴스 provider 연동 기준](./docs/decisions/009-외부-뉴스-provider-연동-기준.md) | Google RSS, Naver, Finnhub provider 설정과 credential 기본 정책 |
 | [010. ai-service 초기 설계](./docs/decisions/010-ai-service-초기-설계.md) | 키워드 단위 AI 처리, 실행 모델, 저장 정책, LLM provider 연동 기준 |
+| [011. ai-service newsHash 요약 중복 방지](./docs/decisions/011-ai-service-newsHash-요약-중복-방지.md) | 요약 입력 묶음 식별 hash와 중복 저장 방지 결정 |
 | [012. notification-service 초기 모듈 설계](./docs/decisions/012-notification-service-초기-모듈-설계.md) | notification contract/core/service/worker 모듈 경계와 런타임 분리 기준 |
 | [013. notification 요청 접수와 dispatch 발행 흐름](./docs/decisions/013-notification-request-service-outbox-dispatch-flow.md) | notification.requested 접수, outbox 저장, notification.dispatch 발행 흐름 |
 | [014. notification dispatch 실패 분류와 Kafka retry 연결](./docs/decisions/014-notification-dispatch-retry-classification.md) | vendor 실패 분류, Kafka retry/DLT 연결, dispatch finalize CAS 기준 |

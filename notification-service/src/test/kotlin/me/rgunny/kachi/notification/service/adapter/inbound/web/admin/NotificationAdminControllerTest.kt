@@ -1,15 +1,15 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.admin.DeadNotificationQuery
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationAdminResult
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryQuery
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistoryResult
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationHistorySummary
-import me.rgunny.kachi.notification.application.port.dto.admin.NotificationSummary
-import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationCommand
-import me.rgunny.kachi.notification.application.port.dto.admin.RecoverDeadNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.NotificationAdminUseCase
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.DeadNotificationQuery
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationAdminResult
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistoryQuery
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistoryResult
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistorySummary
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationSummary
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.RecoverDeadNotificationCommand
+import me.rgunny.kachi.notification.application.port.inbound.admin.model.RecoverDeadNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.admin.NotificationAdminUseCase
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationHistoryId
 import me.rgunny.kachi.notification.domain.NotificationId

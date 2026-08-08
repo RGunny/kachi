@@ -1,9 +1,9 @@
 package me.rgunny.kachi.collector.domain
 
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -13,8 +13,8 @@ import kotlin.test.assertNotNull
 class NewsTest {
     private val title = NewsTitle.of("NVIDIA 실적 발표")
     private val url = NewsUrl.of("https://kachi.com/news/1")
-    private val publishedAt = Instant.parse("2026-05-26T00:00:00Z")
-    private val collectedAt = Instant.parse("2026-05-26T00:01:00Z")
+    private val publishedAt = CollectorTestFixture.NOW
+    private val collectedAt = publishedAt.plusSeconds(60)
     private val keyword = CollectedKeyword.of("NVIDIA")
 
     @Nested

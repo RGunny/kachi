@@ -2,14 +2,14 @@ package me.rgunny.kachi.user.application.service
 
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
-import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensCommand
-import me.rgunny.kachi.user.application.port.`in`.IssueAuthTokensResult
-import me.rgunny.kachi.user.application.port.`in`.LogoutCommand
-import me.rgunny.kachi.user.application.port.`in`.RefreshTokenCommand
-import me.rgunny.kachi.user.application.port.`in`.RefreshTokenResult
-import me.rgunny.kachi.user.application.port.out.RefreshTokenStorePort
-import me.rgunny.kachi.user.application.port.out.TokenPort
-import me.rgunny.kachi.user.application.port.out.UserPersistencePort
+import me.rgunny.kachi.user.application.port.inbound.auth.model.IssueAuthTokensCommand
+import me.rgunny.kachi.user.application.port.inbound.auth.model.IssueAuthTokensResult
+import me.rgunny.kachi.user.application.port.inbound.auth.model.LogoutCommand
+import me.rgunny.kachi.user.application.port.inbound.auth.model.RefreshTokenCommand
+import me.rgunny.kachi.user.application.port.inbound.auth.model.RefreshTokenResult
+import me.rgunny.kachi.user.application.port.outbound.auth.RefreshTokenStorePort
+import me.rgunny.kachi.user.application.port.outbound.auth.TokenPort
+import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.application.token.IssuedToken
 import me.rgunny.kachi.user.application.token.ParsedToken
 import me.rgunny.kachi.user.application.token.StoredRefreshToken
@@ -22,11 +22,12 @@ import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
+import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.Clock
-import java.time.Instant
+import java.time.Duration
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -34,8 +35,8 @@ import kotlin.test.assertFailsWith
 @DisplayName("TokenService")
 class TokenServiceTest {
     private val userId = UserId.newId()
-    private val registeredAt = Instant.parse("2026-05-20T00:00:00Z")
-    private val loggedInAt = Instant.parse("2026-05-20T01:00:00Z")
+    private val registeredAt = UserTestFixture.NOW
+    private val loggedInAt = UserTestFixture.NOW.plus(Duration.ofHours(1))
     private val clock = Clock.fixed(loggedInAt, ZoneOffset.UTC)
 
     @Nested
@@ -270,7 +271,7 @@ class TokenServiceTest {
             return IssuedToken(
                 id = "new-access-token-id",
                 value = "new-access-token",
-                expiresAt = Instant.parse("2026-05-20T00:15:00Z")
+                expiresAt = UserTestFixture.NOW.plus(Duration.ofMinutes(15))
             )
         }
 
@@ -280,7 +281,7 @@ class TokenServiceTest {
             return IssuedToken(
                 id = "new-refresh-token-id",
                 value = "new-refresh-token",
-                expiresAt = Instant.parse("2026-06-03T00:00:00Z")
+                expiresAt = UserTestFixture.NOW.plus(Duration.ofDays(14))
             )
         }
 

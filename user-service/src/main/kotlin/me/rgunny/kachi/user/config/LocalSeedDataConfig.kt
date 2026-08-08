@@ -1,9 +1,9 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.out.persistence.KeywordJpaEntity
-import me.rgunny.kachi.user.adapter.out.persistence.KeywordJpaRepository
-import me.rgunny.kachi.user.adapter.out.persistence.UserJpaEntity
-import me.rgunny.kachi.user.adapter.out.persistence.UserJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaRepository
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword

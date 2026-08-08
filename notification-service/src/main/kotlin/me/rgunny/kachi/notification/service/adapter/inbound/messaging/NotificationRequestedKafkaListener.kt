@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.service.adapter.inbound.messaging
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.inbound.RequestNotificationUseCase
+import me.rgunny.kachi.notification.application.port.inbound.request.RequestNotificationUseCase
 import me.rgunny.kachi.notification.contract.NotificationRequestedEvent
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetrics
 import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract.RequestSource

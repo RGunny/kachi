@@ -1,13 +1,13 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.dlt.DiscardNotificationDltMessageCommand
-import me.rgunny.kachi.notification.application.port.dto.dlt.DiscardNotificationDltMessageResult
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageDetail
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageAdminResult
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageQuery
-import me.rgunny.kachi.notification.application.port.dto.dlt.NotificationDltMessageSummary
-import me.rgunny.kachi.notification.application.port.inbound.NotificationDltMessageAdminUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.DiscardNotificationDltMessageCommand
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.DiscardNotificationDltMessageResult
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageDetail
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageAdminResult
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageQuery
+import me.rgunny.kachi.notification.application.port.inbound.dlt.model.NotificationDltMessageSummary
+import me.rgunny.kachi.notification.application.port.inbound.dlt.NotificationDltMessageAdminUseCase
 import me.rgunny.kachi.notification.domain.NotificationDltMessageId
 import me.rgunny.kachi.notification.domain.NotificationDltMessageStatus
 import me.rgunny.kachi.notification.service.adapter.inbound.web.admin.request.DiscardNotificationDltMessageRequest

@@ -1,9 +1,9 @@
 package me.rgunny.kachi.collector.domain
 
+import me.rgunny.kachi.collector.fixture.CollectorTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -13,8 +13,8 @@ import kotlin.test.assertNull
 @DisplayName("CollectionRun")
 class CollectionRunTest {
 
-    private val startedAt = Instant.parse("2026-05-26T00:00:00Z")
-    private val finishedAt = Instant.parse("2026-05-26T00:01:00Z")
+    private val startedAt = CollectorTestFixture.NOW
+    private val finishedAt = startedAt.plusSeconds(60)
 
     @Nested
     @DisplayName("start()")
@@ -184,7 +184,7 @@ class CollectionRunTest {
             assertFailsWith<IllegalArgumentException> {
                 run.complete(
                     providerResults = listOf(success(NewsSource.GOOGLE)),
-                    finishedAt = Instant.parse("2026-05-25T23:59:59Z")
+                    finishedAt = startedAt.minusSeconds(1)
                 )
             }
         }

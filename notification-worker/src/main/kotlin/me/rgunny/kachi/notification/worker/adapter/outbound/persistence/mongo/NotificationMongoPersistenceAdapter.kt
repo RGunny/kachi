@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.worker.adapter.outbound.persistence.mongo
 import com.mongodb.MongoCommandException
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import me.rgunny.kachi.notification.application.port.outbound.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationHistory
 import me.rgunny.kachi.notification.domain.NotificationId

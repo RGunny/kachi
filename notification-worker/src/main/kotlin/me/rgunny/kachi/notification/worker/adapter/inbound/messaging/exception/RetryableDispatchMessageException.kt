@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception
 
-import me.rgunny.kachi.notification.application.port.dto.DispatchNotificationResult
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
 
 class RetryableDispatchMessageException(
     val result: DispatchNotificationResult,

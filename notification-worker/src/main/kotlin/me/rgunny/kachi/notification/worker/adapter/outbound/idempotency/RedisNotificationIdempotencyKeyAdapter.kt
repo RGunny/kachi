@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.worker.adapter.outbound.idempotency
 import com.github.f4b6a3.uuid.UuidCreator
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import me.rgunny.kachi.notification.application.port.outbound.NotificationIdempotencyKeyPort
+import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.domain.NotificationId
 import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate

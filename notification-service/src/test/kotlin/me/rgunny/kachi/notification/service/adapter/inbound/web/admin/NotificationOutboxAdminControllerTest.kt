@@ -1,12 +1,12 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.web.admin
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.dto.outbox.DeadNotificationOutboxQuery
-import me.rgunny.kachi.notification.application.port.dto.outbox.NotificationOutboxAdminResult
-import me.rgunny.kachi.notification.application.port.dto.outbox.NotificationOutboxSummary
-import me.rgunny.kachi.notification.application.port.dto.outbox.RecoverNotificationOutboxCommand
-import me.rgunny.kachi.notification.application.port.dto.outbox.RecoverNotificationOutboxResult
-import me.rgunny.kachi.notification.application.port.inbound.NotificationOutboxAdminUseCase
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.DeadNotificationOutboxQuery
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.NotificationOutboxAdminResult
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.NotificationOutboxSummary
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.RecoverNotificationOutboxCommand
+import me.rgunny.kachi.notification.application.port.inbound.outbox.model.RecoverNotificationOutboxResult
+import me.rgunny.kachi.notification.application.port.inbound.outbox.NotificationOutboxAdminUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationOutboxId
 import me.rgunny.kachi.notification.domain.NotificationOutboxStatus

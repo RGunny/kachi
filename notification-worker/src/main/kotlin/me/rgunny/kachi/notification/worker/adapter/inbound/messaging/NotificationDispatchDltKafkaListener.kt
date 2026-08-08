@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.notification.application.port.inbound.PersistNotificationDltMessageUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.slf4j.LoggerFactory

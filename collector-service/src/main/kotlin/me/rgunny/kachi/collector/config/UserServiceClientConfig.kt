@@ -1,7 +1,7 @@
 package me.rgunny.kachi.collector.config
 
-import me.rgunny.kachi.collector.adapter.out.keyword.UserServiceKeywordProperties
-import me.rgunny.kachi.collector.adapter.out.keyword.UserServiceKeywordReaderAdapter
+import me.rgunny.kachi.collector.adapter.outbound.keyword.UserServiceKeywordProperties
+import me.rgunny.kachi.collector.adapter.outbound.keyword.UserServiceKeywordReaderAdapter
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean

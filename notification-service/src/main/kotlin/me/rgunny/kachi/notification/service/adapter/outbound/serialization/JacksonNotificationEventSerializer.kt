@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.service.adapter.outbound.serialization
 
-import me.rgunny.kachi.notification.application.port.dto.NotificationDispatchMessage
-import me.rgunny.kachi.notification.application.port.outbound.NotificationEventSerializer
+import me.rgunny.kachi.notification.application.port.outbound.messaging.model.NotificationDispatchMessage
+import me.rgunny.kachi.notification.application.port.outbound.messaging.NotificationEventSerializer
 import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.contract.NotificationChannel as ContractNotificationChannel
 import org.springframework.stereotype.Component
