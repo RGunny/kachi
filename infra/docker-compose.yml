@@ -3,9 +3,13 @@ name: kachi
 networks:
   app-network:
     driver: bridge
+  obs-network:
+    driver: bridge
 
 volumes:
   redis-data:
   mysql-data:
   mongo-data:
   kafka-data:
+  prometheus-data:
+  grafana-data:

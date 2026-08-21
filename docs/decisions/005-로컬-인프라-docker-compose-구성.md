@@ -20,6 +20,7 @@ infra/docker-compose.mysql.yml
 infra/docker-compose.redis.yml
 infra/docker-compose.mongo.yml
 infra/docker-compose.kafka.yml
+infra/docker-compose.observability.yml
 ```
 
 실행 명령:
@@ -28,14 +29,26 @@ infra/docker-compose.kafka.yml
 docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml -f infra/docker-compose.kafka.yml up -d
 ```
 
+```sh
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml -f infra/docker-compose.kafka.yml -f infra/docker-compose.observability.yml up -d
+```
+
 `docker-compose.yml`에는 프로젝트 공통 요소를 둔다.
 
 - Compose project name
-- 공통 network
+- 애플리케이션 인프라 network
+- 관측성 network
 - MySQL volume
 - Redis volume
 - MongoDB volume
 - Kafka volume
+- Prometheus volume
+- Grafana volume
+
+관측성 stack도 같은 project로 둔다.
+`docker-compose.observability.yml`이 자체 project name을 선언하면 volume과 network에 다른 prefix가 붙고
+`docker compose -p kachi ps`에 잡히지 않아, 로컬 인프라를 한 단위로 조회하거나 정리할 수 없다.
+대신 network는 `app-network`와 `obs-network`로 나눠 관측성 트래픽 경로는 분리한다.
 
 `docker-compose.mysql.yml`에는 MySQL 서비스만 둔다.
 

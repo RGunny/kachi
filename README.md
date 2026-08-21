@@ -88,14 +88,17 @@ user-service
 로컬 인프라 실행:
 
 ```sh
-docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml -f infra/docker-compose.kafka.yml up -d
 ```
 
-notification 운영 모니터링 스택 실행:
+notification 운영 모니터링 스택까지 함께 실행:
 
 ```sh
-docker compose -f infra/docker-compose.observability.yml up -d
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f infra/docker-compose.redis.yml -f infra/docker-compose.mongo.yml -f infra/docker-compose.kafka.yml -f infra/docker-compose.observability.yml up -d
 ```
+
+모든 compose 파일은 `infra/docker-compose.yml`의 `kachi` project로 묶인다.
+`docker compose -p kachi ps`로 전체 상태를 한 번에 확인하고, 조합한 파일에 `down`을 주면 함께 정리된다.
 
 Grafana는 `http://localhost:3000`, Prometheus는 `http://localhost:9094`에서 확인한다.
 notification metric은 `notification-service`와 `notification-worker`의 `/actuator/prometheus`를 Prometheus가 scrape한다.

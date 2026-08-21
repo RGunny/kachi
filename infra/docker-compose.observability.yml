@@ -1,13 +1,3 @@
-name: kachi-observability
-
-networks:
-  obs-network:
-    driver: bridge
-
-volumes:
-  prometheus-data:
-  grafana-data:
-
 services:
   prometheus:
     image: prom/prometheus:v2.55.1
