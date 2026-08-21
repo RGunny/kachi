@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.out.persistence.KeywordQuarantinePersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType

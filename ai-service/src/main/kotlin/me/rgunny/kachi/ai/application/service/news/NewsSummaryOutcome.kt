@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.service.news
 
-import me.rgunny.kachi.ai.application.port.dto.llm.LlmGenerationMetadata
-import me.rgunny.kachi.ai.application.port.dto.news.SummarizedNewsResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizedNewsResult
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiSkipReason
 

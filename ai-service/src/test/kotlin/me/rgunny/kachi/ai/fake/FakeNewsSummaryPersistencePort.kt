@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.out.persistence.NewsSummaryPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.persistence.NewsSummaryPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion

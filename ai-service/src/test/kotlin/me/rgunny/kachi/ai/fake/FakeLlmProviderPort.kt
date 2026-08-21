@@ -1,11 +1,11 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.dto.llm.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryPlan
-import me.rgunny.kachi.ai.application.port.dto.llm.LlmNewsSummaryResult
-import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
-import me.rgunny.kachi.ai.application.port.out.llm.PreparedLlmNewsSummary
-import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryPlan
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
+import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment

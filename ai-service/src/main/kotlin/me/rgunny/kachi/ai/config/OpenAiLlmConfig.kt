@@ -3,10 +3,10 @@ package me.rgunny.kachi.ai.config
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
-import me.rgunny.kachi.ai.adapter.out.llm.RoutingLlmProvider
-import me.rgunny.kachi.ai.adapter.out.llm.openai.OpenAiLlmProvider
-import me.rgunny.kachi.ai.adapter.out.llm.openai.OpenAiProviderType
-import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiProviderType
+import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean

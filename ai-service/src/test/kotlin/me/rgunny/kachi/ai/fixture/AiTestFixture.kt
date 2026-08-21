@@ -1,8 +1,8 @@
 package me.rgunny.kachi.ai.fixture
 
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
-import me.rgunny.kachi.ai.application.port.dto.llm.LlmGenerationMetadata
-import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine

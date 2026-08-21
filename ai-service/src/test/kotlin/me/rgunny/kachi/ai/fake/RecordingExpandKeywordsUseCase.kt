@@ -1,8 +1,8 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsResult
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
+import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsResult
+import me.rgunny.kachi.ai.application.port.inbound.keyword.ExpandKeywordsUseCase
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 

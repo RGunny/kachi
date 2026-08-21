@@ -1,8 +1,8 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.application.port.dto.keyword.ExpandKeywordsResult
-import me.rgunny.kachi.ai.application.port.`in`.keyword.ExpandKeywordsUseCase
+import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsResult
+import me.rgunny.kachi.ai.application.port.inbound.keyword.ExpandKeywordsUseCase
 
 /**
  * 항상 실패하는 키워드 확장 유스케이스 fake.

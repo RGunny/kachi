@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.out.keyword.KeywordReaderPort
+import me.rgunny.kachi.ai.application.port.outbound.keyword.KeywordReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 
 class FakeKeywordReaderPort : KeywordReaderPort {

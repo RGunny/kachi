@@ -1,8 +1,8 @@
 package me.rgunny.kachi.ai.application.service.news
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.dto.news.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus

@@ -1,8 +1,8 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.dto.news.SummarizeNewsResult
-import me.rgunny.kachi.ai.application.port.`in`.news.SummarizeNewsUseCase
+import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
+import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsResult
+import me.rgunny.kachi.ai.application.port.inbound.news.SummarizeNewsUseCase
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 

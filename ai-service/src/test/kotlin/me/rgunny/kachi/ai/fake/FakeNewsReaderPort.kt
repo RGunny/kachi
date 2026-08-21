@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.dto.news.NewsArticle
-import me.rgunny.kachi.ai.application.port.out.news.NewsReaderPort
+import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
+import me.rgunny.kachi.ai.application.port.outbound.news.NewsReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import java.time.Instant
 

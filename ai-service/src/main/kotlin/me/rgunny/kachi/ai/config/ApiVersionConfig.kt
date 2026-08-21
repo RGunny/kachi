@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.config
 
-import me.rgunny.kachi.ai.adapter.`in`.web.ApiVersions
+import me.rgunny.kachi.ai.adapter.inbound.web.ApiVersions
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.reactive.config.ApiVersionConfigurer
 import org.springframework.web.reactive.config.PathMatchConfigurer
@@ -11,7 +11,7 @@ class ApiVersionConfig : WebFluxConfigurer {
 
     override fun configurePathMatching(configurer: PathMatchConfigurer) {
         configurer.addPathPrefix(ApiVersions.PATH_PREFIX) { handlerType ->
-            handlerType.packageName.startsWith("me.rgunny.kachi.ai.adapter.in.web")
+            handlerType.packageName.startsWith("me.rgunny.kachi.ai.adapter.inbound.web")
         }
     }
 
