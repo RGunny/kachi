@@ -458,6 +458,8 @@ class SummarizeNewsService(
                     else -> AiFailureReason.SERVER_ERROR
                 }
 
+                LlmFailureCategory.UNAVAILABLE -> AiFailureReason.PROVIDER_UNAVAILABLE
+
                 LlmFailureCategory.VALIDATION_ERROR,
                 LlmFailureCategory.AUTHORIZATION_ERROR -> AiFailureReason.CLIENT_ERROR
 
@@ -482,9 +484,16 @@ class SummarizeNewsService(
 
         /**
          * 이번 실행의 남은 키워드까지 막는 전역 장애인지 판단한다.
+         *
+         * 호출 가능한 provider가 하나도 없는 상태는 이번 tick 안에서 풀리지 않으므로 rate limit과 같이 다룬다.
          */
         fun abortsRun(failure: LlmFailure): Boolean {
-            return failure.category == LlmFailureCategory.RATE_LIMITED
+            return failure.category in ABORTING_CATEGORIES
         }
+
+        val ABORTING_CATEGORIES = setOf(
+            LlmFailureCategory.RATE_LIMITED,
+            LlmFailureCategory.UNAVAILABLE
+        )
     }
 }

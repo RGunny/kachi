@@ -52,7 +52,8 @@ data class LlmFailure(
         val RETRYABLE_CATEGORIES = setOf(
             LlmFailureCategory.TIMEOUT,
             LlmFailureCategory.RATE_LIMITED,
-            LlmFailureCategory.TRANSIENT_ERROR
+            LlmFailureCategory.TRANSIENT_ERROR,
+            LlmFailureCategory.UNAVAILABLE
         )
         val KEYWORD_BOUND_CATEGORIES = setOf(
             LlmFailureCategory.INVALID_RESPONSE,

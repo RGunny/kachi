@@ -1,6 +1,11 @@
 package me.rgunny.kachi.ai.application.service.news
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.ai.application.exception.KeywordReaderErrorCode
+import me.rgunny.kachi.ai.application.exception.KeywordReaderException
+import me.rgunny.kachi.ai.application.exception.NewsReaderErrorCode
+import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
@@ -24,6 +29,7 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -431,6 +437,112 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
+    @DisplayName("호출할 수 있는 provider가 없으면 남은 키워드를 호출하지 않고 건너뛴다")
+    fun abortRemainingKeywordsWhenNoProviderIsAvailable() = runBlocking {
+        val first = AiKeyword.of("NVIDIA")
+        val second = AiKeyword.of("TESLA")
+        val third = AiKeyword.of("APPLE")
+        newsReader.articlesByKeyword = mapOf(
+            first to listOf(AiTestFixture.newsArticle()),
+            second to listOf(AiTestFixture.newsArticle()),
+            third to listOf(AiTestFixture.newsArticle())
+        )
+        llmProvider.failureByKeyword = mapOf(
+            first to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(first, second, third), window = watermarkWindow())
+        )
+
+        assertEquals(1, result.failureCount)
+        assertEquals(2, result.skippedCount)
+        assertEquals(AiSkipReason.PROVIDER_UNAVAILABLE, result.skipReason)
+        assertEquals(1, llmProvider.summarizeCallCount)
+        assertEquals(listOf(first), newsReader.readKeywords)
+    }
+
+    @Test
+    @DisplayName("provider 불능 실패는 실행 기록에 provider 불능으로 남는다")
+    fun recordProviderUnavailableFailureReason() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(AiFailureReason.PROVIDER_UNAVAILABLE, aiRunPersistence.savedRuns.last().failureReason)
+    }
+
+    @Test
+    @DisplayName("provider 불능은 watermark를 전진시키지 않는다")
+    fun keepWatermarkOnProviderUnavailable() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
+        )
+
+        assertFalse(result.watermarkAdvanced)
+        assertEquals(0, watermarkPersistence.saveCount)
+    }
+
+    @Test
+    @DisplayName("provider 불능은 키워드 격리 카운트를 올리지 않는다")
+    fun doNotCountProviderUnavailableTowardQuarantine() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(0, quarantinePersistence.saveCount)
+        assertNull(quarantinePersistence.findByKeyword(keyword))
+    }
+
+    @Test
+    @DisplayName("provider 불능 중에도 기존 요약이 있는 키워드는 재사용으로 성공한다")
+    fun reuseExistingSummaryWhileProviderIsUnavailable() = runBlocking {
+        val reusable = AiKeyword.of("NVIDIA")
+        val failing = AiKeyword.of("TESLA")
+        val article = AiTestFixture.newsArticle()
+        newsReader.articlesByKeyword = mapOf(
+            reusable to listOf(article),
+            failing to listOf(article)
+        )
+        newsSummaryPersistence.existingSummaries += AiTestFixture.newsSummary(
+            keyword = reusable,
+            sourceNewsIds = listOf(article.id),
+            newsHash = NewsHash.calculate(keyword = reusable, sourceNewsIds = listOf(article.id))
+        )
+        llmProvider.failureByKeyword = mapOf(
+            failing to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(reusable, failing), window = watermarkWindow())
+        )
+
+        assertEquals(1, result.succeededCount)
+        assertEquals(1, result.failureCount)
+        assertEquals(true, result.summaries.single().reused)
+        assertEquals(1, llmProvider.summarizeCallCount)
+    }
+
+    @Test
     @DisplayName("rate limit이 아닌 실패는 남은 키워드 처리를 막지 않는다")
     fun continueRemainingKeywordsOnRetryableFailure() = runBlocking {
         val failed = AiKeyword.of("NVIDIA")
@@ -453,6 +565,122 @@ class SummarizeNewsServiceTest {
         assertEquals(1, result.failureCount)
         assertEquals(0, result.skippedCount)
         assertEquals(AiFailureReason.TIMEOUT, aiRunPersistence.savedRuns.last().failureReason)
+    }
+
+    @Test
+    @DisplayName("LLM 실패 분류마다 대응하는 실패 원인으로 기록한다")
+    fun mapEveryLlmFailureCodeToFailureReason() = runBlocking {
+        val expected = mapOf(
+            LlmFailureCode.LLM_TIMEOUT to AiFailureReason.TIMEOUT,
+            LlmFailureCode.LLM_RATE_LIMITED to AiFailureReason.RATE_LIMITED,
+            LlmFailureCode.LLM_TRANSIENT_ERROR to AiFailureReason.SERVER_ERROR,
+            LlmFailureCode.LLM_NETWORK_ERROR to AiFailureReason.NETWORK_ERROR,
+            LlmFailureCode.LLM_CLIENT_ERROR to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_AUTHORIZATION_ERROR to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_INVALID_RESPONSE to AiFailureReason.INVALID_RESPONSE,
+            LlmFailureCode.LLM_PROVIDER_UNAVAILABLE to AiFailureReason.PROVIDER_UNAVAILABLE,
+            LlmFailureCode.LLM_UNKNOWN_ERROR to AiFailureReason.UNKNOWN
+        )
+        assertEquals(LlmFailureCode.entries.toSet(), expected.keys)
+
+        expected.forEach { (code, reason) ->
+            val keyword = AiKeyword.of("NVIDIA")
+            val runs = FakeAiRunPersistencePort()
+            newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+            llmProvider.failureByKeyword = mapOf(keyword to AiTestFixture.llmProviderException(code))
+
+            service(aiRunPersistence = runs).summarize(
+                SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
+            )
+
+            assertEquals(reason, runs.savedRuns.last().failureReason, "$code")
+        }
+    }
+
+    @Test
+    @DisplayName("뉴스 조회 실패는 서버 오류로 기록하고 키워드 격리 카운트를 올리지 않는다")
+    fun recordNewsReaderFailureAsServerError() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.failureByKeyword = mapOf(
+            keyword to NewsReaderException(NewsReaderErrorCode.COLLECTOR_SERVICE_REQUEST_FAILED)
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
+        )
+
+        assertEquals(1, result.failureCount)
+        assertEquals(AiFailureReason.SERVER_ERROR, aiRunPersistence.savedRuns.last().failureReason)
+        assertEquals(0, quarantinePersistence.saveCount)
+    }
+
+    @Test
+    @DisplayName("도메인 불변식을 어긴 응답은 키워드 귀속 실패로 격리 카운트를 올린다")
+    fun countInvariantViolationTowardQuarantine() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(keyword to IllegalArgumentException("title is blank"))
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(AiFailureReason.INVALID_RESPONSE, aiRunPersistence.savedRuns.last().failureReason)
+        assertEquals(1, quarantinePersistence.findByKeyword(keyword)?.consecutiveFailures)
+    }
+
+    @Test
+    @DisplayName("분류할 수 없는 실패는 알 수 없는 원인으로 남기고 격리 카운트를 올리지 않는다")
+    fun recordUnclassifiedFailureAsUnknown() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(keyword to IllegalStateException("boom"))
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(AiFailureReason.UNKNOWN, aiRunPersistence.savedRuns.last().failureReason)
+        assertEquals(0, quarantinePersistence.saveCount)
+    }
+
+    @Test
+    @DisplayName("활성 키워드를 읽지 못하면 실행 자체가 실패한다")
+    fun failRunWhenActiveKeywordsCannotBeRead() = runBlocking {
+        keywordReader.failure = KeywordReaderException(KeywordReaderErrorCode.USER_SERVICE_REQUEST_FAILED)
+        val service = service()
+
+        assertFailsWith<KeywordReaderException> {
+            service.summarize(SummarizeNewsCommand(keywords = emptyList(), window = watermarkWindow()))
+        }
+        Unit
+    }
+
+    @Test
+    @DisplayName("coroutine 취소는 요약 실패로 바꾸지 않고 그대로 전파한다")
+    fun propagateCancellation() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(keyword to CancellationException("cancelled"))
+        val service = service()
+
+        assertFailsWith<CancellationException> {
+            service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+        }
+        assertEquals(0, aiRunPersistence.savedRuns.count { it.failureCount > 0 })
+    }
+
+    @Test
+    @DisplayName("watermark가 최대 조회 기간보다 오래되면 구간을 하한까지만 잡는다")
+    fun truncateWindowByMaxLookback() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        watermarkPersistence.watermarks[AiRunTargetType.NEWS_SUMMARY] =
+            AiTestFixture.watermark(position = now.minus(Duration.ofDays(2)))
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(now.minus(maxLookback), aiRunPersistence.savedRuns.last().windowFrom)
     }
 
     @Test
@@ -480,7 +708,9 @@ class SummarizeNewsServiceTest {
         assertEquals(0, quarantinePersistence.saveCount)
     }
 
-    private fun service(): SummarizeNewsService {
+    private fun service(
+        aiRunPersistence: FakeAiRunPersistencePort = this.aiRunPersistence
+    ): SummarizeNewsService {
         return SummarizeNewsService(
             keywordReaderPort = keywordReader,
             newsReaderPort = newsReader,

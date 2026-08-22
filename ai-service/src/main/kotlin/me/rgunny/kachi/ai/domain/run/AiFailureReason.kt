@@ -8,6 +8,9 @@ enum class AiFailureReason {
     NETWORK_ERROR,
     INVALID_RESPONSE,
 
+    /** 호출 가능한 LLM provider가 없어 요청을 보내지 못했다. */
+    PROVIDER_UNAVAILABLE,
+
     /**
      * 요약 대상 뉴스가 없는 경우는 skip으로 분리했다(ADR 021).
      * 새 실행은 이 값을 쓰지 않고, 이전 실행 기록을 읽기 위해 남긴다.

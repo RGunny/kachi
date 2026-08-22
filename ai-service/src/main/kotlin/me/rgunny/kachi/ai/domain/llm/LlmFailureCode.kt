@@ -54,6 +54,12 @@ enum class LlmFailureCode(
         source = LlmFailureSource.PROVIDER,
         category = LlmFailureCategory.INVALID_RESPONSE
     ),
+    LLM_PROVIDER_UNAVAILABLE(
+        code = "LLM_PROVIDER_UNAVAILABLE",
+        defaultMessage = "llm provider call not permitted",
+        source = LlmFailureSource.APPLICATION,
+        category = LlmFailureCategory.UNAVAILABLE
+    ),
     LLM_UNKNOWN_ERROR(
         code = "LLM_UNKNOWN_ERROR",
         defaultMessage = "llm provider unknown error",
