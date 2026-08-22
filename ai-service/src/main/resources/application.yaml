@@ -108,3 +108,14 @@ kachi:
         base-url: https://generativelanguage.googleapis.com
         generate-content-path: /v1beta/models/{model}:generateContent
         model: gemini-2.0-flash
+      circuit-breaker:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 8s
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 2
+      failover:
+        default-cooldown: 60s
+        max-cooldown: 10m

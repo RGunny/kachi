@@ -16,6 +16,8 @@ data class LlmProviderProperties(
     val cerebras: OpenAiProviderProperties,
     val mistral: OpenAiProviderProperties,
     val gemini: GeminiProviderProperties,
+    val circuitBreaker: LlmCircuitBreakerProperties,
+    val failover: LlmFailoverProperties,
 )
 
 data class OpenAiProviderProperties(

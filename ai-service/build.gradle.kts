@@ -27,6 +27,7 @@ dependencies {
 
     // Resilience
     implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
 
     // UUID v7
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
