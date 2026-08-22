@@ -5,6 +5,8 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetad
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
+import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
@@ -57,6 +59,23 @@ object AiTestFixture {
             publishedAt = NOW.minus(Duration.ofDays(1)),
             collectedAt = NOW.minus(Duration.ofDays(1)).plusSeconds(60),
             matchedKeywords = listOf("NVIDIA")
+        )
+    }
+
+    fun keywordExpansion(
+        keyword: AiKeyword = keyword(),
+        expandedKeywords: List<String> = listOf("AI 반도체", "GPU"),
+        provider: LlmProviderName = PROVIDER,
+        model: LlmModelName = MODEL,
+        createdAt: Instant = NOW
+    ): KeywordExpansion {
+        return KeywordExpansion.create(
+            keyword = keyword,
+            expandedKeywords = expandedKeywords.map(ExpandedKeyword::of),
+            provider = provider,
+            model = model,
+            promptVersion = KEYWORD_EXPANSION_PROMPT_VERSION,
+            createdAt = createdAt
         )
     }
 

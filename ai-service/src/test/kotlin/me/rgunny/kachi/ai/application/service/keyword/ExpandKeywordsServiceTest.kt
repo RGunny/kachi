@@ -2,7 +2,10 @@ package me.rgunny.kachi.ai.application.service.keyword
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.config.LlmPromptVersions
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmModelName
+import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.fake.FakeAiRunPersistencePort
 import me.rgunny.kachi.ai.fake.FakeKeywordExpansionPersistencePort
@@ -20,6 +23,10 @@ class ExpandKeywordsServiceTest {
     private val llmProvider = FakeLlmProviderPort()
     private val keywordExpansionPersistence = FakeKeywordExpansionPersistencePort()
     private val aiRunPersistence = FakeAiRunPersistencePort()
+    private val promptVersions = LlmPromptVersions(
+        keywordExpansion = AiTestFixture.KEYWORD_EXPANSION_PROMPT_VERSION,
+        newsSummary = AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION
+    )
 
     @Test
     @DisplayName("키워드를 확장하고 실행 기록을 성공 상태로 완료한다")
@@ -62,6 +69,47 @@ class ExpandKeywordsServiceTest {
     }
 
     @Test
+    @DisplayName("같은 입력의 기존 확장이 있으면 LLM을 호출하지 않고 성공 처리한다")
+    fun reuseExistingExpansionBeforeLlmCall() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        // 선조회 키에 model이 없으므로 다른 provider가 만든 확장도 같은 키로 걸린다.
+        keywordExpansionPersistence.existingExpansions += AiTestFixture.keywordExpansion(
+            keyword = keyword,
+            provider = LlmProviderName.of("groq"),
+            model = LlmModelName.of("llama-3.3-70b")
+        )
+        val service = service()
+
+        val result = service.expand(ExpandKeywordsCommand(keywords = listOf(keyword)))
+
+        assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(1, result.succeededCount)
+        assertEquals(0, result.failureCount)
+        assertEquals(0, llmProvider.expandCallCount)
+        assertEquals(0, keywordExpansionPersistence.savedExpansions.size)
+        assertEquals(LlmProviderName.of("groq"), aiRunPersistence.savedRuns.last().provider)
+        assertEquals(LlmModelName.of("llama-3.3-70b"), aiRunPersistence.savedRuns.last().model)
+    }
+
+    @Test
+    @DisplayName("선조회에 없던 확장이 저장 시점에 충돌하면 기존 확장으로 성공 처리한다")
+    fun succeedWithExistingExpansionOnDuplicateSave() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        keywordExpansionPersistence.duplicateOnSave = true
+        keywordExpansionPersistence.existingAfterDuplicate = AiTestFixture.keywordExpansion(keyword = keyword)
+        val service = service()
+
+        val result = service.expand(ExpandKeywordsCommand(keywords = listOf(keyword)))
+
+        assertEquals(AiRunStatus.SUCCEEDED, result.status)
+        assertEquals(1, result.succeededCount)
+        assertEquals(0, result.failureCount)
+        assertEquals(1, llmProvider.expandCallCount)
+        assertEquals(1, keywordExpansionPersistence.saveOrFindExistingCallCount)
+        assertEquals(0, keywordExpansionPersistence.savedExpansions.size)
+    }
+
+    @Test
     @DisplayName("일부 키워드 확장에 실패하면 부분 실패 상태로 완료한다")
     fun completeAsPartiallyFailed() = runBlocking {
         llmProvider.failedKeywords = setOf(AiKeyword.of("TESLA"))
@@ -98,6 +146,7 @@ class ExpandKeywordsServiceTest {
             llmProviderPort = llmProvider,
             keywordExpansionPersistencePort = keywordExpansionPersistence,
             aiRunPersistencePort = aiRunPersistence,
+            promptVersions = promptVersions,
             clock = clock
         )
     }

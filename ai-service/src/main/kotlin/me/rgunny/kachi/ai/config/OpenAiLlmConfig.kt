@@ -24,6 +24,17 @@ import java.util.concurrent.TimeUnit
 class OpenAiLlmConfig {
 
     /**
+     * prompt version은 저장 키의 일부라 provider와 선조회가 같은 값을 봐야 한다.
+     */
+    @Bean
+    fun llmPromptVersions(properties: LlmProviderProperties): LlmPromptVersions {
+        return LlmPromptVersions(
+            keywordExpansion = PromptVersion.of(properties.keywordExpansionPromptVersion),
+            newsSummary = PromptVersion.of(properties.newsSummaryPromptVersion)
+        )
+    }
+
+    /**
      * enabled provider들을 mode 정책에 따라 호출하는 application port를 등록한다.
      *
      * provider마다 자기 회로를 가진 데코레이터로 감싼 뒤 router에 넘긴다. 회로를 provider 단위로 두어야
@@ -59,12 +70,13 @@ class OpenAiLlmConfig {
     )
     fun openrouterLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.OPENROUTER,
-            properties = properties,
             providerProperties = properties.openrouter,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -77,12 +89,13 @@ class OpenAiLlmConfig {
     )
     fun groqLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.GROQ,
-            properties = properties,
             providerProperties = properties.groq,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -95,12 +108,13 @@ class OpenAiLlmConfig {
     )
     fun togetherLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.TOGETHER,
-            properties = properties,
             providerProperties = properties.together,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -113,12 +127,13 @@ class OpenAiLlmConfig {
     )
     fun cerebrasLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.CEREBRAS,
-            properties = properties,
             providerProperties = properties.cerebras,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -131,20 +146,21 @@ class OpenAiLlmConfig {
     )
     fun mistralLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.MISTRAL,
-            properties = properties,
             providerProperties = properties.mistral,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
 
     private fun openAiLlmProvider(
         providerType: OpenAiProviderType,
-        properties: LlmProviderProperties,
         providerProperties: OpenAiProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         validateProvider(providerType, providerProperties)
@@ -154,8 +170,8 @@ class OpenAiLlmConfig {
             jsonMapper = jsonMapper,
             providerType = providerType,
             properties = providerProperties,
-            keywordExpansionPromptVersion = PromptVersion.of(properties.keywordExpansionPromptVersion),
-            newsSummaryPromptVersion = PromptVersion.of(properties.newsSummaryPromptVersion)
+            keywordExpansionPromptVersion = promptVersions.keywordExpansion,
+            newsSummaryPromptVersion = promptVersions.newsSummary
         )
     }
 

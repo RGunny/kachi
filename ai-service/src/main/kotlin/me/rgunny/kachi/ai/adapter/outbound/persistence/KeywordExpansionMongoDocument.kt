@@ -18,8 +18,8 @@ import java.util.UUID
 @Document(collection = "keyword_expansions")
 @CompoundIndexes(
     CompoundIndex(
-        name = "ux_keyword_expansions_keyword_prompt_model",
-        def = "{'keyword': 1, 'promptVersion': 1, 'model': 1}",
+        name = "ux_keyword_expansions_keyword_prompt",
+        def = "{'keyword': 1, 'promptVersion': 1}",
         unique = true
     )
 )
