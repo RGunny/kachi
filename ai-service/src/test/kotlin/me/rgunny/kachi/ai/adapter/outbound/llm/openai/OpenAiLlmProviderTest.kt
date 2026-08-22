@@ -390,6 +390,14 @@ class OpenAiLlmProviderTest {
         Unit
     }
 
+    @Test
+    @DisplayName("provider 이름은 provider 종류의 값이다")
+    fun providerName() {
+        val provider = providerOf(ExchangeFunction { Mono.empty() })
+
+        assertEquals(OpenAiProviderType.OPENROUTER.value, provider.providerName.value)
+    }
+
     private fun providerOf(exchangeFunction: ExchangeFunction): OpenAiLlmProvider {
         return OpenAiLlmProvider(
             webClient = WebClient.builder()

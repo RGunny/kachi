@@ -1,8 +1,10 @@
 package me.rgunny.kachi.ai.config
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
+import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiProviderType
@@ -15,6 +17,7 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
 import tools.jackson.databind.json.JsonMapper
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 
 @Configuration
@@ -22,15 +25,29 @@ class OpenAiLlmConfig {
 
     /**
      * enabled provider들을 mode 정책에 따라 호출하는 application port를 등록한다.
+     *
+     * provider마다 자기 회로를 가진 데코레이터로 감싼 뒤 router에 넘긴다. 회로를 provider 단위로 두어야
+     * 한 provider의 장애가 나머지 provider의 호출을 막지 않는다.
      */
     @Bean
     fun llmProviderPort(
         properties: LlmProviderProperties,
-        openAiProviders: List<OpenAiLlmProvider>
+        openAiProviders: List<OpenAiLlmProvider>,
+        circuitBreakerRegistry: CircuitBreakerRegistry,
+        clock: Clock
     ): LlmProviderPort {
         return RoutingLlmProvider(
-            providers = openAiProviders,
-            mode = LlmProviderMode.from(properties.mode)
+            providers = openAiProviders.map { provider ->
+                GuardedLlmProvider(
+                    delegate = provider,
+                    provider = provider.providerName,
+                    circuitBreaker = circuitBreakerRegistry.circuitBreaker(provider.providerName.value),
+                    failover = properties.failover,
+                    clock = clock
+                )
+            },
+            mode = LlmProviderMode.from(properties.mode),
+            clock = clock
         )
     }
 

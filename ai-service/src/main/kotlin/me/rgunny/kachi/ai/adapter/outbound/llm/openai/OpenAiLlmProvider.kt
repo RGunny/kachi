@@ -48,10 +48,12 @@ class OpenAiLlmProvider(
     private val newsSummaryPromptVersion: PromptVersion
 ) : LlmProviderPort {
 
+    val providerName: LlmProviderName = LlmProviderName.of(providerType.value)
+
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
         return OpenAiPreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
-                provider = LlmProviderName.of(providerType.value),
+                provider = providerName,
                 model = LlmModelName.of(properties.model),
                 promptVersion = newsSummaryPromptVersion
             ),
@@ -224,7 +226,7 @@ class OpenAiLlmProvider(
     ): LlmFailure {
         return LlmFailure(
             code = code,
-            provider = LlmProviderName.of(providerType.value),
+            provider = providerName,
             message = message,
             statusCode = statusCode,
             retryAfterMillis = retryAfterMillis
@@ -337,7 +339,7 @@ class OpenAiLlmProvider(
         promptVersion: PromptVersion
     ): LlmGenerationMetadata {
         return LlmGenerationMetadata(
-            provider = LlmProviderName.of(providerType.value),
+            provider = providerName,
             model = LlmModelName.of(response.model?.takeIf { it.isNotBlank() } ?: properties.model),
             promptVersion = promptVersion,
             tokenUsage = TokenUsage(

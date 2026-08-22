@@ -184,6 +184,17 @@ object AiTestFixture {
         return LlmProviderException(llmFailure(code))
     }
 
+    /** 429 응답. [retryAfterMillis]가 null이면 Retry-After 헤더가 없는 응답이다. */
+    fun rateLimitedException(retryAfterMillis: Long?): LlmProviderException {
+        return LlmProviderException(
+            llmFailure(
+                code = LlmFailureCode.LLM_RATE_LIMITED,
+                statusCode = 429,
+                retryAfterMillis = retryAfterMillis
+            )
+        )
+    }
+
     fun quarantineProperties(
         failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD
     ): KeywordQuarantineProperties {
