@@ -62,6 +62,7 @@ class NotificationOutboxAdminServiceTest {
         assertFailsWith<NotificationOutboxNotFoundException> {
             service.recover(RecoverNotificationOutboxCommand(deadOutbox().id))
         }
+        Unit
     }
 
     private fun deadOutbox(): NotificationOutbox {

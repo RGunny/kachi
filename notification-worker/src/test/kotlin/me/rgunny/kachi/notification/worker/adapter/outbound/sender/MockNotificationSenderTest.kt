@@ -39,6 +39,7 @@ class MockNotificationSenderTest {
         val result = sender.send(command())
 
         assertIs<SendNotificationResult.Success>(result)
+        Unit
     }
 
     @Test
