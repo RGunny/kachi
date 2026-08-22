@@ -10,6 +10,8 @@ import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsComma
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
+import me.rgunny.kachi.ai.domain.llm.LlmModelName
+import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
@@ -128,6 +130,33 @@ class SummarizeNewsServiceTest {
 
         assertEquals(true, result.summaries.first().reused)
         assertEquals(0, llmProvider.summarizeCallCount)
+    }
+
+    @Test
+    @DisplayName("다른 provider/model이 만든 기존 요약도 재사용한다")
+    fun reuseExistingSummaryFromAnotherProvider() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val article = AiTestFixture.newsArticle()
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(article))
+        // 선조회 키에 model이 없으므로 failover로 다른 provider가 만든 요약도 같은 키로 걸린다.
+        newsSummaryPersistence.existingSummaries += AiTestFixture.newsSummary(
+            keyword = keyword,
+            sourceNewsIds = listOf(article.id),
+            newsHash = NewsHash.calculate(keyword = keyword, sourceNewsIds = listOf(article.id)),
+            provider = LlmProviderName.of("groq"),
+            model = LlmModelName.of("llama-3.3-70b")
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = explicitWindow())
+        )
+
+        assertEquals(true, result.summaries.single().reused)
+        assertEquals(0, llmProvider.summarizeCallCount)
+        assertEquals(0, newsSummaryPersistence.savedSummaries.size)
+        assertEquals(LlmProviderName.of("groq"), aiRunPersistence.savedRuns.last().provider)
+        assertEquals(LlmModelName.of("llama-3.3-70b"), aiRunPersistence.savedRuns.last().model)
     }
 
     @Test

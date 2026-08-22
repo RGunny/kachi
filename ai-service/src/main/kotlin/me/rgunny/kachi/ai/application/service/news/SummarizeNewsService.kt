@@ -255,8 +255,7 @@ class SummarizeNewsService(
         val existingSummary = newsSummaryPersistencePort.findByUniqueKey(
             keyword = keyword,
             newsHash = newsHash,
-            promptVersion = preparedLlm.plan.promptVersion,
-            model = preparedLlm.plan.model
+            promptVersion = preparedLlm.plan.promptVersion
         )
 
         return existingSummary?.let(::reuseSummary)

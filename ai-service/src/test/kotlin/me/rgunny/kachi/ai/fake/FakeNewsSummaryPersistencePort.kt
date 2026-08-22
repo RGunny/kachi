@@ -2,7 +2,6 @@ package me.rgunny.kachi.ai.fake
 
 import me.rgunny.kachi.ai.application.port.outbound.persistence.NewsSummaryPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 
@@ -16,14 +15,12 @@ class FakeNewsSummaryPersistencePort : NewsSummaryPersistencePort {
     override suspend fun findByUniqueKey(
         keyword: AiKeyword,
         newsHash: String,
-        promptVersion: PromptVersion,
-        model: LlmModelName
+        promptVersion: PromptVersion
     ): NewsSummary? {
         return existingSummaries.firstOrNull {
             it.keyword == keyword &&
                 it.newsHash == newsHash &&
-                it.promptVersion == promptVersion &&
-                it.model == model
+                it.promptVersion == promptVersion
         }
     }
 

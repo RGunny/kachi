@@ -19,8 +19,8 @@ import java.util.UUID
 @Document(collection = "news_summaries")
 @CompoundIndexes(
     CompoundIndex(
-        name = "ux_news_summaries_keyword_news_hash_prompt_model",
-        def = "{'keyword': 1, 'newsHash': 1, 'promptVersion': 1, 'model': 1}",
+        name = "ux_news_summaries_keyword_news_hash_prompt",
+        def = "{'keyword': 1, 'newsHash': 1, 'promptVersion': 1}",
         unique = true
     )
 )

@@ -44,7 +44,6 @@ open class NamedLlmProviderPort(
         return FakePreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
                 provider = LlmProviderName.of(name),
-                model = AiTestFixture.MODEL,
                 promptVersion = AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION
             ),
             provider = this

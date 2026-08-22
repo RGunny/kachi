@@ -9,8 +9,8 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 /**
  * 선조회에 쓴 plan을 들고 다니면서 요약 호출만 failover 순회로 처리하는 실행 단위.
  *
- * [plan]은 [order]의 첫 후보에서 나온다. 첫 후보가 실패해 다른 provider가 요약하면 plan의 model과
- * 실제 model이 어긋나는데, 그 대가는 다음 실행의 호출 1건이다. 요약을 못 만드는 쪽이 더 비싸다(ADR 021).
+ * [plan]은 [order]의 첫 후보에서 나온다.
+ * 선조회 키는 promptVersion만 쓰므로 failover로 다른 provider가 요약해도 키는 그대로다.
  */
 internal class RoutingPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,

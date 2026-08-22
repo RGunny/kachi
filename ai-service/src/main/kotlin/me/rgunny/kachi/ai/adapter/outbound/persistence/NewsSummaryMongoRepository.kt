@@ -6,10 +6,9 @@ import java.util.UUID
 
 interface NewsSummaryMongoRepository : ReactiveMongoRepository<NewsSummaryMongoDocument, UUID> {
 
-    fun findByKeywordAndNewsHashAndPromptVersionAndModel(
+    fun findByKeywordAndNewsHashAndPromptVersion(
         keyword: String,
         newsHash: String,
-        promptVersion: String,
-        model: String
+        promptVersion: String
     ): Mono<NewsSummaryMongoDocument>
 }

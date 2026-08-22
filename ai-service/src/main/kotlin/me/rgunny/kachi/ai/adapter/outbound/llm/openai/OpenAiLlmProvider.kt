@@ -54,7 +54,6 @@ class OpenAiLlmProvider(
         return OpenAiPreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
                 provider = providerName,
-                model = LlmModelName.of(properties.model),
                 promptVersion = newsSummaryPromptVersion
             ),
             provider = this

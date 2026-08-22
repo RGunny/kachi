@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.application.port.outbound.persistence
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 
@@ -13,8 +12,7 @@ interface NewsSummaryPersistencePort {
     suspend fun findByUniqueKey(
         keyword: AiKeyword,
         newsHash: String,
-        promptVersion: PromptVersion,
-        model: LlmModelName
+        promptVersion: PromptVersion
     ): NewsSummary?
 
     suspend fun save(newsSummary: NewsSummary): NewsSummary

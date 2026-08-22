@@ -27,7 +27,6 @@ class FakeLlmProviderPort : LlmProviderPort {
         return FakePreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
                 provider = AiTestFixture.PROVIDER,
-                model = AiTestFixture.MODEL,
                 promptVersion = AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION
             ),
             provider = this

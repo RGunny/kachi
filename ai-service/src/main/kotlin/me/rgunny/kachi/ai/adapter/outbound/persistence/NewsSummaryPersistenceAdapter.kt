@@ -4,7 +4,6 @@ import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.ai.application.port.outbound.persistence.NewsSummaryPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import org.springframework.dao.DuplicateKeyException
@@ -18,14 +17,12 @@ class NewsSummaryPersistenceAdapter(
     override suspend fun findByUniqueKey(
         keyword: AiKeyword,
         newsHash: String,
-        promptVersion: PromptVersion,
-        model: LlmModelName
+        promptVersion: PromptVersion
     ): NewsSummary? {
-        return repository.findByKeywordAndNewsHashAndPromptVersionAndModel(
+        return repository.findByKeywordAndNewsHashAndPromptVersion(
             keyword = keyword.value,
             newsHash = newsHash,
-            promptVersion = promptVersion.value,
-            model = model.value
+            promptVersion = promptVersion.value
         ).awaitSingleOrNull()?.toDomain()
     }
 
@@ -43,8 +40,7 @@ class NewsSummaryPersistenceAdapter(
             findByUniqueKey(
                 keyword = newsSummary.keyword,
                 newsHash = newsSummary.newsHash,
-                promptVersion = newsSummary.promptVersion,
-                model = newsSummary.model
+                promptVersion = newsSummary.promptVersion
             ) ?: throw error
         }
     }

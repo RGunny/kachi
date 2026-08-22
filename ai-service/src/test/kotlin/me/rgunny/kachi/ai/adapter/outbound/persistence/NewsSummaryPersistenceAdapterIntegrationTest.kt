@@ -64,29 +64,29 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
         }
 
         @Test
-        @DisplayName("같은 keyword, newsHash, promptVersion, model 조합은 중복 저장할 수 없다")
-        fun rejectDuplicateKeywordWindowPromptVersionAndModel() = runBlocking {
+        @DisplayName("같은 keyword, newsHash, promptVersion 조합은 model이 달라도 중복 저장할 수 없다")
+        fun rejectDuplicateKeywordNewsHashAndPromptVersion() = runBlocking {
             adapter.save(newsSummary())
 
             assertFailsWith<DuplicateKeyException> {
-                adapter.save(newsSummary())
+                adapter.save(newsSummary(provider = "groq", model = "llama-3.3-70b"))
             }
         }
 
         @Test
-        @DisplayName("같은 keyword, newsHash, promptVersion, model 조합으로 기존 요약을 조회한다")
+        @DisplayName("같은 keyword, newsHash, promptVersion 조합이면 model이 달라도 기존 요약을 조회한다")
         fun findByUniqueKey() = runBlocking {
-            adapter.save(newsSummary())
+            adapter.save(newsSummary(provider = "groq", model = "llama-3.3-70b"))
 
             val found = adapter.findByUniqueKey(
                 keyword = AiKeyword.of("NVIDIA"),
                 newsHash = "news-hash",
-                promptVersion = PromptVersion.of("news-summary-v1"),
-                model = LlmModelName.of("openai/gpt-4o-mini")
+                promptVersion = PromptVersion.of("news-summary-v1")
             )
 
             assertNotNull(found)
             assertEquals("summary title", found.title)
+            assertEquals("llama-3.3-70b", found.model.value)
         }
 
         @Test
@@ -94,14 +94,17 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
         fun returnExistingSummaryOnDuplicateSave() = runBlocking {
             val first = adapter.save(newsSummary())
 
-            val second = adapter.saveOrFindExisting(newsSummary())
+            val second = adapter.saveOrFindExisting(newsSummary(provider = "groq", model = "llama-3.3-70b"))
 
             assertEquals(first.id, second.id)
             assertEquals(1, repository.count().block())
         }
     }
 
-    private fun newsSummary(): NewsSummary {
+    private fun newsSummary(
+        provider: String = "openrouter",
+        model: String = "openai/gpt-4o-mini"
+    ): NewsSummary {
         return NewsSummary.create(
             keyword = AiKeyword.of("NVIDIA"),
             sourceNewsIds = sourceNewsIds,
@@ -109,8 +112,8 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
             title = "summary title",
             content = "summary content",
             sentiment = NewsSummarySentiment.NEUTRAL,
-            provider = LlmProviderName.of("openrouter"),
-            model = LlmModelName.of("openai/gpt-4o-mini"),
+            provider = LlmProviderName.of(provider),
+            model = LlmModelName.of(model),
             promptVersion = PromptVersion.of("news-summary-v1"),
             tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 5),
             createdAt = createdAt

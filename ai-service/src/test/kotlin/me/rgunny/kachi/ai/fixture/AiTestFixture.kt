@@ -64,6 +64,8 @@ object AiTestFixture {
         keyword: AiKeyword = keyword(),
         sourceNewsIds: List<UUID> = listOf(NEWS_ID),
         newsHash: String = "news-hash",
+        provider: LlmProviderName = PROVIDER,
+        model: LlmModelName = MODEL,
         createdAt: Instant = NOW
     ): NewsSummary {
         return NewsSummary.create(
@@ -73,8 +75,8 @@ object AiTestFixture {
             title = "${keyword.value} 기존 요약",
             content = "기존 요약 본문",
             sentiment = NewsSummarySentiment.NEUTRAL,
-            provider = PROVIDER,
-            model = MODEL,
+            provider = provider,
+            model = model,
             promptVersion = NEWS_SUMMARY_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE,
             createdAt = createdAt
