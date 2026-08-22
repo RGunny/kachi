@@ -14,6 +14,8 @@ import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
+import me.rgunny.kachi.ai.domain.outbox.AiOutbox
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
@@ -43,6 +45,9 @@ object AiTestFixture {
 
     val NEWS_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
 
+    const val OUTBOX_EVENT_KEY: String = "018f0000-0000-7000-8000-000000000009"
+    const val OUTBOX_PAYLOAD: String = """{"schemaVersion":1,"keyword":"NVIDIA"}"""
+
     fun keyword(value: String = "NVIDIA"): AiKeyword {
         return AiKeyword.of(value)
     }
@@ -59,6 +64,22 @@ object AiTestFixture {
             publishedAt = NOW.minus(Duration.ofDays(1)),
             collectedAt = NOW.minus(Duration.ofDays(1)).plusSeconds(60),
             matchedKeywords = listOf("NVIDIA")
+        )
+    }
+
+    fun outbox(
+        eventType: AiOutboxEventType = AiOutboxEventType.SUMMARY_CREATED,
+        eventKey: String = OUTBOX_EVENT_KEY,
+        partitionKey: String = "NVIDIA",
+        payload: String = OUTBOX_PAYLOAD,
+        now: Instant = NOW
+    ): AiOutbox {
+        return AiOutbox.create(
+            eventType = eventType,
+            eventKey = eventKey,
+            partitionKey = partitionKey,
+            payload = payload,
+            now = now
         )
     }
 
