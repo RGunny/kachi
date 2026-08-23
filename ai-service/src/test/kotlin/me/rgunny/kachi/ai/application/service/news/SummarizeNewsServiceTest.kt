@@ -6,8 +6,9 @@ import me.rgunny.kachi.ai.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.KeywordReaderException
 import me.rgunny.kachi.ai.application.exception.NewsReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.NewsReaderException
+import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
@@ -123,7 +124,7 @@ class SummarizeNewsServiceTest {
         val result = service.summarize(
             SummarizeNewsCommand(
                 keywords = listOf(keyword),
-                window = SummaryWindowRequest.Explicit(
+                window = ExplicitSummaryWindowRequest(
                     from = now.minus(Duration.ofHours(1)),
                     to = now.plus(Duration.ofMinutes(10))
                 )
@@ -169,7 +170,7 @@ class SummarizeNewsServiceTest {
         val service = service()
 
         val result = service.summarize(
-            SummarizeNewsCommand(keywords = listOf(keyword), window = SummaryWindowRequest.Explicit(null, null))
+            SummarizeNewsCommand(keywords = listOf(keyword), window = ExplicitSummaryWindowRequest(null, null))
         )
 
         assertEquals(1, result.summaries.size)
@@ -193,7 +194,7 @@ class SummarizeNewsServiceTest {
         val service = service()
 
         val result = service.summarize(
-            SummarizeNewsCommand(keywords = listOf(keyword), window = SummaryWindowRequest.Explicit(null, null))
+            SummarizeNewsCommand(keywords = listOf(keyword), window = ExplicitSummaryWindowRequest(null, null))
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, result.status)
@@ -211,7 +212,7 @@ class SummarizeNewsServiceTest {
         val service = service()
 
         val result = service.summarize(
-            SummarizeNewsCommand(keywords = emptyList(), window = SummaryWindowRequest.Explicit(null, null))
+            SummarizeNewsCommand(keywords = emptyList(), window = ExplicitSummaryWindowRequest(null, null))
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, result.status)
@@ -228,7 +229,7 @@ class SummarizeNewsServiceTest {
         val result = service.summarize(
             SummarizeNewsCommand(
                 keywords = listOf(AiKeyword.of("NVIDIA")),
-                window = SummaryWindowRequest.Explicit(null, null)
+                window = ExplicitSummaryWindowRequest(null, null)
             )
         )
 
@@ -750,12 +751,12 @@ class SummarizeNewsServiceTest {
     private fun explicitWindow(
         from: Instant = AiTestFixture.NOW.minus(Duration.ofDays(1)),
         to: Instant = AiTestFixture.NOW
-    ): SummaryWindowRequest.Explicit {
-        return SummaryWindowRequest.Explicit(from = from, to = to)
+    ): ExplicitSummaryWindowRequest {
+        return ExplicitSummaryWindowRequest(from = from, to = to)
     }
 
-    private fun watermarkWindow(): SummaryWindowRequest.FromWatermark {
-        return SummaryWindowRequest.FromWatermark(overlap = overlap, maxLookback = maxLookback)
+    private fun watermarkWindow(): WatermarkSummaryWindowRequest {
+        return WatermarkSummaryWindowRequest(overlap = overlap, maxLookback = maxLookback)
     }
 
     private companion object {

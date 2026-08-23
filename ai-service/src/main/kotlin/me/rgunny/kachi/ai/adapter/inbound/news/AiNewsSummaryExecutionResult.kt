@@ -1,15 +1,5 @@
 package me.rgunny.kachi.ai.adapter.inbound.news
 
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsResult
-import java.time.Instant
-
-/**
- * 현재 인스턴스에서 실행 중인 뉴스 요약 작업의 최소 메타데이터다.
- */
-data class RunningAiNewsSummary(
-    val startedAt: Instant
-)
-
 /**
  * 뉴스 요약 요청의 처리 상태 결과.
  *
@@ -23,13 +13,4 @@ data class RunningAiNewsSummary(
  *
  * 결과가 늘어나면 두 진입점이 함께 컴파일되지 않으므로, 한쪽만 고쳐 규칙이 갈라질 수 없다.
  */
-sealed interface AiNewsSummaryExecutionResult {
-
-    data class Started(
-        val result: SummarizeNewsResult
-    ) : AiNewsSummaryExecutionResult
-
-    data class AlreadyRunning(
-        val runningSummary: RunningAiNewsSummary
-    ) : AiNewsSummaryExecutionResult
-}
+sealed interface AiNewsSummaryExecutionResult

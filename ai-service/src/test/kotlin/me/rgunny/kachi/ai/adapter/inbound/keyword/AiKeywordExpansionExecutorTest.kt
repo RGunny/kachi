@@ -32,9 +32,9 @@ class AiKeywordExpansionExecutorTest {
         val secondExecution = executor.execute(command)
         useCase.release.complete(Unit)
 
-        assertIs<AiKeywordExpansionExecutionResult.AlreadyRunning>(secondExecution)
+        assertIs<AiKeywordExpansionAlreadyRunning>(secondExecution)
         assertEquals(AiTestFixture.NOW, secondExecution.runningExpansion.startedAt)
-        assertIs<AiKeywordExpansionExecutionResult.Started>(firstExecution.await())
+        assertIs<AiKeywordExpansionStarted>(firstExecution.await())
         assertEquals(1, useCase.executeCount)
     }
 

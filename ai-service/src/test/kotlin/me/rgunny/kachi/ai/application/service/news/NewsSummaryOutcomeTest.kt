@@ -92,8 +92,8 @@ class NewsSummaryOutcomeTest {
         assertNull(outcome.metadata)
     }
 
-    private fun succeeded(keyword: String): KeywordOutcome.Succeeded {
-        return KeywordOutcome.Succeeded(
+    private fun succeeded(keyword: String): SucceededKeywordOutcome {
+        return SucceededKeywordOutcome(
             summary = SummarizedNewsResult(
                 id = NewsSummaryId.newId(),
                 keyword = AiKeyword.of(keyword),
@@ -105,11 +105,11 @@ class NewsSummaryOutcomeTest {
         )
     }
 
-    private fun failed(reason: AiFailureReason): KeywordOutcome.Failed {
-        return KeywordOutcome.Failed(reason = reason, abortsRun = false)
+    private fun failed(reason: AiFailureReason): FailedKeywordOutcome {
+        return FailedKeywordOutcome(reason = reason, abortsRun = false)
     }
 
-    private fun skipped(reason: AiSkipReason): KeywordOutcome.Skipped {
-        return KeywordOutcome.Skipped(reason)
+    private fun skipped(reason: AiSkipReason): SkippedKeywordOutcome {
+        return SkippedKeywordOutcome(reason)
     }
 }

@@ -4,7 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.inbound.news.SummarizeNewsUseCase
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
 import me.rgunny.kachi.ai.fake.FailingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fake.RecordingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -42,7 +42,7 @@ class AiNewsSummarySchedulerTest {
 
         scheduler.summarizeNews()
 
-        val window = assertIs<SummaryWindowRequest.FromWatermark>(requireNotNull(useCase.lastCommand).window)
+        val window = assertIs<WatermarkSummaryWindowRequest>(requireNotNull(useCase.lastCommand).window)
         assertEquals(Duration.ofMinutes(5), window.overlap)
         assertEquals(Duration.ofHours(6), window.maxLookback)
     }

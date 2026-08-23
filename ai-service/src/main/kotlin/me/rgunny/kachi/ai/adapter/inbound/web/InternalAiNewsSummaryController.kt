@@ -1,7 +1,8 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
-import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutionResult
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
 import org.slf4j.LoggerFactory
@@ -39,7 +40,7 @@ class InternalAiNewsSummaryController(
 
         // 2. 중복 실행 방지 컴포넌트에 위임하고 실행 여부에 따라 응답을 분기한다.
         return when (val result = executor.execute(command)) {
-            is AiNewsSummaryExecutionResult.AlreadyRunning -> {
+            is AiNewsSummaryAlreadyRunning -> {
                 log.info(
                     "Manual news summary skipped because another summary is running: startedAt={}",
                     result.runningSummary.startedAt
@@ -50,7 +51,7 @@ class InternalAiNewsSummaryController(
                     .body(ApiResponse.failure(ErrorCode.NEWS_SUMMARY_ALREADY_RUNNING))
             }
 
-            is AiNewsSummaryExecutionResult.Started -> {
+            is AiNewsSummaryStarted -> {
                 log.info(
                     "Manual news summary finished: runId={}, status={}, succeeded={}, failures={}",
                     result.result.runId.value,

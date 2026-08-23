@@ -60,13 +60,13 @@ suspend fun execute(command: SummarizeNewsCommand): AiNewsSummaryExecutionResult
 
     // 획득: null일 때만 내 값으로 바꾼다. 검사와 획득이 한 원자 연산이다.
     if (!runningSummary.compareAndSet(null, currentSummary)) {
-        return AiNewsSummaryExecutionResult.AlreadyRunning(
+        return AiNewsSummaryAlreadyRunning(
             runningSummary = runningSummary.get() ?: currentSummary
         )
     }
 
     return try {
-        AiNewsSummaryExecutionResult.Started(summarizeNewsUseCase.summarize(command))
+        AiNewsSummaryStarted(summarizeNewsUseCase.summarize(command))
     } finally {
         // 해제: 내가 넣은 값일 때만 지운다.
         runningSummary.compareAndSet(currentSummary, null)
@@ -136,13 +136,13 @@ watermark는 저장된 상태라 조회에 출력 포트가 필요하다. 진입
 그래서 진입점은 **구간 정책만** 실어 보내고, 실제 계산과 전진은 유스케이스가 맡는다.
 
 ```kotlin
-sealed interface SummaryWindowRequest {
-    // 수동 실행: 지정 구간만 처리하고 watermark를 읽지도 전진시키지도 않는다
-    data class Explicit(val from: Instant?, val to: Instant?) : SummaryWindowRequest
+sealed interface SummaryWindowRequest
 
-    // scheduler 실행: watermark에서 이어받고, 실패가 없으면 전진시킨다
-    data class FromWatermark(val overlap: Duration, val maxLookback: Duration) : SummaryWindowRequest
-}
+// 수동 실행: 지정 구간만 처리하고 watermark를 읽지도 전진시키지도 않는다
+data class ExplicitSummaryWindowRequest(val from: Instant?, val to: Instant?) : SummaryWindowRequest
+
+// scheduler 실행: watermark에서 이어받고, 실패가 없으면 전진시킨다
+data class WatermarkSummaryWindowRequest(val overlap: Duration, val maxLookback: Duration) : SummaryWindowRequest
 ```
 
 `overlap`과 `maxLookback`의 설정 소유는 `AiNewsSummarySchedulerProperties`에 남고, 상태 접근은 application 안에 남는다.

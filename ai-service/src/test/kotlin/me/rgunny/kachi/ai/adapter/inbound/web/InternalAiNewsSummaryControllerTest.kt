@@ -6,8 +6,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
+import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.config.ApiVersionConfig
 import me.rgunny.kachi.ai.fake.RecordingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -86,7 +86,7 @@ class InternalAiNewsSummaryControllerTest {
             .expectStatus().isOk
 
         val command = requireNotNull(useCase.lastCommand)
-        val window = command.window as SummaryWindowRequest.Explicit
+        val window = command.window as ExplicitSummaryWindowRequest
 
         assertEquals(listOf("NVIDIA", "TESLA"), command.keywords.map { it.value })
         assertEquals(5, command.maxArticlesPerKeyword)
@@ -150,7 +150,7 @@ class InternalAiNewsSummaryControllerTest {
             executor.execute(
                 SummarizeNewsCommand(
                     keywords = emptyList(),
-                    window = SummaryWindowRequest.Explicit(from = null, to = null)
+                    window = ExplicitSummaryWindowRequest(from = null, to = null)
                 )
             )
         }

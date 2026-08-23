@@ -28,14 +28,14 @@ class AiNewsSummaryExecutor(
 
         // 2. 이미 뉴스 요약이 실행 중이면 유스케이스를 호출하지 않고 중복 실행 결과를 반환한다.
         if (!runningSummary.compareAndSet(null, currentSummary)) {
-            return AiNewsSummaryExecutionResult.AlreadyRunning(
+            return AiNewsSummaryAlreadyRunning(
                 runningSummary = runningSummary.get() ?: currentSummary
             )
         }
 
         // 3. lock을 획득한 요청만 실제 뉴스 요약 유스케이스를 실행한다.
         return try {
-            AiNewsSummaryExecutionResult.Started(summarizeNewsUseCase.summarize(command))
+            AiNewsSummaryStarted(summarizeNewsUseCase.summarize(command))
         } finally {
             // 4. 성공/실패와 무관하게 다음 실행을 받을 수 있도록 lock을 해제한다.
             runningSummary.compareAndSet(currentSummary, null)

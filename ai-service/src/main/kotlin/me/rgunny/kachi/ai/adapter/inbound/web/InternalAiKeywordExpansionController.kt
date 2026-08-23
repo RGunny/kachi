@@ -1,7 +1,8 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
-import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutionResult
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
 import org.slf4j.LoggerFactory
@@ -38,7 +39,7 @@ class InternalAiKeywordExpansionController(
 
         // 2. 중복 실행 방지 컴포넌트에 위임하고 실행 여부에 따라 응답을 분기한다.
         return when (val result = executor.execute(command)) {
-            is AiKeywordExpansionExecutionResult.AlreadyRunning -> {
+            is AiKeywordExpansionAlreadyRunning -> {
                 log.info(
                     "Manual keyword expansion skipped because another expansion is running: startedAt={}",
                     result.runningExpansion.startedAt
@@ -49,7 +50,7 @@ class InternalAiKeywordExpansionController(
                     .body(ApiResponse.failure(ErrorCode.KEYWORD_EXPANSION_ALREADY_RUNNING))
             }
 
-            is AiKeywordExpansionExecutionResult.Started -> {
+            is AiKeywordExpansionStarted -> {
                 log.info(
                     "Manual keyword expansion finished: runId={}, status={}, succeeded={}, failures={}",
                     result.result.runId.value,

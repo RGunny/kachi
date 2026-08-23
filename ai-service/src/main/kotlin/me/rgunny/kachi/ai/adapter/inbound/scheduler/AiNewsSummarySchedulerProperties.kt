@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.inbound.scheduler
 
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
@@ -45,8 +45,8 @@ data class AiNewsSummarySchedulerProperties(
         }
     }
 
-    fun toWindowRequest(): SummaryWindowRequest.FromWatermark {
-        return SummaryWindowRequest.FromWatermark(
+    fun toWindowRequest(): WatermarkSummaryWindowRequest {
+        return WatermarkSummaryWindowRequest(
             overlap = overlap,
             maxLookback = maxLookback
         )

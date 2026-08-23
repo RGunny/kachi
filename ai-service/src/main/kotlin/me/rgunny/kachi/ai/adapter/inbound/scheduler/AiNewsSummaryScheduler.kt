@@ -1,8 +1,9 @@
 package me.rgunny.kachi.ai.adapter.inbound.scheduler
 
 import jakarta.annotation.PostConstruct
-import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutionResult
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -59,13 +60,13 @@ class AiNewsSummaryScheduler(
         }.onSuccess { result ->
             // 3. scheduler는 이미 실행 중인 요약을 실패로 보지 않고 이번 tick만 skip한다.
             when (result) {
-                is AiNewsSummaryExecutionResult.AlreadyRunning ->
+                is AiNewsSummaryAlreadyRunning ->
                     log.info(
                         "Skip scheduled news summary because another summary is running: startedAt={}",
                         result.runningSummary.startedAt
                     )
 
-                is AiNewsSummaryExecutionResult.Started ->
+                is AiNewsSummaryStarted ->
                     log.info(
                         "Scheduled news summary finished: runId={}, status={}, requested={}, succeeded={}, failures={}, window={}~{}, watermarkAdvanced={}",
                         result.result.runId.value,

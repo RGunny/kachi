@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
+import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import java.time.Instant
 
@@ -21,7 +21,7 @@ data class SummarizeNewsRequest(
     fun toCommand(): SummarizeNewsCommand {
         return SummarizeNewsCommand(
             keywords = keywords.map(AiKeyword::of),
-            window = SummaryWindowRequest.Explicit(from = from, to = to),
+            window = ExplicitSummaryWindowRequest(from = from, to = to),
             maxArticlesPerKeyword = maxArticlesPerKeyword
         )
     }

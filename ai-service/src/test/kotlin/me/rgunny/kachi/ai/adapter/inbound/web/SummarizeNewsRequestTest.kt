@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -26,7 +26,7 @@ class SummarizeNewsRequestTest {
             maxArticlesPerKeyword = 10
         ).toCommand()
 
-        val window = assertIs<SummaryWindowRequest.Explicit>(command.window)
+        val window = assertIs<ExplicitSummaryWindowRequest>(command.window)
         assertEquals(listOf(AiKeyword.of("NVIDIA")), command.keywords)
         assertEquals(from, window.from)
         assertEquals(to, window.to)

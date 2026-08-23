@@ -2,8 +2,8 @@ package me.rgunny.kachi.ai.adapter.inbound.news
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.SummaryWindowRequest
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.fake.BlockingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -23,7 +23,7 @@ class AiNewsSummaryExecutorTest {
         val executor = AiNewsSummaryExecutor(useCase, clock)
         val command = SummarizeNewsCommand(
             keywords = listOf(AiKeyword.of("NVIDIA")),
-            window = SummaryWindowRequest.Explicit(from = null, to = null)
+            window = ExplicitSummaryWindowRequest(from = null, to = null)
         )
 
         val firstExecution = async {
@@ -34,9 +34,9 @@ class AiNewsSummaryExecutorTest {
         val secondExecution = executor.execute(command)
         useCase.release.complete(Unit)
 
-        assertIs<AiNewsSummaryExecutionResult.AlreadyRunning>(secondExecution)
+        assertIs<AiNewsSummaryAlreadyRunning>(secondExecution)
         assertEquals(AiTestFixture.NOW, secondExecution.runningSummary.startedAt)
-        assertIs<AiNewsSummaryExecutionResult.Started>(firstExecution.await())
+        assertIs<AiNewsSummaryStarted>(firstExecution.await())
         assertEquals(1, useCase.executeCount)
     }
 

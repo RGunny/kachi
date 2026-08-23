@@ -30,9 +30,9 @@ internal class NewsSummaryOutcome private constructor(
                 // subject가 sealed이므로 KeywordOutcome에 variant가 늘면 이 when이 컴파일되지 않는다.
                 // 새 결과가 어느 카운트에도 잡히지 않은 채 지나가는 것을 컴파일러가 막는다.
                 when (outcome) {
-                    is KeywordOutcome.Succeeded -> accumulator.recordSuccess(outcome)
-                    is KeywordOutcome.Failed -> accumulator.recordFailure(outcome)
-                    is KeywordOutcome.Skipped -> accumulator.recordSkip(outcome)
+                    is SucceededKeywordOutcome -> accumulator.recordSuccess(outcome)
+                    is FailedKeywordOutcome -> accumulator.recordFailure(outcome)
+                    is SkippedKeywordOutcome -> accumulator.recordSkip(outcome)
                 }
             }
 
@@ -51,19 +51,19 @@ internal class NewsSummaryOutcome private constructor(
         private var skipReason: AiSkipReason? = null
         private var metadata: LlmGenerationMetadata? = null
 
-        fun recordSuccess(outcome: KeywordOutcome.Succeeded) {
+        fun recordSuccess(outcome: SucceededKeywordOutcome) {
             summaries += outcome.summary
             // 실행에 여러 provider가 섞일 수 있으므로 최초 성공분을 대표로 남긴다.
             metadata = metadata ?: outcome.metadata
         }
 
-        fun recordFailure(outcome: KeywordOutcome.Failed) {
+        fun recordFailure(outcome: FailedKeywordOutcome) {
             failureCount += 1
             // 실패 원인은 하나만 남으므로 가장 먼저 발생한 것을 대표로 쓴다.
             failureReason = failureReason ?: outcome.reason
         }
 
-        fun recordSkip(outcome: KeywordOutcome.Skipped) {
+        fun recordSkip(outcome: SkippedKeywordOutcome) {
             skippedCount += 1
 
             // NO_INPUT은 조치할 것이 없지만 PROVIDER_UNAVAILABLE은 장애 신호다. 조치가 필요한 쪽을 대표로 남긴다.

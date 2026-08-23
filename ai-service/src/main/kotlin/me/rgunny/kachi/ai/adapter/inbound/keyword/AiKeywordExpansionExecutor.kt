@@ -28,14 +28,14 @@ class AiKeywordExpansionExecutor(
 
         // 2. 이미 키워드 확장이 실행 중이면 유스케이스를 호출하지 않고 중복 실행 결과를 반환한다.
         if (!runningExpansion.compareAndSet(null, currentExpansion)) {
-            return AiKeywordExpansionExecutionResult.AlreadyRunning(
+            return AiKeywordExpansionAlreadyRunning(
                 runningExpansion = runningExpansion.get() ?: currentExpansion
             )
         }
 
         // 3. lock을 획득한 요청만 실제 키워드 확장 유스케이스를 실행한다.
         return try {
-            AiKeywordExpansionExecutionResult.Started(expandKeywordsUseCase.expand(command))
+            AiKeywordExpansionStarted(expandKeywordsUseCase.expand(command))
         } finally {
             // 4. 성공/실패와 무관하게 다음 실행을 받을 수 있도록 lock을 해제한다.
             runningExpansion.compareAndSet(currentExpansion, null)

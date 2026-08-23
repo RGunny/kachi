@@ -1,8 +1,9 @@
 package me.rgunny.kachi.ai.adapter.inbound.scheduler
 
 import jakarta.annotation.PostConstruct
-import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutionResult.*
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
@@ -50,13 +51,13 @@ class AiKeywordExpansionScheduler(
         }.onSuccess { result ->
             // 3. scheduler는 이미 실행 중인 확장을 실패로 보지 않고 이번 tick만 skip한다.
             when (result) {
-                is AlreadyRunning ->
+                is AiKeywordExpansionAlreadyRunning ->
                     log.info(
                         "Skip scheduled keyword expansion because another expansion is running: startedAt={}",
                         result.runningExpansion.startedAt
                     )
 
-                is Started ->
+                is AiKeywordExpansionStarted ->
                     log.info(
                         "Scheduled keyword expansion finished: runId={}, status={}, requested={}, succeeded={}, failures={}",
                         result.result.runId.value,
