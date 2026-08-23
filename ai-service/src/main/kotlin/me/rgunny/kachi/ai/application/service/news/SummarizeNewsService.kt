@@ -17,6 +17,10 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.NewsReaderPort
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxEventSerializer
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.toOutbox
 import me.rgunny.kachi.ai.application.port.outbound.persistence.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.persistence.NewsSummaryPersistencePort
@@ -50,6 +54,7 @@ class SummarizeNewsService(
     private val aiRunPersistencePort: AiRunPersistencePort,
     private val summaryWatermarkPersistencePort: SummaryWatermarkPersistencePort,
     private val keywordQuarantinePersistencePort: KeywordQuarantinePersistencePort,
+    private val eventSerializer: AiOutboxEventSerializer,
     private val quarantineProperties: KeywordQuarantineProperties,
     private val clock: Clock
 ) : SummarizeNewsUseCase {
@@ -289,6 +294,7 @@ class SummarizeNewsService(
             keyword = keyword,
             articles = articles
         )
+        val now = Instant.now(clock)
         val summary = NewsSummary.create(
             keyword = keyword,
             sourceNewsIds = articles.map { it.id },
@@ -300,10 +306,14 @@ class SummarizeNewsService(
             model = llmResult.metadata.model,
             promptVersion = llmResult.metadata.promptVersion,
             tokenUsage = llmResult.metadata.tokenUsage,
-            createdAt = Instant.now(clock)
+            createdAt = now
         )
+        val event = SummaryCreatedEvent.from(summary)
         // 선조회 이후 다른 요청이 먼저 저장했으면, 새로 저장하지 않고 기존 요약을 사용한다.
-        val savedSummary = newsSummaryPersistencePort.saveOrFindExisting(summary)
+        val savedSummary = newsSummaryPersistencePort.saveOrFindExisting(
+            newsSummary = summary,
+            outbox = event.toOutbox(payload = eventSerializer.serialize(event), now = now)
+        )
 
         return SucceededKeywordOutcome(
             summary = SummarizedNewsResult.from(savedSummary, reused = savedSummary.id != summary.id),
@@ -414,16 +424,21 @@ class SummarizeNewsService(
             failureThreshold = quarantineProperties.failureThreshold,
             updatedAt = now
         )
-        keywordQuarantinePersistencePort.save(updated)
-
-        // TODO: 관리자 알림 연계는 notification 파이프라인이 붙은 뒤 연결한다.
+        // 격리로 넘어간 순간에만 알릴 이벤트를 남긴다.
         if (updated.isQuarantined && !tracked.isQuarantined) {
+            val event = KeywordQuarantinedEvent.from(updated)
+            keywordQuarantinePersistencePort.saveQuarantined(
+                quarantine = updated,
+                outbox = event.toOutbox(payload = eventSerializer.serialize(event), now = now)
+            )
             log.error(
                 "Keyword quarantined after consecutive news summary failures: keyword={}, consecutiveFailures={}, lastFailureReason={}",
                 keyword.value,
                 updated.consecutiveFailures,
                 reason
             )
+        } else {
+            keywordQuarantinePersistencePort.save(updated)
         }
     }
 

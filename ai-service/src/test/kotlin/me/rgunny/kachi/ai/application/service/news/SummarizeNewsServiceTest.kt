@@ -9,16 +9,21 @@ import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.application.port.inbound.news.model.ExplicitSummaryWindowRequest
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModelName
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.domain.run.AiSkipReason
 import me.rgunny.kachi.ai.domain.summary.NewsHash
+import me.rgunny.kachi.ai.fake.FakeAiOutboxEventSerializer
 import me.rgunny.kachi.ai.fake.FakeAiRunPersistencePort
 import me.rgunny.kachi.ai.fake.FakeKeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.fake.FakeKeywordReaderPort
@@ -36,6 +41,7 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -52,6 +58,7 @@ class SummarizeNewsServiceTest {
     private val aiRunPersistence = FakeAiRunPersistencePort()
     private val watermarkPersistence = FakeSummaryWatermarkPersistencePort()
     private val quarantinePersistence = FakeKeywordQuarantinePersistencePort()
+    private val eventSerializer = FakeAiOutboxEventSerializer()
 
     @Test
     @DisplayName("키워드별 뉴스를 요약하고 실행 기록을 성공 상태로 완료한다")
@@ -732,6 +739,146 @@ class SummarizeNewsServiceTest {
         assertEquals(0, quarantinePersistence.saveCount)
     }
 
+    @Test
+    @DisplayName("새 요약을 저장할 때 요약 생성 이벤트를 함께 넘긴다")
+    fun recordSummaryCreatedEventWithNewSummary() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        val summary = newsSummaryPersistence.savedSummaries.single()
+        val outbox = newsSummaryPersistence.savedOutboxes.single()
+        assertEquals(AiOutboxEventType.SUMMARY_CREATED, outbox.eventType)
+        assertEquals(summary.id.value.toString(), outbox.eventKey)
+        assertEquals("NVIDIA", outbox.partitionKey)
+        assertEquals(AiOutboxStatus.PENDING, outbox.status)
+        assertEquals(now, outbox.createdAt)
+        val event = assertIs<SummaryCreatedEvent>(eventSerializer.serialized.single())
+        assertEquals(FakeAiOutboxEventSerializer.payloadOf(event), outbox.payload)
+    }
+
+    @Test
+    @DisplayName("기존 요약을 재사용하면 이벤트를 만들지 않는다")
+    fun doNotRecordEventWhenSummaryIsReused() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val article = AiTestFixture.newsArticle()
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(article))
+        newsSummaryPersistence.existingSummaries += AiTestFixture.newsSummary(
+            keyword = keyword,
+            sourceNewsIds = listOf(article.id),
+            newsHash = NewsHash.calculate(keyword = keyword, sourceNewsIds = listOf(article.id))
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertTrue(eventSerializer.serialized.isEmpty())
+        assertTrue(newsSummaryPersistence.savedOutboxes.isEmpty())
+    }
+
+    @Test
+    @DisplayName("저장 중 중복이 발생하면 이벤트가 저장되지 않는다")
+    fun doNotRecordEventOnDuplicateSave() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val article = AiTestFixture.newsArticle()
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(article))
+        newsSummaryPersistence.duplicateOnSave = true
+        newsSummaryPersistence.existingAfterDuplicate = AiTestFixture.newsSummary(
+            keyword = keyword,
+            sourceNewsIds = listOf(article.id),
+            newsHash = NewsHash.calculate(keyword = keyword, sourceNewsIds = listOf(article.id))
+        )
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
+        )
+
+        assertEquals(true, result.summaries.first().reused)
+        assertTrue(newsSummaryPersistence.savedOutboxes.isEmpty())
+    }
+
+    @Test
+    @DisplayName("키워드가 격리로 넘어가면 격리 이벤트를 전이와 함께 저장한다")
+    fun recordKeywordQuarantinedEventOnTransition() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        quarantinePersistence.quarantines += AiTestFixture.quarantine(keyword = keyword, consecutiveFailures = 2)
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(1, quarantinePersistence.saveQuarantinedCount)
+        val quarantine = quarantinePersistence.findByKeyword(keyword)
+        val outbox = quarantinePersistence.savedOutboxes.single()
+        assertEquals(AiOutboxEventType.KEYWORD_QUARANTINED, outbox.eventType)
+        assertEquals("${quarantine?.id?.value}:${now.toEpochMilli()}", outbox.eventKey)
+        assertEquals("NVIDIA", outbox.partitionKey)
+        val event = assertIs<KeywordQuarantinedEvent>(eventSerializer.serialized.single())
+        assertEquals(FakeAiOutboxEventSerializer.payloadOf(event), outbox.payload)
+    }
+
+    @Test
+    @DisplayName("이미 격리된 키워드는 대상에서 빠지므로 격리 이벤트를 다시 만들지 않는다")
+    fun doNotRecordEventForAlreadyQuarantinedKeyword() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        quarantinePersistence.quarantines += AiTestFixture.quarantine(
+            keyword = keyword,
+            consecutiveFailures = AiTestFixture.DEFAULT_QUARANTINE_FAILURE_THRESHOLD
+        )
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(0, quarantinePersistence.saveQuarantinedCount)
+        assertTrue(quarantinePersistence.savedOutboxes.isEmpty())
+    }
+
+    @Test
+    @DisplayName("임계치에 못 미친 실패는 격리 이벤트를 만들지 않는다")
+    fun doNotRecordEventBelowFailureThreshold() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(1, quarantinePersistence.saveCount)
+        assertEquals(0, quarantinePersistence.saveQuarantinedCount)
+        assertTrue(quarantinePersistence.savedOutboxes.isEmpty())
+    }
+
+    @Test
+    @DisplayName("이벤트 직렬화가 실패하면 요약을 저장하지 않고 그 키워드만 실패로 남긴다")
+    fun failKeywordWhenEventSerializationFails() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        eventSerializer.failure = IllegalStateException("직렬화 실패")
+        val service = service()
+
+        val result = service.summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
+        )
+
+        assertEquals(1, result.failureCount)
+        assertEquals(AiFailureReason.UNKNOWN, aiRunPersistence.savedRuns.last().failureReason)
+        assertEquals(0, newsSummaryPersistence.saveOrFindExistingCallCount)
+        // 서비스가 만든 실패이므로 키워드에 책임을 묻지 않는다.
+        assertEquals(0, quarantinePersistence.saveCount)
+    }
+
     private fun service(
         aiRunPersistence: FakeAiRunPersistencePort = this.aiRunPersistence
     ): SummarizeNewsService {
@@ -743,6 +890,7 @@ class SummarizeNewsServiceTest {
             aiRunPersistencePort = aiRunPersistence,
             summaryWatermarkPersistencePort = watermarkPersistence,
             keywordQuarantinePersistencePort = quarantinePersistence,
+            eventSerializer = eventSerializer,
             quarantineProperties = AiTestFixture.quarantineProperties(),
             clock = clock
         )

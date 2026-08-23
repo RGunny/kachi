@@ -3,10 +3,15 @@ package me.rgunny.kachi.ai.fixture
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
+import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxClaim
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxId
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
@@ -81,6 +86,57 @@ object AiTestFixture {
             payload = payload,
             now = now
         )
+    }
+
+    /**
+     * 저장소에 있던 것처럼 상태·재시도 횟수·소유권을 지정해 복원한 outbox.
+     *
+     * [outbox]는 생성 직후만 만들 수 있으므로 발행 중이거나 실패가 쌓인 행은 여기서 만든다.
+     * 기본값은 [outbox]와 같은 PENDING 행이다.
+     */
+    fun restoredOutbox(
+        id: AiOutboxId = AiOutboxId.newId(),
+        eventType: AiOutboxEventType = AiOutboxEventType.SUMMARY_CREATED,
+        eventKey: String = OUTBOX_EVENT_KEY,
+        partitionKey: String = "NVIDIA",
+        payload: String = OUTBOX_PAYLOAD,
+        status: AiOutboxStatus = AiOutboxStatus.PENDING,
+        retryCount: Int = 0,
+        nextRetryAt: Instant = NOW,
+        lastError: String? = null,
+        publishedAt: Instant? = null,
+        claim: AiOutboxClaim? = null,
+        createdAt: Instant = NOW,
+        updatedAt: Instant = createdAt
+    ): AiOutbox {
+        return AiOutbox.restore(
+            id = id,
+            eventType = eventType,
+            eventKey = eventKey,
+            partitionKey = partitionKey,
+            payload = payload,
+            status = status,
+            retryCount = retryCount,
+            nextRetryAt = nextRetryAt,
+            lastError = lastError,
+            publishedAt = publishedAt,
+            claim = claim,
+            createdAt = createdAt,
+            updatedAt = updatedAt
+        )
+    }
+
+    fun summaryCreatedEvent(summary: NewsSummary = newsSummary()): SummaryCreatedEvent {
+        return SummaryCreatedEvent.from(summary)
+    }
+
+    /**
+     * 격리 상태 기록에서 만든 격리 이벤트. 기본값은 임계치에 막 도달한 기록이다.
+     */
+    fun keywordQuarantinedEvent(
+        quarantine: KeywordQuarantine = quarantine(consecutiveFailures = DEFAULT_QUARANTINE_FAILURE_THRESHOLD)
+    ): KeywordQuarantinedEvent {
+        return KeywordQuarantinedEvent.from(quarantine)
     }
 
     fun keywordExpansion(

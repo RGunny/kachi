@@ -3,10 +3,12 @@ package me.rgunny.kachi.ai.fake
 import me.rgunny.kachi.ai.application.port.outbound.persistence.NewsSummaryPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 
 class FakeNewsSummaryPersistencePort : NewsSummaryPersistencePort {
     val savedSummaries: MutableList<NewsSummary> = mutableListOf()
+    val savedOutboxes: MutableList<AiOutbox> = mutableListOf()
     val existingSummaries: MutableList<NewsSummary> = mutableListOf()
     var duplicateOnSave: Boolean = false
     var existingAfterDuplicate: NewsSummary? = null
@@ -29,12 +31,15 @@ class FakeNewsSummaryPersistencePort : NewsSummaryPersistencePort {
         return newsSummary
     }
 
-    override suspend fun saveOrFindExisting(newsSummary: NewsSummary): NewsSummary {
+    override suspend fun saveOrFindExisting(newsSummary: NewsSummary, outbox: AiOutbox): NewsSummary {
         saveOrFindExistingCallCount += 1
 
+        // 중복이면 기존 요약이 이미 이벤트를 남겼으므로 outbox를 저장하지 않는다.
         if (duplicateOnSave) {
             return existingAfterDuplicate ?: newsSummary
         }
+
+        savedOutboxes.add(outbox)
 
         return save(newsSummary)
     }

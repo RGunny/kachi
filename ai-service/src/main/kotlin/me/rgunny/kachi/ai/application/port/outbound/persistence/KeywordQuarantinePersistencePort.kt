@@ -1,5 +1,6 @@
 package me.rgunny.kachi.ai.application.port.outbound.persistence
 
+import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 
@@ -23,4 +24,11 @@ interface KeywordQuarantinePersistencePort {
      * 격리 기록을 저장한다. 기존 기록의 갱신은 새 기록으로 쌓이지 않고 그 기록을 대체한다.
      */
     suspend fun save(quarantine: KeywordQuarantine): KeywordQuarantine
+
+    /**
+     * 격리 전이와 발행 대기 이벤트를 한 트랜잭션으로 저장한다.
+     *
+     * 격리됐는데 알림이 없는 상태를 만들지 않기 위해 전이 저장과 이벤트 기록의 결과를 묶는다.
+     */
+    suspend fun saveQuarantined(quarantine: KeywordQuarantine, outbox: AiOutbox): KeywordQuarantine
 }

@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.fake
 
 import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 
@@ -13,7 +14,9 @@ import me.rgunny.kachi.ai.domain.run.AiRunTargetType
  */
 class FakeKeywordQuarantinePersistencePort : KeywordQuarantinePersistencePort {
     val quarantines: MutableList<KeywordQuarantine> = mutableListOf()
+    val savedOutboxes: MutableList<AiOutbox> = mutableListOf()
     var saveCount: Int = 0
+    var saveQuarantinedCount: Int = 0
 
     override suspend fun findAllBy(targetType: AiRunTargetType): List<KeywordQuarantine> {
         return quarantines.filter { it.targetType == targetType }
@@ -25,6 +28,16 @@ class FakeKeywordQuarantinePersistencePort : KeywordQuarantinePersistencePort {
         quarantines.add(quarantine)
 
         return quarantine
+    }
+
+    override suspend fun saveQuarantined(
+        quarantine: KeywordQuarantine,
+        outbox: AiOutbox
+    ): KeywordQuarantine {
+        saveQuarantinedCount += 1
+        savedOutboxes.add(outbox)
+
+        return save(quarantine)
     }
 
     fun findByKeyword(keyword: AiKeyword): KeywordQuarantine? {
