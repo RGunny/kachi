@@ -47,22 +47,25 @@ class LlmCircuitBreakerConfigTest {
         "LLM_TRANSIENT_ERROR",
         "LLM_NETWORK_ERROR"
     ])
-    @DisplayName("재시도 가능한 LLM 실패만 회로를 여는 근거로 기록한다")
-    fun recordRetryableLlmFailures(code: LlmFailureCode) {
+    @DisplayName("실제 호출에서 나온 재시도 가능한 실패만 회로를 여는 근거로 기록한다")
+    fun recordRetryableFailuresFromActualCall(code: LlmFailureCode) {
         val predicate = config.circuitBreakerConfig(properties()).recordExceptionPredicate
 
         assertTrue(predicate.test(AiTestFixture.llmProviderException(code)))
     }
 
+    // 위 목록과 같은 값을 쓴다. 기록 대상이 늘었는데 한쪽만 고치면 그 코드가 이 테스트로 넘어와 바로 실패한다.
+    // LLM_PROVIDER_UNAVAILABLE도 여기 들어온다. 차단이 만든 실패라 실제로는 predicate까지 오지 않지만,
+    // 그 호출 순서가 바뀌어도 차단 실패가 회로를 다시 여는 근거가 되지 않도록 판정을 고정해 둔다.
     @ParameterizedTest
-    @EnumSource(value = LlmFailureCode::class, names = [
-        "LLM_INVALID_RESPONSE",
-        "LLM_CLIENT_ERROR",
-        "LLM_AUTHORIZATION_ERROR",
-        "LLM_UNKNOWN_ERROR"
+    @EnumSource(value = LlmFailureCode::class, mode = EnumSource.Mode.EXCLUDE, names = [
+        "LLM_TIMEOUT",
+        "LLM_RATE_LIMITED",
+        "LLM_TRANSIENT_ERROR",
+        "LLM_NETWORK_ERROR"
     ])
-    @DisplayName("키워드 귀속 실패와 인증 실패는 기록하지 않는다")
-    fun doNotRecordKeywordBoundOrAuthorizationFailures(code: LlmFailureCode) {
+    @DisplayName("실제 호출에서 나오지 않았거나 재시도로 풀리지 않는 실패는 기록하지 않는다")
+    fun doNotRecordFailuresOutsideCircuitEvidence(code: LlmFailureCode) {
         val predicate = config.circuitBreakerConfig(properties()).recordExceptionPredicate
 
         assertFalse(predicate.test(AiTestFixture.llmProviderException(code)))

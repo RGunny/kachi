@@ -47,7 +47,7 @@ LlmFailure
   message           운영자와 로그가 볼 수 있는 실패 메시지
   source            PROVIDER | NETWORK | APPLICATION
   category          TIMEOUT | RATE_LIMITED | TRANSIENT_ERROR | VALIDATION_ERROR
-                    | AUTHORIZATION_ERROR | INVALID_RESPONSE | UNKNOWN
+                    | AUTHORIZATION_ERROR | INVALID_RESPONSE | UNAVAILABLE | UNKNOWN
   statusCode?       외부 HTTP status가 있을 때 보존
   retryAfterMillis? provider가 Retry-After를 내려줬을 때 보존
   provider          어느 provider에서 난 실패인가
@@ -71,11 +71,12 @@ notification-core의 `RetryFailure`(ADR 014)와 어휘를 맞추되 코드 의�
 class LlmProviderException(val failure: LlmFailure, cause: Throwable? = null) : RuntimeException(...)
 ```
 
-`retryable` 여부는 `LlmFailure.category`에서 파생한다.
+`retryable`, `keywordBound`는 `LlmFailure.category`에서, `fromActualCall`은 `LlmFailure.source`에서 파생한다.
 
 ```text
-retryable  = TIMEOUT, RATE_LIMITED, TRANSIENT_ERROR
-keywordBound = INVALID_RESPONSE, VALIDATION_ERROR
+retryable      = TIMEOUT, RATE_LIMITED, TRANSIENT_ERROR, UNAVAILABLE
+keywordBound   = INVALID_RESPONSE, VALIDATION_ERROR
+fromActualCall = source != APPLICATION
 ```
 
 ### provider 예외 매핑
@@ -201,12 +202,14 @@ provider마다 `CircuitBreaker` 인스턴스를 둔다. `resilience4j-reactor`�
 
 ```kotlin
 CircuitBreakerConfig.custom()
-    .recordException { it is LlmProviderException && it.failure.retryable }
+    .recordException { it is LlmProviderException && it.failure.fromActualCall && it.failure.retryable }
 ```
 
 `INVALID_RESPONSE`와 `VALIDATION_ERROR`로는 CB를 열지 않는다. 그 응답은 provider가 살아 있다는 증거이고, 특정 키워드의 payload 문제로 provider 전체를 차단하면 나머지 키워드까지 막힌다.
 
 `AUTHORIZATION_ERROR`도 기록하지 않는다. 키 만료는 CB의 `waitDurationInOpenState`가 지난다고 해소되지 않으므로 차단이 아니라 운영자 조치가 필요한 실패다.
+
+`LLM_PROVIDER_UNAVAILABLE`도 기록하지 않는다. 이 실패는 CB가 열려 있거나 Retry-After 대기 중이라 provider를 호출하지 않고 만든 것이다. 호출이 없었으니 provider 장애의 증거가 될 수 없다. 그런데 `retryable`만으로 판정하면 이 실패도 기록 대상에 들어간다. 차단은 다음 tick에 풀릴 수 있어 `retryable`이 맞기 때문이다. 차단 실패가 기록되면 차단 자체가 회로를 계속 여는 근거가 되어 회로가 닫힐 기회를 잃는다. 그래서 "실제로 provider를 호출해서 얻은 실패인가"를 `fromActualCall`로 따로 두고, CB는 두 조건을 함께 본다.
 
 설정은 yaml로 노출한다.
 
@@ -267,7 +270,7 @@ circuit breaker는 체인을 통과하는 예외만 본다.
 아래 설정은 체인 안에서 분류가 끝나 있어야 성립한다.
 
 ```kotlin
-.recordException { it is LlmProviderException && it.failure.retryable }
+.recordException { it is LlmProviderException && it.failure.fromActualCall && it.failure.retryable }
 ```
 
 `exchangeToMono`는 응답을 받은 자리에서 status를 보고 예외를 만들 수 있어 이 조건을 만족한다.

@@ -6,7 +6,7 @@ package me.rgunny.kachi.ai.domain.llm
  * 이 값 하나로 세 가지 판단이 갈린다.
  * - 실행 기록에 남길 실패 원인
  * - 키워드 격리 카운트를 올릴 것인가([keywordBound])
- * - provider circuit breaker에 실패로 기록할 것인가([retryable])
+ * - provider circuit breaker에 실패로 기록할 것인가([fromActualCall]이면서 [retryable])
  *
  * 자세한 결정 배경은 docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md 를 참고한다.
  */
@@ -34,11 +34,20 @@ data class LlmFailure(
     /**
      * 다음 tick이 같은 구간을 다시 처리하면 해소될 수 있는 실패인가.
      *
-     * circuit breaker에 실패로 기록할 대상 판단 기준이기도 하다.
      * INVALID_RESPONSE와 VALIDATION_ERROR는 provider가 살아 있다는 증거이므로 여기 포함하지 않는다.
      */
     val retryable: Boolean
         get() = category in RETRYABLE_CATEGORIES
+
+    /**
+     * 실제로 provider를 호출해서 얻은 실패인가.
+     *
+     * 호출 전에 차단해서 만든 실패는 provider의 상태에 대해 아무것도 말해주지 않는다.
+     * 차단은 다음 tick에 풀릴 수 있어 [retryable]에는 해당하지만, 재시도 가능 여부만으로 회로를 열면
+     * 차단해서 만든 실패가 다시 회로를 여는 근거가 된다.
+     */
+    val fromActualCall: Boolean
+        get() = source != LlmFailureSource.APPLICATION
 
     /**
      * 키워드에 책임을 물을 수 있는 실패인가.

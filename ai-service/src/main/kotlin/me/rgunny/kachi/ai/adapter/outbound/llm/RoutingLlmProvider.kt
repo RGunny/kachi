@@ -9,7 +9,6 @@ import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
-import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmProviderName
 import org.slf4j.LoggerFactory
@@ -111,7 +110,7 @@ class RoutingLlmProvider(
 
                 // 2. 차단은 호출이 아니므로 "실제 실패"로 세지 않는다. 후보 소진 시 판정에 쓴다.
                 failures += failure
-                if (failure.category != LlmFailureCategory.UNAVAILABLE) {
+                if (failure.fromActualCall) {
                     lastCallFailure = exception
                 }
 

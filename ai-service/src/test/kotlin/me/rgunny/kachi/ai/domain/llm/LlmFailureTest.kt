@@ -41,6 +41,14 @@ class LlmFailureTest {
     }
 
     @Test
+    @DisplayName("차단이 만든 실패만 실제 호출에서 나오지 않은 것으로 본다")
+    fun fromActualCallCodes() {
+        val notFromCall = LlmFailureCode.entries.filterNot { failure(it).fromActualCall }
+
+        assertEquals(listOf(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE), notFromCall)
+    }
+
+    @Test
     @DisplayName("응답 계약 위반과 요청 검증 실패만 키워드에 귀속된다")
     fun keywordBoundCodes() {
         val keywordBound = LlmFailureCode.entries.filter { failure(it).keywordBound }
@@ -68,7 +76,9 @@ class LlmFailureTest {
 
         assertEquals(LlmFailureSource.APPLICATION, failure.source)
         assertEquals(LlmFailureCategory.UNAVAILABLE, failure.category)
+        // 다음 tick에는 풀릴 수 있지만 provider를 호출해서 얻은 실패가 아니다.
         assertTrue(failure.retryable)
+        assertFalse(failure.fromActualCall)
         assertFalse(failure.keywordBound)
     }
 
