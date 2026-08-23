@@ -38,6 +38,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-data-mongodb-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
     testImplementation("io.projectreactor:reactor-test")
 
     // TestContainers

@@ -2,6 +2,8 @@ package me.rgunny.kachi.ai.domain.llm
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -10,35 +12,32 @@ import kotlin.test.assertTrue
 @DisplayName("LlmFailure")
 class LlmFailureTest {
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_TIMEOUT",
+        "LLM_RATE_LIMITED",
+        "LLM_TRANSIENT_ERROR",
+        "LLM_NETWORK_ERROR",
+        "LLM_PROVIDER_UNAVAILABLE"
+    ])
     @DisplayName("timeout·rate limit·일시 오류·provider 불능은 재시도 가능하다")
-    fun retryableCodes() {
-        val codes = listOf(
-            LlmFailureCode.LLM_TIMEOUT,
-            LlmFailureCode.LLM_RATE_LIMITED,
-            LlmFailureCode.LLM_TRANSIENT_ERROR,
-            LlmFailureCode.LLM_NETWORK_ERROR,
-            LlmFailureCode.LLM_PROVIDER_UNAVAILABLE
-        )
-
-        codes.forEach { code ->
-            assertTrue(failure(code).retryable, "$code must be retryable")
-        }
+    fun retryableCodes(code: LlmFailureCode) {
+        assertTrue(failure(code).retryable)
     }
 
-    @Test
-    @DisplayName("검증·인증·계약 위반·분류 불가 실패는 재시도 대상이 아니다")
-    fun nonRetryableCodes() {
-        val codes = listOf(
-            LlmFailureCode.LLM_CLIENT_ERROR,
-            LlmFailureCode.LLM_AUTHORIZATION_ERROR,
-            LlmFailureCode.LLM_INVALID_RESPONSE,
-            LlmFailureCode.LLM_UNKNOWN_ERROR
-        )
-
-        codes.forEach { code ->
-            assertFalse(failure(code).retryable, "$code must not be retryable")
-        }
+    // 재시도 가능이 allowlist이므로 나머지 전부가 대상이다. 코드가 늘면 이 테스트가 먼저 판정을 요구한다.
+    // 위 목록과 같은 값을 쓴다. 한쪽만 고치면 새 코드가 이 테스트로 넘어와 바로 실패한다.
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, mode = EnumSource.Mode.EXCLUDE, names = [
+        "LLM_TIMEOUT",
+        "LLM_RATE_LIMITED",
+        "LLM_TRANSIENT_ERROR",
+        "LLM_NETWORK_ERROR",
+        "LLM_PROVIDER_UNAVAILABLE"
+    ])
+    @DisplayName("재시도 가능 목록 밖의 실패는 재시도 대상이 아니다")
+    fun nonRetryableCodes(code: LlmFailureCode) {
+        assertFalse(failure(code).retryable)
     }
 
     @Test
@@ -52,15 +51,14 @@ class LlmFailureTest {
         )
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(LlmFailureCode::class)
     @DisplayName("원천과 분류는 코드에서 파생된다")
-    fun sourceAndCategoryAreDerivedFromCode() {
-        LlmFailureCode.entries.forEach { code ->
-            val failure = failure(code)
+    fun sourceAndCategoryAreDerivedFromCode(code: LlmFailureCode) {
+        val failure = failure(code)
 
-            assertEquals(code.source, failure.source, "$code source")
-            assertEquals(code.category, failure.category, "$code category")
-        }
+        assertEquals(code.source, failure.source)
+        assertEquals(code.category, failure.category)
     }
 
     @Test

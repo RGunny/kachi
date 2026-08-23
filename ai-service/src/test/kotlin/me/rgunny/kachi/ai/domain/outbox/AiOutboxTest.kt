@@ -4,6 +4,8 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -76,13 +78,12 @@ class AiOutboxTest {
             assertNull(pending.claim)
         }
 
-        @Test
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["PENDING"])
         @DisplayName("PENDING이 아니면 발행을 시작할 수 없다")
-        fun rejectNonPending() {
-            listOf(AiOutboxStatus.PUBLISHING, AiOutboxStatus.PUBLISHED, AiOutboxStatus.DEAD).forEach { status ->
-                assertFailsWith<IllegalStateException>("status=$status") {
-                    restored(status).markPublishing(now = later, claimedBy = "relay-1")
-                }
+        fun rejectNonPending(status: AiOutboxStatus) {
+            assertFailsWith<IllegalStateException> {
+                restored(status).markPublishing(now = later, claimedBy = "relay-1")
             }
         }
 
@@ -113,13 +114,12 @@ class AiOutboxTest {
             assertEquals(later, published.updatedAt)
         }
 
-        @Test
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["PUBLISHING"])
         @DisplayName("PUBLISHING이 아니면 발행 완료할 수 없다")
-        fun rejectNonPublishing() {
-            listOf(AiOutboxStatus.PENDING, AiOutboxStatus.PUBLISHED, AiOutboxStatus.DEAD).forEach { status ->
-                assertFailsWith<IllegalStateException>("status=$status") {
-                    restored(status).markPublished(later)
-                }
+        fun rejectNonPublishing(status: AiOutboxStatus) {
+            assertFailsWith<IllegalStateException> {
+                restored(status).markPublished(later)
             }
         }
     }
@@ -158,14 +158,18 @@ class AiOutboxTest {
             assertEquals(publishing.nextRetryAt, failed.nextRetryAt)
         }
 
-        @Test
-        @DisplayName("PUBLISHING이 아니거나 사유가 비어 있으면 실패를 기록할 수 없다")
-        fun rejectInvalidFailure() {
-            listOf(AiOutboxStatus.PENDING, AiOutboxStatus.PUBLISHED, AiOutboxStatus.DEAD).forEach { status ->
-                assertFailsWith<IllegalStateException>("status=$status") {
-                    restored(status).recordFailure("broker timeout", retryPolicy, later)
-                }
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["PUBLISHING"])
+        @DisplayName("PUBLISHING이 아니면 실패를 기록할 수 없다")
+        fun rejectNonPublishing(status: AiOutboxStatus) {
+            assertFailsWith<IllegalStateException> {
+                restored(status).recordFailure("broker timeout", retryPolicy, later)
             }
+        }
+
+        @Test
+        @DisplayName("사유가 비어 있으면 실패를 기록할 수 없다")
+        fun rejectBlankReason() {
             assertFailsWith<IllegalArgumentException> {
                 restored(AiOutboxStatus.PUBLISHING).recordFailure(" ", retryPolicy, later)
             }
@@ -190,14 +194,18 @@ class AiOutboxTest {
             assertEquals(later, dead.updatedAt)
         }
 
-        @Test
-        @DisplayName("PUBLISHING이 아니거나 사유가 비어 있으면 DEAD로 보낼 수 없다")
-        fun rejectInvalidMarkDead() {
-            listOf(AiOutboxStatus.PENDING, AiOutboxStatus.PUBLISHED, AiOutboxStatus.DEAD).forEach { status ->
-                assertFailsWith<IllegalStateException>("status=$status") {
-                    restored(status).markDead("payload too large", later)
-                }
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["PUBLISHING"])
+        @DisplayName("PUBLISHING이 아니면 DEAD로 보낼 수 없다")
+        fun rejectNonPublishing(status: AiOutboxStatus) {
+            assertFailsWith<IllegalStateException> {
+                restored(status).markDead("payload too large", later)
             }
+        }
+
+        @Test
+        @DisplayName("사유가 비어 있으면 DEAD로 보낼 수 없다")
+        fun rejectBlankReason() {
             assertFailsWith<IllegalArgumentException> {
                 restored(AiOutboxStatus.PUBLISHING).markDead(" ", later)
             }
@@ -223,13 +231,12 @@ class AiOutboxTest {
             assertNull(recovered.claim)
         }
 
-        @Test
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["DEAD"])
         @DisplayName("DEAD가 아니면 복구할 수 없다")
-        fun rejectNonDead() {
-            listOf(AiOutboxStatus.PENDING, AiOutboxStatus.PUBLISHING, AiOutboxStatus.PUBLISHED).forEach { status ->
-                assertFailsWith<IllegalStateException>("status=$status") {
-                    restored(status).recoverToPending(later)
-                }
+        fun rejectNonDead(status: AiOutboxStatus) {
+            assertFailsWith<IllegalStateException> {
+                restored(status).recoverToPending(later)
             }
         }
     }

@@ -28,6 +28,8 @@ import me.rgunny.kachi.ai.fake.FakeSummaryWatermarkPersistencePort
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -597,33 +599,25 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
+    @DisplayName("모든 LLM 실패 코드에 대응하는 실패 원인이 정해져 있다")
+    fun everyLlmFailureCodeHasExpectedReason() {
+        assertEquals(LlmFailureCode.entries.toSet(), FAILURE_REASON_BY_CODE.keys)
+    }
+
+    @ParameterizedTest
+    @EnumSource(LlmFailureCode::class)
     @DisplayName("LLM 실패 분류마다 대응하는 실패 원인으로 기록한다")
-    fun mapEveryLlmFailureCodeToFailureReason() = runBlocking {
-        val expected = mapOf(
-            LlmFailureCode.LLM_TIMEOUT to AiFailureReason.TIMEOUT,
-            LlmFailureCode.LLM_RATE_LIMITED to AiFailureReason.RATE_LIMITED,
-            LlmFailureCode.LLM_TRANSIENT_ERROR to AiFailureReason.SERVER_ERROR,
-            LlmFailureCode.LLM_NETWORK_ERROR to AiFailureReason.NETWORK_ERROR,
-            LlmFailureCode.LLM_CLIENT_ERROR to AiFailureReason.CLIENT_ERROR,
-            LlmFailureCode.LLM_AUTHORIZATION_ERROR to AiFailureReason.CLIENT_ERROR,
-            LlmFailureCode.LLM_INVALID_RESPONSE to AiFailureReason.INVALID_RESPONSE,
-            LlmFailureCode.LLM_PROVIDER_UNAVAILABLE to AiFailureReason.PROVIDER_UNAVAILABLE,
-            LlmFailureCode.LLM_UNKNOWN_ERROR to AiFailureReason.UNKNOWN
+    fun mapEveryLlmFailureCodeToFailureReason(code: LlmFailureCode) = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        val runs = FakeAiRunPersistencePort()
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(keyword to AiTestFixture.llmProviderException(code))
+
+        service(aiRunPersistence = runs).summarize(
+            SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
         )
-        assertEquals(LlmFailureCode.entries.toSet(), expected.keys)
 
-        expected.forEach { (code, reason) ->
-            val keyword = AiKeyword.of("NVIDIA")
-            val runs = FakeAiRunPersistencePort()
-            newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
-            llmProvider.failureByKeyword = mapOf(keyword to AiTestFixture.llmProviderException(code))
-
-            service(aiRunPersistence = runs).summarize(
-                SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow())
-            )
-
-            assertEquals(reason, runs.savedRuns.last().failureReason, "$code")
-        }
+        assertEquals(FAILURE_REASON_BY_CODE.getValue(code), runs.savedRuns.last().failureReason)
     }
 
     @Test
@@ -762,5 +756,19 @@ class SummarizeNewsServiceTest {
 
     private fun watermarkWindow(): SummaryWindowRequest.FromWatermark {
         return SummaryWindowRequest.FromWatermark(overlap = overlap, maxLookback = maxLookback)
+    }
+
+    private companion object {
+        val FAILURE_REASON_BY_CODE = mapOf(
+            LlmFailureCode.LLM_TIMEOUT to AiFailureReason.TIMEOUT,
+            LlmFailureCode.LLM_RATE_LIMITED to AiFailureReason.RATE_LIMITED,
+            LlmFailureCode.LLM_TRANSIENT_ERROR to AiFailureReason.SERVER_ERROR,
+            LlmFailureCode.LLM_NETWORK_ERROR to AiFailureReason.NETWORK_ERROR,
+            LlmFailureCode.LLM_CLIENT_ERROR to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_AUTHORIZATION_ERROR to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_INVALID_RESPONSE to AiFailureReason.INVALID_RESPONSE,
+            LlmFailureCode.LLM_PROVIDER_UNAVAILABLE to AiFailureReason.PROVIDER_UNAVAILABLE,
+            LlmFailureCode.LLM_UNKNOWN_ERROR to AiFailureReason.UNKNOWN
+        )
     }
 }

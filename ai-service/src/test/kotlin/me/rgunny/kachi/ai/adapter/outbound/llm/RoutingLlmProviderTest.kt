@@ -11,6 +11,8 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import kotlin.random.Random
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -249,16 +251,15 @@ class RoutingLlmProviderTest {
         assertEquals(LlmProviderName.NONE, failure.failure.provider)
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     @DisplayName("호출 가능해 보이는 provider를 plan으로 우선 고른다")
-    fun preferAvailableProviderAsPlan() = runBlocking {
-        repeat(10) { seed ->
-            val candidates = candidates("a", "b")
-            val router = router(candidates, seed = seed)
-            candidates.first { it.name == "a" }.blockedBy = OPEN
+    fun preferAvailableProviderAsPlan(seed: Int) = runBlocking {
+        val candidates = candidates("a", "b")
+        val router = router(candidates, seed = seed)
+        candidates.first { it.name == "a" }.blockedBy = OPEN
 
-            assertEquals("b", router.prepareNewsSummary().plan.provider.value, "seed=$seed")
-        }
+        assertEquals("b", router.prepareNewsSummary().plan.provider.value)
     }
 
     @Test

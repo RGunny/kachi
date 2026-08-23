@@ -5,6 +5,8 @@ import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
@@ -38,34 +40,32 @@ class LlmCircuitBreakerConfigTest {
         assertEquals(2, circuitBreakerConfig.permittedNumberOfCallsInHalfOpenState)
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_TIMEOUT",
+        "LLM_RATE_LIMITED",
+        "LLM_TRANSIENT_ERROR",
+        "LLM_NETWORK_ERROR"
+    ])
     @DisplayName("재시도 가능한 LLM 실패만 회로를 여는 근거로 기록한다")
-    fun recordRetryableLlmFailures() {
+    fun recordRetryableLlmFailures(code: LlmFailureCode) {
         val predicate = config.circuitBreakerConfig(properties()).recordExceptionPredicate
 
-        listOf(
-            LlmFailureCode.LLM_TIMEOUT,
-            LlmFailureCode.LLM_RATE_LIMITED,
-            LlmFailureCode.LLM_TRANSIENT_ERROR,
-            LlmFailureCode.LLM_NETWORK_ERROR
-        ).forEach { code ->
-            assertTrue(predicate.test(AiTestFixture.llmProviderException(code)), "$code must be recorded")
-        }
+        assertTrue(predicate.test(AiTestFixture.llmProviderException(code)))
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_INVALID_RESPONSE",
+        "LLM_CLIENT_ERROR",
+        "LLM_AUTHORIZATION_ERROR",
+        "LLM_UNKNOWN_ERROR"
+    ])
     @DisplayName("키워드 귀속 실패와 인증 실패는 기록하지 않는다")
-    fun doNotRecordKeywordBoundOrAuthorizationFailures() {
+    fun doNotRecordKeywordBoundOrAuthorizationFailures(code: LlmFailureCode) {
         val predicate = config.circuitBreakerConfig(properties()).recordExceptionPredicate
 
-        listOf(
-            LlmFailureCode.LLM_INVALID_RESPONSE,
-            LlmFailureCode.LLM_CLIENT_ERROR,
-            LlmFailureCode.LLM_AUTHORIZATION_ERROR,
-            LlmFailureCode.LLM_UNKNOWN_ERROR
-        ).forEach { code ->
-            assertFalse(predicate.test(AiTestFixture.llmProviderException(code)), "$code must not be recorded")
-        }
+        assertFalse(predicate.test(AiTestFixture.llmProviderException(code)))
     }
 
     @Test

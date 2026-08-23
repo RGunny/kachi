@@ -19,6 +19,8 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -48,26 +50,24 @@ class GuardedLlmProviderTest {
         assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_RATE_LIMITED",
+        "LLM_TRANSIENT_ERROR",
+        "LLM_NETWORK_ERROR"
+    ])
     @DisplayName("rate limit·일시 오류·네트워크 실패도 회로를 여는 근거로 기록한다")
-    fun recordEveryRetryableFailure() = runBlocking {
-        listOf(
-            LlmFailureCode.LLM_RATE_LIMITED,
-            LlmFailureCode.LLM_TRANSIENT_ERROR,
-            LlmFailureCode.LLM_NETWORK_ERROR
-        ).forEach { code ->
-            val delegate = NamedLlmProviderPort(PROVIDER_NAME)
-            val circuitBreaker = circuitBreaker()
-            val provider = guarded(delegate = delegate, circuitBreaker = circuitBreaker)
-            repeat(2) { delegate.failures += AiTestFixture.llmProviderException(code) }
+    fun recordEveryRetryableFailure(code: LlmFailureCode) = runBlocking {
+        val circuitBreaker = circuitBreaker()
+        val provider = guarded(circuitBreaker = circuitBreaker)
+        repeat(2) { delegate.failures += AiTestFixture.llmProviderException(code) }
 
-            assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
-            // rate limit은 cooldown까지 거는 실패다. 쉬는 동안에는 회로에 닿는 호출이 없다.
-            clock.advance(DEFAULT_COOLDOWN)
-            assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        // rate limit은 cooldown까지 거는 실패다. 쉬는 동안에는 회로에 닿는 호출이 없다.
+        clock.advance(DEFAULT_COOLDOWN)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
-            assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state, "$code must open the circuit")
-        }
+        assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
     }
 
     @Test
@@ -84,19 +84,17 @@ class GuardedLlmProviderTest {
         assertEquals(6, delegate.summarizeCallCount)
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = ["LLM_CLIENT_ERROR", "LLM_AUTHORIZATION_ERROR"])
     @DisplayName("요청 검증 실패와 인증 실패는 회로를 열지 않는다")
-    fun keepClosedOnValidationAndAuthorizationFailure() = runBlocking {
-        listOf(LlmFailureCode.LLM_CLIENT_ERROR, LlmFailureCode.LLM_AUTHORIZATION_ERROR).forEach { code ->
-            val delegate = NamedLlmProviderPort(PROVIDER_NAME)
-            val circuitBreaker = circuitBreaker()
-            val provider = guarded(delegate = delegate, circuitBreaker = circuitBreaker)
-            repeat(5) { delegate.failures += AiTestFixture.llmProviderException(code) }
+    fun keepClosedOnValidationAndAuthorizationFailure(code: LlmFailureCode) = runBlocking {
+        val circuitBreaker = circuitBreaker()
+        val provider = guarded(circuitBreaker = circuitBreaker)
+        repeat(5) { delegate.failures += AiTestFixture.llmProviderException(code) }
 
-            repeat(5) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
+        repeat(5) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
 
-            assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state, "$code must not open the circuit")
-        }
+        assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
     }
 
     @Test
