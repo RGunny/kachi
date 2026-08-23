@@ -95,20 +95,31 @@ class InternalAiNewsSummaryControllerTest {
     }
 
     @Test
+    @DisplayName("생략한 필드는 요청 DTO의 기본값으로 채운다")
+    fun applyRequestDefaultsForOmittedFields() {
+        webTestClient.post()
+            .uri(ApiPaths.V1_INTERNAL_AI_NEWS_SUMMARIES)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(mapOf("keywords" to listOf("NVIDIA")))
+            .exchange()
+            .expectStatus().isOk
+
+        val command = requireNotNull(useCase.lastCommand)
+
+        assertEquals(listOf("NVIDIA"), command.keywords.map { it.value })
+        assertEquals(
+            SummarizeNewsCommand.DEFAULT_MAX_ARTICLES_PER_KEYWORD,
+            command.maxArticlesPerKeyword
+        )
+    }
+
+    @Test
     @DisplayName("키워드가 올바르지 않으면 400으로 응답한다")
     fun rejectInvalidKeyword() {
         val body = webTestClient.post()
             .uri(ApiPaths.V1_INTERNAL_AI_NEWS_SUMMARIES)
             .contentType(MediaType.APPLICATION_JSON)
-            // 요청 DTO의 기본값이 역직렬화에 적용되지 않아 필드를 모두 채워 보낸다.
-            .bodyValue(
-                mapOf(
-                    "keywords" to listOf(" "),
-                    "from" to null,
-                    "to" to null,
-                    "maxArticlesPerKeyword" to 20
-                )
-            )
+            .bodyValue(mapOf("keywords" to listOf(" ")))
             .exchange()
             .expectStatus().isBadRequest
             .expectBody(String::class.java)
