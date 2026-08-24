@@ -5,6 +5,9 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetad
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
+import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
+import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
+import me.rgunny.kachi.ai.config.AiOutboxRetryProperties
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
@@ -21,6 +24,7 @@ import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxRetryPolicy
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
@@ -52,6 +56,7 @@ object AiTestFixture {
 
     const val OUTBOX_EVENT_KEY: String = "018f0000-0000-7000-8000-000000000009"
     const val OUTBOX_PAYLOAD: String = """{"schemaVersion":1,"keyword":"NVIDIA"}"""
+    const val RELAY_PUBLISHER_ID: String = "relay-test"
 
     fun keyword(value: String = "NVIDIA"): AiKeyword {
         return AiKeyword.of(value)
@@ -123,6 +128,73 @@ object AiTestFixture {
             claim = claim,
             createdAt = createdAt,
             updatedAt = updatedAt
+        )
+    }
+
+    /**
+     * 재시도 정책. 분산값은 기본으로 끈다. 켜 두면 다음 차례 시각을 단언할 수 없다.
+     */
+    fun retryPolicy(
+        maxAttempts: Int = 5,
+        baseDelay: Duration = Duration.ofSeconds(1),
+        maxDelay: Duration = Duration.ofMinutes(1),
+        multiplier: Double = 2.0,
+        jitterRatio: Double = 0.0
+    ): AiOutboxRetryPolicy {
+        return AiOutboxRetryPolicy(
+            maxAttempts = maxAttempts,
+            baseDelay = baseDelay,
+            maxDelay = maxDelay,
+            multiplier = multiplier,
+            jitterRatio = jitterRatio
+        )
+    }
+
+    fun relayPolicy(
+        batchSize: Int = 10,
+        publisherId: String = RELAY_PUBLISHER_ID,
+        retryPolicy: AiOutboxRetryPolicy = retryPolicy(),
+        publishingVisibilityTimeout: Duration = Duration.ofSeconds(60)
+    ): AiOutboxRelayPolicy {
+        return AiOutboxRelayPolicy(
+            batchSize = batchSize,
+            publisherId = publisherId,
+            retryPolicy = retryPolicy,
+            publishingVisibilityTimeout = publishingVisibilityTimeout
+        )
+    }
+
+    fun relayProperties(
+        enabled: Boolean = true,
+        publisherId: String = RELAY_PUBLISHER_ID,
+        fixedDelay: Duration = Duration.ofSeconds(5),
+        initialDelay: Duration = Duration.ofSeconds(15),
+        batchSize: Int = 50,
+        publishingVisibilityTimeout: Duration = Duration.ofSeconds(60),
+        retry: AiOutboxRetryProperties = retryProperties()
+    ): AiOutboxRelayProperties {
+        return AiOutboxRelayProperties(
+            enabled = enabled,
+            publisherId = publisherId,
+            fixedDelay = fixedDelay,
+            initialDelay = initialDelay,
+            batchSize = batchSize,
+            publishingVisibilityTimeout = publishingVisibilityTimeout,
+            retry = retry
+        )
+    }
+
+    fun retryProperties(
+        maxAttempts: Int = 5,
+        baseDelay: Duration = Duration.ofSeconds(1),
+        maxDelay: Duration = Duration.ofMinutes(1),
+        multiplier: Double = 2.0
+    ): AiOutboxRetryProperties {
+        return AiOutboxRetryProperties(
+            maxAttempts = maxAttempts,
+            baseDelay = baseDelay,
+            maxDelay = maxDelay,
+            multiplier = multiplier
         )
     }
 

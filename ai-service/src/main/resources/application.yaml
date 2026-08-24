@@ -34,6 +34,19 @@ kachi:
         max-expansions-per-keyword: 5
     quarantine:
       failure-threshold: 3
+    outbox:
+      relay:
+        enabled: false
+        publisher-id: ${HOSTNAME:ai-service-${random.uuid}}
+        fixed-delay: 5s
+        initial-delay: 15s
+        batch-size: 50
+        publishing-visibility-timeout: 60s
+        retry:
+          max-attempts: 5
+          base-delay: 1s
+          max-delay: 1m
+          multiplier: 2.0
     clients:
       user-service:
         active-keywords-path: /api/v1/internal/keywords/active
