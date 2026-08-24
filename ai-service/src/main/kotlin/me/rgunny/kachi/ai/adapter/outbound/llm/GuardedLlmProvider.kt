@@ -99,7 +99,7 @@ class GuardedLlmProvider(
      * 호출을 circuit breaker 집계와 cooldown 판정으로 감싼다.
      *
      * 취소는 성공도 실패도 아니라서 permission을 돌려주고 집계에서 뺀다. 라이브러리 wrapper는 취소를
-     * 성공으로 세고 그 동작에 끼어들 지점이 없어, 상태기계 API를 직접 호출한다.
+     * 성공으로 세고 그 동작에 끼어들 지점이 없어, 상태 전이 API를 직접 호출한다.
      */
     private suspend fun <T : Any> guarded(call: suspend () -> T): T {
         val now = Instant.now(clock)
