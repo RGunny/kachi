@@ -1,23 +1,30 @@
 package me.rgunny.kachi.ai
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
+import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
+import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiOutboxRelayScheduler
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxEventSerializer
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.AiOutboxEvent
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
+import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
+import me.rgunny.kachi.ai.application.service.outbox.RelayAiOutboxService
+import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.reactive.TransactionalOperator
 import tools.jackson.databind.json.JsonMapper
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -41,6 +48,12 @@ class AiServiceApplicationTest {
 
     @Autowired
     private lateinit var jsonMapper: JsonMapper
+
+    @Autowired
+    private lateinit var relayProperties: AiOutboxRelayProperties
+
+    @Autowired
+    private lateinit var applicationContext: ApplicationContext
 
     @Test
     fun contextLoads() {
@@ -68,6 +81,25 @@ class AiServiceApplicationTest {
         assertEquals(summary.id.value.toString(), payload["summaryId"])
         assertEquals("NEUTRAL", payload["sentiment"])
         assertEquals("2026-06-03T00:00:00Z", payload["createdAt"])
+    }
+
+    /**
+     * 발행 어댑터가 아직 없으므로 relay를 켜면 이벤트가 유실되거나 전부 실패로 쌓인다.
+     * 켜고 끄는 스위치를 빈 생성 조건에 둔 이유가 이것이라, 꺼진 상태에서 빈이 없다는 사실 자체가 검증 대상이다.
+     */
+    @Test
+    @DisplayName("relay가 꺼져 있으면 relay 빈이 만들어지지 않는다")
+    fun skipRelayBeansWhenRelayIsDisabled() {
+        assertFalse(relayProperties.enabled)
+
+        listOf(
+            RelayAiOutboxService::class.java,
+            AiOutboxRelayExecutor::class.java,
+            AiOutboxRelayScheduler::class.java,
+            AiOutboxRelayPolicy::class.java
+        ).forEach { type ->
+            assertTrue(applicationContext.getBeanNamesForType(type).isEmpty(), "${type.simpleName} 빈이 없어야 합니다")
+        }
     }
 
     @Test
