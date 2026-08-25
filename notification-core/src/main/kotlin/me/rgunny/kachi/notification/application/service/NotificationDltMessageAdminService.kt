@@ -62,10 +62,10 @@ class NotificationDltMessageAdminService(
         }
 
         // 2. domain 전이 규칙으로 PENDING 메시지만 DISCARDED로 닫는다.
-        message.discard(now, command.reason)
+        val discarded = message.discard(now, command.reason)
 
         // 3. 저장 시점에도 PENDING일 때만 조건부 갱신해 동시 운영 처리 충돌을 막는다.
-        val saved = persistencePort.discardIfPending(message)
+        val saved = persistencePort.discardIfPending(discarded)
             ?: throw InvalidNotificationDltMessageStateException(
                 messageId = command.messageId,
                 currentStatus = null,

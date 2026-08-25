@@ -78,9 +78,9 @@ class NotificationMongoDltMessageAdminPersistenceAdapterIntegrationTest : Persis
         mongoTemplate.insert(document).block()
         val message = adapter.findById(NotificationDltMessageId.of(UUID.fromString(document.id)))
         assertNotNull(message)
-        message.discard(NOW.plusSeconds(10), "operator discard")
+        val discarded = message.discard(NOW.plusSeconds(10), "operator discard")
 
-        val result = adapter.discardIfPending(message)
+        val result = adapter.discardIfPending(discarded)
 
         assertNotNull(result)
         assertEquals(NotificationDltMessageStatus.DISCARDED, result.status)

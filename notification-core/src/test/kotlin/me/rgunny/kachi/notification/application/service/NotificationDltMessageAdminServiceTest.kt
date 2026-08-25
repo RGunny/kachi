@@ -105,9 +105,7 @@ class NotificationDltMessageAdminServiceTest {
     @Test
     @DisplayName("이미 처리된 DLT 메시지는 폐기할 수 없다")
     fun discardAlreadyClosed() {
-        val message = message().also {
-            it.discard(NOW.minusSeconds(1), "already discarded")
-        }
+        val message = message().discard(NOW.minusSeconds(1), "already discarded")
         val service = NotificationDltMessageAdminService(
             FakeNotificationDltMessageAdminPersistencePort(listOf(message)),
             CLOCK,
