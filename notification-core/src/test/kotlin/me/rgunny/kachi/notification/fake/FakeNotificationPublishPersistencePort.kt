@@ -23,8 +23,7 @@ class FakeNotificationPublishPersistencePort(
 
         val notification = notificationPersistencePort.findById(outbox.notificationId)
             ?: throw IllegalStateException("notification not found. notificationId=${outbox.notificationId}")
-        notification.markPublished(now)
-        notificationPersistencePort.save(notification)
+        notificationPersistencePort.save(notification.markPublished(now))
         return true
     }
 
@@ -42,8 +41,7 @@ class FakeNotificationPublishPersistencePort(
 
         val notification = notificationPersistencePort.findById(outbox.notificationId)
             ?: throw IllegalStateException("notification not found. notificationId=${outbox.notificationId}")
-        notification.markPublishFailed(now, reason)
-        notificationPersistencePort.save(notification)
+        notificationPersistencePort.save(notification.markPublishFailed(now, reason))
         return true
     }
 

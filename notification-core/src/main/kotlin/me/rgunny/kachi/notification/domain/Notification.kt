@@ -14,46 +14,24 @@ class Notification private constructor(
      * 외부 요청을 알림으로 최초 접수한 시각.
      */
     val requestedAt: Instant,
-    status: NotificationStatus,
-    failureReason: String? = null,
+    val status: NotificationStatus,
+    val failureReason: String?,
     /**
      * 알림 row가 마지막으로 변경된 시각.
      */
-    updatedAt: Instant = requestedAt,
+    val updatedAt: Instant,
     /**
      * 알림 상태가 마지막으로 전이된 시각.
      */
-    lastTransitionAt: Instant = requestedAt,
-    dispatchAttempts: Int = 0,
-    claimedAt: Instant? = null,
-    claimedBy: String? = null,
-    uncommittedHistories: List<NotificationHistory> = emptyList(),
+    val lastTransitionAt: Instant,
+    val dispatchAttempts: Int,
+    val claimedAt: Instant?,
+    val claimedBy: String?,
+    /**
+     * 이 인스턴스에 이르기까지 쌓였으나 아직 저장되지 않은 상태 전이 이력.
+     */
+    val uncommittedHistories: List<NotificationHistory>,
 ) {
-    var status: NotificationStatus = status
-        private set
-
-    var failureReason: String? = failureReason
-        private set
-
-    var updatedAt: Instant = updatedAt
-        private set
-
-    var lastTransitionAt: Instant = lastTransitionAt
-        private set
-
-    var dispatchAttempts: Int = dispatchAttempts
-        private set
-
-    var claimedAt: Instant? = claimedAt
-        private set
-
-    var claimedBy: String? = claimedBy
-        private set
-
-    private val _uncommittedHistories = uncommittedHistories.toMutableList()
-    val uncommittedHistories: List<NotificationHistory>
-        get() = _uncommittedHistories.toList()
-
     companion object {
 
         /**
@@ -82,6 +60,13 @@ class Notification private constructor(
                 message = message,
                 requestedAt = now,
                 status = NotificationStatus.REQUESTED,
+                failureReason = null,
+                updatedAt = now,
+                lastTransitionAt = now,
+                dispatchAttempts = 0,
+                claimedAt = null,
+                claimedBy = null,
+                uncommittedHistories = emptyList(),
             )
         }
 
@@ -139,7 +124,7 @@ class Notification private constructor(
                 dispatchAttempts = dispatchAttempts,
                 claimedAt = claimedAt,
                 claimedBy = claimedBy,
-                uncommittedHistories = uncommittedHistories,
+                uncommittedHistories = uncommittedHistories.toList(),
             )
         }
     }
@@ -148,157 +133,190 @@ class Notification private constructor(
      * Kafka 발행 성공 처리.
      * NotificationStatus: [REQUESTED --> PUBLISHED]
      */
-    fun markPublished(now: Instant) {
+    fun markPublished(now: Instant): Notification {
         // 이미 PUBLISHED 면 변화 없이 반환 (멱등).
-        if (this.status == NotificationStatus.PUBLISHED) {
-            return
+        if (status == NotificationStatus.PUBLISHED) {
+            return this
         }
 
         // REQUESTED 가 아니면 잘못된 상태에서의 전이요청으로 예외 처리
-        if (this.status != NotificationStatus.REQUESTED && this.status != NotificationStatus.PUBLISH_FAILED) {
-            throw IllegalStateException("markPublished requires REQUESTED or PUBLISH_FAILED, current= ${this.status}")
+        check(status == NotificationStatus.REQUESTED || status == NotificationStatus.PUBLISH_FAILED) {
+            "markPublished requires REQUESTED or PUBLISH_FAILED, current= $status"
         }
 
-        transition(this.status, NotificationStatus.PUBLISHED, now)
+        return transition(status, NotificationStatus.PUBLISHED, now)
     }
 
     /**
      * Kafka 발행 실패 처리.
      * NotificationStatus: [REQUESTED --> PUBLISH_FAILED]
      */
-    fun markPublishFailed(now: Instant, reason: String) {
+    fun markPublishFailed(now: Instant, reason: String): Notification {
         // 이미 PUBLISHED, PUBLISH_FAILED 면 변화 없이 반환 (멱등).
-        if (this.status == NotificationStatus.PUBLISHED
-            || this.status == NotificationStatus.PUBLISH_FAILED) {
-            return
+        if (status == NotificationStatus.PUBLISHED
+            || status == NotificationStatus.PUBLISH_FAILED) {
+            return this
         }
 
-        transition(NotificationStatus.REQUESTED, NotificationStatus.PUBLISH_FAILED, now, reason)
+        return transition(NotificationStatus.REQUESTED, NotificationStatus.PUBLISH_FAILED, now, reason)
     }
 
     /**
      * 카프카 요청 수신 성공 처리.
      * NotificationStatus: [PUBLISHED --> PROCESSING]
      */
-    fun markProcessing(now: Instant, claimedBy: String) {
+    fun markProcessing(now: Instant, claimedBy: String): Notification {
         require(claimedBy.isNotBlank()) { "claimedBy must not be blank" }
 
-        if (this.status == NotificationStatus.PROCESSING) {
-            return
+        if (status == NotificationStatus.PROCESSING) {
+            return this
         }
-        if (this.status != NotificationStatus.PUBLISHED && this.status != NotificationStatus.RETRY_WAIT) {
-            throw IllegalStateException("markProcessing requires PUBLISHED or RETRY_WAIT, current= ${this.status}")
+        check(status == NotificationStatus.PUBLISHED || status == NotificationStatus.RETRY_WAIT) {
+            "markProcessing requires PUBLISHED or RETRY_WAIT, current= $status"
         }
-        transition(this.status, NotificationStatus.PROCESSING, now)
-        this.claimedAt = now
-        this.claimedBy = claimedBy
+
+        return transition(status, NotificationStatus.PROCESSING, now)
+            .copy(claimedAt = now, claimedBy = claimedBy)
     }
 
     /**
      * 외부 채널 발송 성공 처리.
      * NotificationStatus: [PROCESSING --> SENT]
      */
-    fun markSent(now: Instant) {
-        transition(NotificationStatus.PROCESSING, NotificationStatus.SENT, now)
-        this.dispatchAttempts += 1
-        clearClaim()
+    fun markSent(now: Instant): Notification {
+        return transition(NotificationStatus.PROCESSING, NotificationStatus.SENT, now)
+            .copy(dispatchAttempts = dispatchAttempts + 1, claimedAt = null, claimedBy = null)
     }
 
     /**
      * 외부 채널 발송 실패 처리.
      * NotificationStatus: [PROCESSING --> FAILED]
      */
-    fun markFailed(now: Instant, reason: String) {
+    fun markFailed(now: Instant, reason: String): Notification {
         require(reason.isNotBlank()) { "reason must not be blank" }
-        transition(NotificationStatus.PROCESSING, NotificationStatus.FAILED, now, reason)
-        this.dispatchAttempts += 1
-        clearClaim()
+
+        return transition(NotificationStatus.PROCESSING, NotificationStatus.FAILED, now, reason)
+            .copy(dispatchAttempts = dispatchAttempts + 1, claimedAt = null, claimedBy = null)
     }
 
     /**
      * 자동 재시도 대기 처리.
      * NotificationStatus: [FAILED --> RETRY_WAIT]
      */
-    fun markRetryWait(now: Instant, reason: String) {
+    fun markRetryWait(now: Instant, reason: String): Notification {
         require(reason.isNotBlank()) { "reason must not be blank" }
-        transition(NotificationStatus.FAILED, NotificationStatus.RETRY_WAIT, now, reason)
+
+        return transition(NotificationStatus.FAILED, NotificationStatus.RETRY_WAIT, now, reason)
     }
 
     /**
      * 자동 재시도 종료 처리.
      * NotificationStatus: [FAILED --> DEAD]
      */
-    fun markDead(now: Instant, reason: String) {
+    fun markDead(now: Instant, reason: String): Notification {
         require(reason.isNotBlank()) { "reason must not be blank" }
 
-        if (this.status == NotificationStatus.DEAD) {
-            return
+        if (status == NotificationStatus.DEAD) {
+            return this
         }
 
-        transition(NotificationStatus.FAILED, NotificationStatus.DEAD, now, reason)
+        return transition(NotificationStatus.FAILED, NotificationStatus.DEAD, now, reason)
     }
 
     /**
      * 운영자 수동 복구 처리.
      * NotificationStatus: [DEAD --> REQUESTED]
      */
-    fun recoverDeadToRequested(now: Instant, reason: String) {
+    fun recoverDeadToRequested(now: Instant, reason: String): Notification {
         require(reason.isNotBlank()) { "reason must not be blank" }
-        if (this.status != NotificationStatus.DEAD) {
-            throw IllegalStateException("recoverDeadToRequested requires DEAD, current=${this.status}")
+        check(status == NotificationStatus.DEAD) {
+            "recoverDeadToRequested requires DEAD, current=$status"
         }
 
-        val fromStatus = this.status
-        this.status = NotificationStatus.REQUESTED
-        this.failureReason = null
-        this.updatedAt = now
-        this.lastTransitionAt = now
-        this.dispatchAttempts = 0
-        clearClaim()
-        this._uncommittedHistories.add(NotificationHistory.record(
-            notificationId = this.id,
-            fromStatus = fromStatus,
-            toStatus = NotificationStatus.REQUESTED,
-            createdAt = now,
-            reason = reason,
-        ))
+        return copy(
+            status = NotificationStatus.REQUESTED,
+            failureReason = null,
+            updatedAt = now,
+            lastTransitionAt = now,
+            dispatchAttempts = 0,
+            claimedAt = null,
+            claimedBy = null,
+            uncommittedHistories = uncommittedHistories + NotificationHistory.record(
+                notificationId = id,
+                fromStatus = status,
+                toStatus = NotificationStatus.REQUESTED,
+                createdAt = now,
+                reason = reason,
+            ),
+        )
     }
 
     fun canRetry(maxAttempts: Int): Boolean {
         require(maxAttempts > 0) { "maxAttempts must be positive" }
-        return this.dispatchAttempts < maxAttempts
+        return dispatchAttempts < maxAttempts
     }
 
     /**
      * 상태 전이의 최종 가드.
      *
      * 멱등 마커와 저장소 유니크 제약을 통과해도 같은 알림 row에서 허용되지 않는 상태 변경은 여기서 차단한다.
+     * 통과하면 전이 이력을 덧붙인 새 인스턴스를 돌려준다.
      */
     private fun transition(
         expected: NotificationStatus, next: NotificationStatus,
         now: Instant,
         reason: String? = null
-    ) {
-        if (this.status != expected) {
-            throw IllegalStateException("transition to " + next + " requires " + expected + ", current=${this.status}")
+    ): Notification {
+        check(status == expected) {
+            "transition to $next requires $expected, current=$status"
         }
-        val fromStatus = this.status
-        this.status = next
-        this.updatedAt = now
-        this.lastTransitionAt = now
-        this.failureReason = reason
-        this._uncommittedHistories.add(NotificationHistory.record(
-            notificationId = this.id,
-            fromStatus = fromStatus,
-            toStatus = next,
-            createdAt = now,
-            reason = reason
-        ))
+
+        return copy(
+            status = next,
+            updatedAt = now,
+            lastTransitionAt = now,
+            failureReason = reason,
+            uncommittedHistories = uncommittedHistories + NotificationHistory.record(
+                notificationId = id,
+                fromStatus = status,
+                toStatus = next,
+                createdAt = now,
+                reason = reason,
+            ),
+        )
     }
 
-    private fun clearClaim() {
-        this.claimedAt = null
-        this.claimedBy = null
+    /**
+     * 전이 결과 인스턴스를 만든다.
+     *
+     * 전이해도 바뀌지 않는 식별자/요청 내용/접수 시각은 인자로 받지 않는다.
+     */
+    private fun copy(
+        status: NotificationStatus = this.status,
+        failureReason: String? = this.failureReason,
+        updatedAt: Instant = this.updatedAt,
+        lastTransitionAt: Instant = this.lastTransitionAt,
+        dispatchAttempts: Int = this.dispatchAttempts,
+        claimedAt: Instant? = this.claimedAt,
+        claimedBy: String? = this.claimedBy,
+        uncommittedHistories: List<NotificationHistory> = this.uncommittedHistories,
+    ): Notification {
+        return Notification(
+            id = id,
+            requestId = requestId,
+            requester = requester,
+            channel = channel,
+            recipient = recipient,
+            message = message,
+            requestedAt = requestedAt,
+            status = status,
+            failureReason = failureReason,
+            updatedAt = updatedAt,
+            lastTransitionAt = lastTransitionAt,
+            dispatchAttempts = dispatchAttempts,
+            claimedAt = claimedAt,
+            claimedBy = claimedBy,
+            uncommittedHistories = uncommittedHistories,
+        )
     }
-
 }

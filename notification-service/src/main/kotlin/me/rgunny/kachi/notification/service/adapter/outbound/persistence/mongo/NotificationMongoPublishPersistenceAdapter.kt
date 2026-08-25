@@ -73,11 +73,10 @@ class NotificationMongoPublishPersistenceAdapter(
             }
 
             // 2. 같은 transaction 안에서 notification도 publish 완료 상태로 맞춘다.
-            val notification = findNotification(outbox)
-            notification.markPublished(now)
-            mongoTemplate.save(notificationMapper.toDocument(notification))
+            val published = findNotification(outbox).markPublished(now)
+            mongoTemplate.save(notificationMapper.toDocument(published))
                 .awaitSingle()
-            insertUncommittedHistories(notification)
+            insertUncommittedHistories(published)
 
             true
         } ?: false
@@ -97,11 +96,10 @@ class NotificationMongoPublishPersistenceAdapter(
             }
 
             // 2. 같은 transaction 안에서 notification에도 publish 실패 사유를 남긴다.
-            val notification = findNotification(outbox)
-            notification.markPublishFailed(now, reason)
-            mongoTemplate.save(notificationMapper.toDocument(notification))
+            val failed = findNotification(outbox).markPublishFailed(now, reason)
+            mongoTemplate.save(notificationMapper.toDocument(failed))
                 .awaitSingle()
-            insertUncommittedHistories(notification)
+            insertUncommittedHistories(failed)
 
             true
         } ?: false

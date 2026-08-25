@@ -26,9 +26,8 @@ class NotificationDocumentMapperTest {
             recipient = "C123",
             message = "hello",
             now = requestedAt,
-        ).also {
-            it.markPublished(publishedAt)
-        }
+        )
+            .markPublished(publishedAt)
 
         val document = mapper.toDocument(notification)
         val restored = mapper.toDomain(document)
@@ -63,10 +62,9 @@ class NotificationDocumentMapperTest {
             recipient = "C123",
             message = "hello",
             now = requestedAt,
-        ).also {
-            it.markPublished(publishedAt)
-            it.markProcessing(claimedAt, "worker-1")
-        }
+        )
+            .markPublished(publishedAt)
+            .markProcessing(claimedAt, "worker-1")
 
         val document = mapper.toDocument(notification)
         val restored = mapper.toDomain(document)
@@ -76,8 +74,8 @@ class NotificationDocumentMapperTest {
         assertEquals(claimedAt, restored.claimedAt)
         assertEquals("worker-1", restored.claimedBy)
 
-        restored.markSent(Instant.parse("2026-06-17T00:00:30Z"))
-        assertNull(restored.claimedAt)
-        assertNull(restored.claimedBy)
+        val sent = restored.markSent(Instant.parse("2026-06-17T00:00:30Z"))
+        assertNull(sent.claimedAt)
+        assertNull(sent.claimedBy)
     }
 }
