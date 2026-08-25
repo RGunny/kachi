@@ -3,6 +3,7 @@ package me.rgunny.kachi.ai.application.port.outbound.persistence
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxClaim
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxId
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import java.time.Instant
 
 /**
@@ -28,7 +29,10 @@ interface AiOutboxPersistencePort {
      */
     suspend fun findStalePublishing(threshold: Instant, batchSize: Int): List<AiOutbox>
 
-    suspend fun findDead(batchSize: Int): List<AiOutbox>
+    /**
+     * 상태의 행을 오래된 순으로 읽는다.
+     */
+    suspend fun findByStatus(status: AiOutboxStatus, batchSize: Int): List<AiOutbox>
 
     /**
      * 발행할 차례가 된 PENDING 행을 PUBLISHING으로 옮기고 소유권을 잡는다.
@@ -45,4 +49,11 @@ interface AiOutboxPersistencePort {
      * 점유 시각은 저장 정밀도에 맞춰 잘린 값이므로, 호출자가 자기 시계로 같은 값을 다시 만들 수는 없다.
      */
     suspend fun finalize(outbox: AiOutbox, expectedClaim: AiOutboxClaim): Boolean
+
+    /**
+     * DEAD 행일 때만 복구 결과를 저장한다. false는 조회와 저장 사이에 다른 복구가 끝났다는 뜻이다.
+     *
+     * [outbox]는 `recoverToPending`이 계산한 PENDING 상태다.
+     */
+    suspend fun recoverDead(outbox: AiOutbox): Boolean
 }

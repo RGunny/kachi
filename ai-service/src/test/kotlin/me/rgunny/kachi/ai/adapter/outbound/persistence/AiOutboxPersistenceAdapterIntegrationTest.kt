@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -259,18 +261,85 @@ class AiOutboxPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationT
     }
 
     @Nested
-    @DisplayName("findDead()")
-    inner class FindDead {
+    @DisplayName("findByStatus()")
+    inner class FindByStatus {
+
+        @ParameterizedTest
+        @EnumSource(AiOutboxStatus::class)
+        @DisplayName("요청한 상태의 행만 읽는다")
+        fun findOnlyRequestedStatus(status: AiOutboxStatus) = runBlocking {
+            val stored = AiOutboxStatus.entries.associateWith { saveWith(it) }
+
+            assertEquals(
+                listOf(stored.getValue(status).id),
+                adapter.findByStatus(status, batchSize = 10).map { it.id }
+            )
+        }
 
         @Test
-        @DisplayName("DEAD 행만 batchSize만큼 읽는다")
-        fun findOnlyDead() = runBlocking {
-            val dead = save(eventKey = "dead", status = AiOutboxStatus.DEAD, lastError = "broker down")
-            save(eventKey = "pending", nextRetryAt = now)
-            save(eventKey = "published", status = AiOutboxStatus.PUBLISHED, publishedAt = now)
+        @DisplayName("batchSize만큼만 오래된 순으로 읽는다")
+        fun limitByBatchSize() = runBlocking {
+            val older = save(
+                eventKey = "dead-older",
+                status = AiOutboxStatus.DEAD,
+                nextRetryAt = now.minus(Duration.ofMinutes(1)),
+                lastError = "broker down"
+            )
+            save(eventKey = "dead-newer", status = AiOutboxStatus.DEAD, lastError = "broker down")
 
-            assertEquals(listOf(dead.id), adapter.findDead(batchSize = 10).map { it.id })
-            assertEquals(1, adapter.findDead(batchSize = 1).size)
+            assertEquals(listOf(older.id), adapter.findByStatus(AiOutboxStatus.DEAD, batchSize = 1).map { it.id })
+            assertEquals(2, adapter.findByStatus(AiOutboxStatus.DEAD, batchSize = 10).size)
+        }
+    }
+
+    @Nested
+    @DisplayName("recoverDead()")
+    inner class RecoverDead {
+
+        @Test
+        @DisplayName("DEAD 행을 발행 대기 상태로 되돌린다")
+        fun recoverOnlyDead() = runBlocking {
+            val dead = save(eventKey = "dead", status = AiOutboxStatus.DEAD, lastError = "broker down")
+
+            assertTrue(adapter.recoverDead(dead.recoverToPending(now)))
+
+            val found = assertNotNull(adapter.findById(dead.id))
+            assertEquals(AiOutboxStatus.PENDING, found.status)
+            assertEquals(0, found.retryCount)
+            assertEquals(now, found.nextRetryAt)
+            assertNull(found.lastError)
+            assertNull(found.claim)
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = AiOutboxStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["DEAD"])
+        @DisplayName("DEAD가 아닌 행은 바꾸지 않고 실패로 알린다")
+        fun rejectNotDead(status: AiOutboxStatus) = runBlocking {
+            val stored = saveWith(status)
+            val recovered = AiTestFixture.restoredOutbox(
+                id = stored.id,
+                eventKey = stored.eventKey,
+                status = AiOutboxStatus.PENDING,
+                nextRetryAt = now,
+                createdAt = stored.createdAt,
+                updatedAt = now
+            )
+
+            assertFalse(adapter.recoverDead(recovered))
+
+            val found = assertNotNull(adapter.findById(stored.id))
+            assertEquals(status, found.status)
+            assertEquals(stored.updatedAt, found.updatedAt)
+        }
+
+        @Test
+        @DisplayName("같은 행을 두 번 복구하면 두 번째는 실패한다")
+        fun recoverOnlyOnce() = runBlocking {
+            val dead = save(eventKey = "dead", status = AiOutboxStatus.DEAD, lastError = "broker down")
+            val recovered = dead.recoverToPending(now)
+
+            assertTrue(adapter.recoverDead(recovered))
+            assertFalse(adapter.recoverDead(recovered))
         }
     }
 
@@ -324,6 +393,19 @@ class AiOutboxPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationT
                 claim = claim,
                 createdAt = createdAt
             )
+        )
+    }
+
+    /**
+     * 상태 하나에 맞는 행을 그 상태가 요구하는 필드까지 채워 저장한다.
+     */
+    private suspend fun saveWith(status: AiOutboxStatus): AiOutbox {
+        return save(
+            eventKey = "outbox-${status.name.lowercase()}",
+            status = status,
+            lastError = "broker down".takeIf { status == AiOutboxStatus.DEAD },
+            publishedAt = now.takeIf { status == AiOutboxStatus.PUBLISHED },
+            claim = claim().takeIf { status == AiOutboxStatus.PUBLISHING }
         )
     }
 

@@ -19,13 +19,18 @@ class FakeAiOutboxPersistencePort : AiOutboxPersistencePort {
 
     val publishableCalls: MutableList<Pair<Instant, Int>> = mutableListOf()
     val staleCalls: MutableList<Pair<Instant, Int>> = mutableListOf()
+    val statusCalls: MutableList<Pair<AiOutboxStatus, Int>> = mutableListOf()
     val claimCalls: MutableList<Triple<AiOutboxId, String, Instant>> = mutableListOf()
+    val recoverCalls: MutableList<AiOutbox> = mutableListOf()
     val finalizeCalls: MutableList<Pair<AiOutbox, AiOutboxClaim>> = mutableListOf()
     val callOrder: MutableList<String> = mutableListOf()
 
     /** null이면 저장된 행을 발행 중으로 옮겨 돌려준다. */
     var claimResult: ((AiOutboxId) -> AiOutbox?)? = null
     var finalizeResult: Boolean = true
+
+    /** false로 두면 저장된 상태와 무관하게 복구가 밀린다. 동시 복구를 재현하는 데 쓴다. */
+    var recoverResult: Boolean = true
 
     /** 호출 순서별 확정 실패. null 자리는 그 호출이 성공한다는 뜻이고, 비면 모두 성공한다. */
     val finalizeFailures: ArrayDeque<Throwable?> = ArrayDeque()
@@ -64,9 +69,12 @@ class FakeAiOutboxPersistencePort : AiOutboxPersistencePort {
             .take(batchSize)
     }
 
-    override suspend fun findDead(batchSize: Int): List<AiOutbox> {
+    override suspend fun findByStatus(status: AiOutboxStatus, batchSize: Int): List<AiOutbox> {
+        statusCalls.add(status to batchSize)
+
         return outboxes.values
-            .filter { it.status == AiOutboxStatus.DEAD }
+            .filter { it.status == status }
+            .sortedWith(compareBy({ it.nextRetryAt }, { it.createdAt }))
             .take(batchSize)
     }
 
@@ -85,6 +93,25 @@ class FakeAiOutboxPersistencePort : AiOutboxPersistencePort {
         outboxes[id] = claimed
 
         return claimed
+    }
+
+    /**
+     * 저장된 행이 아직 DEAD일 때만 복구 결과를 반영한다. 조건부 쓰기를 그대로 재현한다.
+     */
+    override suspend fun recoverDead(outbox: AiOutbox): Boolean {
+        recoverCalls.add(outbox)
+
+        if (!recoverResult) {
+            return false
+        }
+
+        val stored = outboxes[outbox.id] ?: return false
+        if (stored.status != AiOutboxStatus.DEAD) {
+            return false
+        }
+        outboxes[outbox.id] = outbox
+
+        return true
     }
 
     override suspend fun finalize(outbox: AiOutbox, expectedClaim: AiOutboxClaim): Boolean {

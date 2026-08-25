@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.exception
 
 /**
- * outbox 이벤트 발행 오류 코드.
+ * outbox 이벤트 발행과 운영 개입의 오류 코드.
  *
  * 재시도 여부는 코드가 아니라 [AiOutboxPublishException.retryable]이 가르고, 코드는 그 실패가 무엇이었는지를 로그와 운영 조회에 남긴다.
  * [OUTBOX_PAYLOAD_INVALID]는 아직 던지는 곳이 없다. broker 어댑터가 payload를 직렬화 계약에 맞춰 검증할 때 쓰도록 미리 정해 둔 코드다.
@@ -17,5 +17,13 @@ enum class AiOutboxErrorCode(
     OUTBOX_PAYLOAD_INVALID(
         code = "OUTBOX_PAYLOAD_INVALID",
         message = "outbox 이벤트 payload가 발행 계약에 맞지 않습니다"
+    ),
+    OUTBOX_NOT_FOUND(
+        code = "OUTBOX_NOT_FOUND",
+        message = "outbox 행이 없습니다"
+    ),
+    OUTBOX_NOT_RECOVERABLE(
+        code = "OUTBOX_NOT_RECOVERABLE",
+        message = "DEAD 상태의 outbox만 복구할 수 있습니다"
     )
 }

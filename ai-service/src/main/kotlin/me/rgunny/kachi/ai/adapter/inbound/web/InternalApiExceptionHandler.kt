@@ -4,6 +4,7 @@ import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.ai.application.exception.AiErrorCode
 import me.rgunny.kachi.ai.application.exception.AiException
+import me.rgunny.kachi.ai.application.exception.AiOutboxErrorCode
 import me.rgunny.kachi.ai.application.exception.AiQuarantineErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -53,7 +54,9 @@ class InternalApiExceptionHandler {
 
         val ERROR_CODES: Map<AiErrorCode, ErrorCode> = mapOf(
             AiQuarantineErrorCode.QUARANTINE_NOT_FOUND to ErrorCode.KEYWORD_QUARANTINE_NOT_FOUND,
-            AiQuarantineErrorCode.QUARANTINE_NOT_RELEASABLE to ErrorCode.KEYWORD_QUARANTINE_NOT_RELEASABLE
+            AiQuarantineErrorCode.QUARANTINE_NOT_RELEASABLE to ErrorCode.KEYWORD_QUARANTINE_NOT_RELEASABLE,
+            AiOutboxErrorCode.OUTBOX_NOT_FOUND to ErrorCode.AI_OUTBOX_NOT_FOUND,
+            AiOutboxErrorCode.OUTBOX_NOT_RECOVERABLE to ErrorCode.AI_OUTBOX_NOT_RECOVERABLE
         )
     }
 }

@@ -56,9 +56,9 @@ class AiOutboxPersistenceAdapter(
         return findAll(query)
     }
 
-    override suspend fun findDead(batchSize: Int): List<AiOutbox> {
+    override suspend fun findByStatus(status: AiOutboxStatus, batchSize: Int): List<AiOutbox> {
         val query = Query.query(
-            Criteria.where(FIELD_STATUS).`is`(AiOutboxStatus.DEAD.name)
+            Criteria.where(FIELD_STATUS).`is`(status.name)
         ).with(PUBLISH_ORDER).limit(batchSize)
 
         return findAll(query)
@@ -105,6 +105,32 @@ class AiOutboxPersistenceAdapter(
         return mongoTemplate.updateFirst(query, update, AiOutboxMongoDocument::class.java)
             .awaitSingle()
             .matchedCount == 1L
+    }
+
+    /**
+     * 복구 결과를 DEAD 행에만 쓴다.
+     * 조건에 걸리지 않으면 반환 문서가 없고, 그것이 곧 복구 실패다.
+     */
+    override suspend fun recoverDead(outbox: AiOutbox): Boolean {
+        val query = Query.query(
+            Criteria.where(FIELD_ID).`is`(outbox.id.value)
+                .and(FIELD_STATUS).`is`(AiOutboxStatus.DEAD.name)
+        )
+        val update = Update()
+            .set(FIELD_STATUS, outbox.status.name)
+            .set(FIELD_RETRY_COUNT, outbox.retryCount)
+            .set(FIELD_NEXT_RETRY_AT, outbox.nextRetryAt)
+            .set(FIELD_LAST_ERROR, outbox.lastError)
+            .set(FIELD_PUBLISHED_AT, outbox.publishedAt)
+            .set(FIELD_CLAIMED_BY, null)
+            .set(FIELD_CLAIMED_AT, null)
+            .set(FIELD_UPDATED_AT, outbox.updatedAt)
+
+        return mongoTemplate.findAndModify(
+            query,
+            update,
+            AiOutboxMongoDocument::class.java
+        ).awaitSingleOrNull() != null
     }
 
     private suspend fun findAll(query: Query): List<AiOutbox> {
