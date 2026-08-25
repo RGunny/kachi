@@ -42,16 +42,12 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @DisplayName("vendor 발송 성공 결과를 SENT 상태로 저장한다")
     fun saveSent() = runBlocking {
         val notification = notificationPersistenceAdapter.save(processingNotification())
-        val expectedClaimedAt = requireNotNull(notification.claimedAt)
-        val expectedClaimedBy = requireNotNull(notification.claimedBy)
-        notification.also {
-            it.markSent(transitionAt)
-        }
+        val sent = notification.markSent(transitionAt)
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = expectedClaimedAt,
-            expectedClaimedBy = expectedClaimedBy,
+            notification = sent,
+            expectedClaimedAt = requireNotNull(notification.claimedAt),
+            expectedClaimedBy = requireNotNull(notification.claimedBy),
         )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
@@ -67,17 +63,14 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @DisplayName("vendor 재시도 가능 실패 결과를 RETRY_WAIT 상태로 저장한다")
     fun saveRetryWait() = runBlocking {
         val notification = notificationPersistenceAdapter.save(processingNotification())
-        val expectedClaimedAt = requireNotNull(notification.claimedAt)
-        val expectedClaimedBy = requireNotNull(notification.claimedBy)
-        notification.also {
-            it.markFailed(transitionAt, "vendor timeout")
-            it.markRetryWait(transitionAt, "vendor timeout")
-        }
+        val retryWait = notification
+            .markFailed(transitionAt, "vendor timeout")
+            .markRetryWait(transitionAt, "vendor timeout")
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = expectedClaimedAt,
-            expectedClaimedBy = expectedClaimedBy,
+            notification = retryWait,
+            expectedClaimedAt = requireNotNull(notification.claimedAt),
+            expectedClaimedBy = requireNotNull(notification.claimedBy),
         )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
@@ -94,17 +87,14 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
     @DisplayName("vendor 영구 실패 결과를 DEAD 상태로 저장한다")
     fun saveDead() = runBlocking {
         val notification = notificationPersistenceAdapter.save(processingNotification())
-        val expectedClaimedAt = requireNotNull(notification.claimedAt)
-        val expectedClaimedBy = requireNotNull(notification.claimedBy)
-        notification.also {
-            it.markFailed(transitionAt, "invalid recipient")
-            it.markDead(transitionAt, "invalid recipient")
-        }
+        val dead = notification
+            .markFailed(transitionAt, "invalid recipient")
+            .markDead(transitionAt, "invalid recipient")
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = expectedClaimedAt,
-            expectedClaimedBy = expectedClaimedBy,
+            notification = dead,
+            expectedClaimedAt = requireNotNull(notification.claimedAt),
+            expectedClaimedBy = requireNotNull(notification.claimedBy),
         )
 
         val found = notificationPersistenceAdapter.findById(notification.id)
@@ -123,10 +113,10 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
         val notification = notificationPersistenceAdapter.save(processingNotification())
         val expectedClaimedAt = requireNotNull(notification.claimedAt)
         val expectedClaimedBy = requireNotNull(notification.claimedBy)
-        notification.markSent(transitionAt)
+        val sent = notification.markSent(transitionAt)
 
         val saved = adapter.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
+            notification = sent,
             expectedClaimedAt = expectedClaimedAt.plusSeconds(1),
             expectedClaimedBy = expectedClaimedBy,
         )
@@ -159,9 +149,8 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
             recipient = "C123",
             message = "hello",
             now = requestedAt,
-        ).also {
-            it.markPublished(requestedAt.plusSeconds(10))
-            it.markProcessing(requestedAt.plusSeconds(20), "worker-1")
-        }
+        )
+            .markPublished(requestedAt.plusSeconds(10))
+            .markProcessing(requestedAt.plusSeconds(20), "worker-1")
     }
 }

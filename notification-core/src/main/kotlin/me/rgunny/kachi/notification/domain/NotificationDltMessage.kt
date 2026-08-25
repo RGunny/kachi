@@ -24,39 +24,24 @@ class NotificationDltMessage private constructor(
     val deadLetteredAt: Instant,
     /** worker 저장 시각 */
     val storedAt: Instant,
-    discardedAt: Instant?,
-    discardReason: String?,
-    reprocessedAt: Instant?,
-    reprocessReason: String?,
-    status: NotificationDltMessageStatus,
-) {
-    var status: NotificationDltMessageStatus = status
-        private set
-
     /**
      * 운영자가 재처리하지 않기로 판단해 DISCARDED로 종료한 시각.
      */
-    var discardedAt: Instant? = discardedAt
-        private set
-
+    val discardedAt: Instant?,
     /**
      * DISCARDED 종료 사유.
      */
-    var discardReason: String? = discardReason
-        private set
-
+    val discardReason: String?,
     /**
      * 운영자가 재처리를 완료해 REPROCESSED로 종료한 시각.
      */
-    var reprocessedAt: Instant? = reprocessedAt
-        private set
-
+    val reprocessedAt: Instant?,
     /**
      * REPROCESSED 종료 사유.
      */
-    var reprocessReason: String? = reprocessReason
-        private set
-
+    val reprocessReason: String?,
+    val status: NotificationDltMessageStatus,
+) {
     companion object {
         /**
          * DLT record를 운영 확인 대상인 PENDING 메시지로 기록한다.
@@ -215,15 +200,32 @@ class NotificationDltMessage private constructor(
     /**
      * 운영자가 재처리하지 않기로 판단한 DLT 메시지를 폐기한다.
      */
-    fun discard(now: Instant, reason: String) {
+    fun discard(now: Instant, reason: String): NotificationDltMessage {
         require(reason.isNotBlank()) { "reason must not be blank" }
-        if (!canDiscard()) {
-            throw IllegalStateException("discard requires PENDING, current=$status")
-        }
+        check(canDiscard()) { "discard requires PENDING, current=$status" }
 
-        status = NotificationDltMessageStatus.DISCARDED
-        discardedAt = now
-        discardReason = reason
+        return NotificationDltMessage(
+            id = id,
+            originalTopic = originalTopic,
+            originalPartition = originalPartition,
+            originalOffset = originalOffset,
+            originalTimestamp = originalTimestamp,
+            dltTopic = dltTopic,
+            dltPartition = dltPartition,
+            dltOffset = dltOffset,
+            consumerGroup = consumerGroup,
+            messageKey = messageKey,
+            payload = payload,
+            exceptionFqcn = exceptionFqcn,
+            exceptionMessage = exceptionMessage,
+            deadLetteredAt = deadLetteredAt,
+            storedAt = storedAt,
+            discardedAt = now,
+            discardReason = reason,
+            reprocessedAt = reprocessedAt,
+            reprocessReason = reprocessReason,
+            status = NotificationDltMessageStatus.DISCARDED,
+        )
     }
 
     fun canDiscard(): Boolean {

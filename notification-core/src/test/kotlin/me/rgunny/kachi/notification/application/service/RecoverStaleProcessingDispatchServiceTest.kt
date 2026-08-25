@@ -142,9 +142,8 @@ class RecoverStaleProcessingDispatchServiceTest {
             recipient = RECIPIENT,
             message = MESSAGE,
             now = NOW.minusSeconds(120),
-        ).also {
-            it.markPublished(NOW.minusSeconds(90))
-            it.markProcessing(NOW.minusSeconds(claimedSecondsAgo), "worker-1")
-        }
+        )
+            .markPublished(NOW.minusSeconds(90))
+            .markProcessing(NOW.minusSeconds(claimedSecondsAgo), "worker-1")
     }
 }

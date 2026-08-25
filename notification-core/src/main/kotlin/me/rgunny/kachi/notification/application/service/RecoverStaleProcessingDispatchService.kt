@@ -73,13 +73,6 @@ class RecoverStaleProcessingDispatchService(
         notification: Notification,
         now: Instant,
     ): RecoveredStatus {
-        val expectedClaimedAt = requireNotNull(notification.claimedAt) {
-            "PROCESSING notification must have claimedAt"
-        }
-        val expectedClaimedBy = requireNotNull(notification.claimedBy) {
-            "PROCESSING notification must have claimedBy"
-        }
-
         // 1. PROCESSING timeout은 worker가 vendor 호출 또는 DB finalize 사이에서 중단된 것으로 분류한다.
         val failure = RetryFailure.of(RetryFailureCode.DISPATCH_PROCESSING_TIMEOUT)
 
@@ -88,23 +81,18 @@ class RecoverStaleProcessingDispatchService(
         val reason = failure.message
 
         // 3. timeout 실패 이력을 남기고 retry 가능 여부에 따라 상태를 확정한다.
-        notification.markFailed(now, reason)
-        val status = when (policy.retryPolicy.decide(failure, nextAttempts)) {
-            is RetryDecision.Retry -> {
-                notification.markRetryWait(now, reason)
-                RecoveredStatus.RETRY_WAIT
-            }
-            is RetryDecision.GiveUp -> {
-                notification.markDead(now, reason)
-                RecoveredStatus.DEAD
-            }
+        val failed = notification.markFailed(now, reason)
+        val (recovered, status) = when (policy.retryPolicy.decide(failure, nextAttempts)) {
+            is RetryDecision.Retry -> failed.markRetryWait(now, reason) to RecoveredStatus.RETRY_WAIT
+            is RetryDecision.GiveUp -> failed.markDead(now, reason) to RecoveredStatus.DEAD
         }
 
         // 4. 회수 상태가 DB에 저장되기 전에는 dedupe marker를 풀지 않는다.
+        // claim 조건은 전이 전 인스턴스가 그대로 들고 있다.
         val savedNotification = dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = expectedClaimedAt,
-            expectedClaimedBy = expectedClaimedBy,
+            notification = recovered,
+            expectedClaimedAt = notification.claimedAt!!,
+            expectedClaimedBy = notification.claimedBy!!,
         ) ?: return RecoveredStatus.SKIPPED
 
         if (status == RecoveredStatus.RETRY_WAIT) {

@@ -63,19 +63,16 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         @Test
         @DisplayName("threshold보다 오래된 PROCESSING 알림만 조회한다")
         fun findStaleProcessing() = runBlocking {
-            val stale = notification(requestId = "stale").also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-                it.markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
-            }
-            val fresh = notification(requestId = "fresh").also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-                it.markProcessing(Instant.parse("2026-06-19T00:00:50Z"), "worker-1")
-            }
-            val sent = notification(requestId = "sent").also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-                it.markProcessing(Instant.parse("2026-06-19T00:00:15Z"), "worker-1")
-                it.markSent(Instant.parse("2026-06-19T00:00:20Z"))
-            }
+            val stale = notification(requestId = "stale")
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                .markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
+            val fresh = notification(requestId = "fresh")
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                .markProcessing(Instant.parse("2026-06-19T00:00:50Z"), "worker-1")
+            val sent = notification(requestId = "sent")
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                .markProcessing(Instant.parse("2026-06-19T00:00:15Z"), "worker-1")
+                .markSent(Instant.parse("2026-06-19T00:00:20Z"))
             adapter.save(stale)
             adapter.save(fresh)
             adapter.save(sent)
@@ -96,9 +93,8 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         @Test
         @DisplayName("PUBLISHED 상태만 PROCESSING으로 원자 claim한다")
         fun claimPublished() = runBlocking {
-            val notification = notification().also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-            }
+            val notification = notification()
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
             val claimedAt = Instant.parse("2026-06-19T00:00:20Z")
             adapter.save(notification)
 
@@ -121,9 +117,8 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         @Test
         @DisplayName("동시 claim은 하나만 성공한다")
         fun claimPublishedConcurrently() = runBlocking {
-            val notification = notification().also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-            }
+            val notification = notification()
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
             val claimedAt = Instant.parse("2026-06-19T00:00:20Z")
             adapter.save(notification)
 
@@ -145,12 +140,11 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         @Test
         @DisplayName("RETRY_WAIT 상태만 PROCESSING으로 원자 claim한다")
         fun claimRetryWait() = runBlocking {
-            val notification = notification().also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-                it.markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
-                it.markFailed(Instant.parse("2026-06-19T00:00:30Z"), "temporary failure")
-                it.markRetryWait(Instant.parse("2026-06-19T00:00:40Z"), "temporary failure")
-            }
+            val notification = notification()
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                .markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
+                .markFailed(Instant.parse("2026-06-19T00:00:30Z"), "temporary failure")
+                .markRetryWait(Instant.parse("2026-06-19T00:00:40Z"), "temporary failure")
             val claimedAt = Instant.parse("2026-06-19T00:00:50Z")
             adapter.save(notification)
 
@@ -170,11 +164,10 @@ class NotificationMongoPersistenceAdapterIntegrationTest : PersistenceAdapterInt
         @Test
         @DisplayName("RETRY_WAIT이 아닌 상태는 claim하지 않는다")
         fun skipNotRetryWait() = runBlocking {
-            val notification = notification().also {
-                it.markPublished(Instant.parse("2026-06-19T00:00:10Z"))
-                it.markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
-                it.markSent(Instant.parse("2026-06-19T00:00:30Z"))
-            }
+            val notification = notification()
+                .markPublished(Instant.parse("2026-06-19T00:00:10Z"))
+                .markProcessing(Instant.parse("2026-06-19T00:00:20Z"), "worker-1")
+                .markSent(Instant.parse("2026-06-19T00:00:30Z"))
             adapter.save(notification)
 
             val claimed = adapter.claimFromRetryWait(

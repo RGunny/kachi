@@ -97,10 +97,9 @@ class NotificationWorkerDispatchFixture(
             recipient = recipient,
             message = MESSAGE,
             now = clock.instant().minusSeconds(10),
-        ).also {
-            it.markPublished(clock.instant().minusSeconds(5))
-            persistence.put(it)
-        }
+        )
+            .markPublished(clock.instant().minusSeconds(5))
+            .also(persistence::put)
     }
 
     fun payload(notification: Notification): String {

@@ -70,10 +70,10 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
     @DisplayName("DEAD notification을 REQUESTED로 복구하고 새 outbox와 history를 transaction으로 저장한다")
     fun recoverDeadToRequested() = runBlocking {
         val notification = notificationPersistenceAdapter.save(deadNotification())
-        notification.recoverDeadToRequested(NOW.plusSeconds(5), "operator retry")
-        val outbox = outbox(notification.id)
+        val recovered = notification.recoverDeadToRequested(NOW.plusSeconds(5), "operator retry")
+        val outbox = outbox(recovered.id)
 
-        val saved = adapter.recoverDeadToRequested(notification, outbox)
+        val saved = adapter.recoverDeadToRequested(recovered, outbox)
 
         val found = notificationPersistenceAdapter.findById(notification.id)
         assertNotNull(saved)
@@ -111,12 +111,11 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
     }
 
     private fun deadNotification(requestId: String, deadAt: java.time.Instant): Notification {
-        return requestedNotification(requestId).also {
-            it.markPublished(deadAt.minusSeconds(3))
-            it.markProcessing(deadAt.minusSeconds(2), "worker-1")
-            it.markFailed(deadAt.minusSeconds(1), "invalid recipient")
-            it.markDead(deadAt, "invalid recipient")
-        }
+        return requestedNotification(requestId)
+            .markPublished(deadAt.minusSeconds(3))
+            .markProcessing(deadAt.minusSeconds(2), "worker-1")
+            .markFailed(deadAt.minusSeconds(1), "invalid recipient")
+            .markDead(deadAt, "invalid recipient")
     }
 
     private fun requestedNotification(requestId: String = "request-1"): Notification {

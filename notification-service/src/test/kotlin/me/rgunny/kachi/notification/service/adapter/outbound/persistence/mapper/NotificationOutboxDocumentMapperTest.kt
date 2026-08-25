@@ -24,9 +24,7 @@ class NotificationOutboxDocumentMapperTest {
             partitionKey = "C123",
             eventPayload = """{"notificationId":"n1"}""",
             now = createdAt,
-        ).also {
-            it.markPublishing(claimedAt, "notification-service-1")
-        }
+        ).markPublishing(claimedAt, "notification-service-1")
 
         val document = mapper.toDocument(outbox)
         val restored = mapper.toDomain(document)

@@ -5,11 +5,17 @@ import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPublishPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationOutbox
+import me.rgunny.kachi.notification.domain.NotificationOutboxStatus
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationDocument
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationHistoryDocument
+import me.rgunny.kachi.notification.service.adapter.outbound.persistence.document.NotificationOutboxDocument
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationDocumentMapper
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.mapper.NotificationOutboxDocumentMapper
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.transaction.reactive.executeAndAwait
@@ -41,6 +47,10 @@ import java.time.Instant
  *
  * 두 document 중 하나만 반영되면 scheduler가 같은 outbox를 재처리하거나 notification 상태가 어긋날 수 있다.
  * 따라서 두 저장은 반드시 하나의 MongoDB transaction 안에서 끝나야 한다.
+ *
+ * outbox 저장은 덮어쓰기가 아니라 `_id + PUBLISHING + claim` 조건부 갱신이다.
+ * publish가 visibility timeout보다 오래 걸려 다른 tick이 그 행을 회수한 뒤에 결과가 도착하면 조건이 어긋난다.
+ * 그때는 outbox도 notification도 건드리지 않고 false를 돌려주어, 회수 이후의 상태가 늦은 결과에 덮이지 않게 한다.
  */
 @Repository
 class NotificationMongoPublishPersistenceAdapter(
@@ -52,39 +62,86 @@ class NotificationMongoPublishPersistenceAdapter(
 
     override suspend fun savePublished(
         outbox: NotificationOutbox,
+        expectedClaimedAt: Instant,
+        expectedClaimedBy: String,
         now: Instant,
-    ) {
-        transactionalOperator.executeAndAwait {
-            // 1. Kafka publish 성공이 확인된 outbox 상태를 먼저 저장한다.
-            mongoTemplate.save(outboxMapper.toDocument(outbox))
-                .awaitSingle()
+    ): Boolean {
+        return transactionalOperator.executeAndAwait {
+            // 1. 발행을 시작할 때 잡은 claim이 그대로일 때만 발행 완료 상태를 확정한다.
+            if (!finalizeOutbox(outbox, expectedClaimedAt, expectedClaimedBy)) {
+                return@executeAndAwait false
+            }
 
             // 2. 같은 transaction 안에서 notification도 publish 완료 상태로 맞춘다.
-            val notification = findNotification(outbox)
-            notification.markPublished(now)
-            mongoTemplate.save(notificationMapper.toDocument(notification))
+            val published = findNotification(outbox).markPublished(now)
+            mongoTemplate.save(notificationMapper.toDocument(published))
                 .awaitSingle()
-            insertUncommittedHistories(notification)
-        }
+            insertUncommittedHistories(published)
+
+            true
+        } ?: false
     }
 
     override suspend fun savePublishFailed(
         outbox: NotificationOutbox,
+        expectedClaimedAt: Instant,
+        expectedClaimedBy: String,
         now: Instant,
         reason: String,
-    ) {
-        transactionalOperator.executeAndAwait {
-            // 1. retry/DEAD 계산이 끝난 outbox 실패 상태를 저장한다.
-            mongoTemplate.save(outboxMapper.toDocument(outbox))
-                .awaitSingle()
+    ): Boolean {
+        return transactionalOperator.executeAndAwait {
+            // 1. retry/DEAD 계산이 끝난 실패 상태도 같은 claim 조건으로만 확정한다.
+            if (!finalizeOutbox(outbox, expectedClaimedAt, expectedClaimedBy)) {
+                return@executeAndAwait false
+            }
 
             // 2. 같은 transaction 안에서 notification에도 publish 실패 사유를 남긴다.
-            val notification = findNotification(outbox)
-            notification.markPublishFailed(now, reason)
-            mongoTemplate.save(notificationMapper.toDocument(notification))
+            val failed = findNotification(outbox).markPublishFailed(now, reason)
+            mongoTemplate.save(notificationMapper.toDocument(failed))
                 .awaitSingle()
-            insertUncommittedHistories(notification)
-        }
+            insertUncommittedHistories(failed)
+
+            true
+        } ?: false
+    }
+
+    /**
+     * 전이가 끝난 outbox 상태를 claim 조건부로 반영한다. 조건이 어긋나면 아무것도 바꾸지 않고 false를 돌려준다.
+     */
+    private suspend fun finalizeOutbox(
+        outbox: NotificationOutbox,
+        expectedClaimedAt: Instant,
+        expectedClaimedBy: String,
+    ): Boolean {
+        val query = Query.query(
+            Criteria.where(FIELD_ID).`is`(outbox.id.id.toString())
+                .and(FIELD_OUTBOX_STATUS).`is`(NotificationOutboxStatus.PUBLISHING.name)
+                .and(FIELD_CLAIMED_AT).`is`(expectedClaimedAt)
+                .and(FIELD_CLAIMED_BY).`is`(expectedClaimedBy)
+        )
+
+        val finalized = mongoTemplate.findAndModify(
+            query,
+            finalizedUpdate(outbox),
+            FindAndModifyOptions.options().returnNew(true),
+            NotificationOutboxDocument::class.java,
+        )
+            .awaitSingleOrNull()
+
+        return finalized != null
+    }
+
+    private fun finalizedUpdate(outbox: NotificationOutbox): Update {
+        val document = outboxMapper.toDocument(outbox)
+
+        return Update()
+            .set(FIELD_OUTBOX_STATUS, document.outboxStatus)
+            .set(FIELD_RETRY_COUNT, document.retryCount)
+            .set(FIELD_NEXT_RETRY_AT, document.nextRetryAt)
+            .set(FIELD_LAST_ERROR, document.lastError)
+            .set(FIELD_PUBLISHED_AT, document.publishedAt)
+            .set(FIELD_CLAIMED_AT, null)
+            .set(FIELD_CLAIMED_BY, null)
     }
 
     private suspend fun findNotification(outbox: NotificationOutbox) =
@@ -98,5 +155,16 @@ class NotificationMongoPublishPersistenceAdapter(
             mongoTemplate.insert(notificationMapper.toHistoryDocument(history))
                 .awaitSingle()
         }
+    }
+
+    private companion object {
+        const val FIELD_ID = "_id"
+        const val FIELD_OUTBOX_STATUS = "outboxStatus"
+        const val FIELD_RETRY_COUNT = "retryCount"
+        const val FIELD_NEXT_RETRY_AT = "nextRetryAt"
+        const val FIELD_LAST_ERROR = "lastError"
+        const val FIELD_PUBLISHED_AT = "publishedAt"
+        const val FIELD_CLAIMED_AT = "claimedAt"
+        const val FIELD_CLAIMED_BY = "claimedBy"
     }
 }

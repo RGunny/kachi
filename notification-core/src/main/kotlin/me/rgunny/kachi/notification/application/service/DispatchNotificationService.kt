@@ -89,7 +89,6 @@ class DispatchNotificationService(
             )
         }
 
-        val processingClaim = ProcessingClaim.from(claimedNotification)
         val sendResult = try {
             // 6. claim에 성공한 알림에 대해 vendor idempotency key를 조회하거나 새로 만든다.
             val idempotencyKey = idempotencyKeyPort.getOrCreate(
@@ -122,28 +121,24 @@ class DispatchNotificationService(
         // vendor HTTP/Redis는 Mongo rollback 대상이 아니므로, 외부 호출 이후 DB finalize는 별도 저장 경계로 분리한다.
         return when (sendResult) {
             is SendNotificationResult.Success -> completeAsSent(
-                notification = claimedNotification,
-                processingClaim = processingClaim,
+                claimed = claimedNotification,
                 now = now,
             )
             is SendNotificationResult.RateLimited -> completeAsRetryableFailure(
-                notification = claimedNotification,
+                claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
-                processingClaim = processingClaim,
                 now = now,
             )
             is SendNotificationResult.TransientFailure -> completeAsRetryableFailure(
-                notification = claimedNotification,
+                claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
-                processingClaim = processingClaim,
                 now = now,
             )
             is SendNotificationResult.PermanentFailure -> completeAsDead(
-                notification = claimedNotification,
+                claimed = claimedNotification,
                 failure = sendResult.failure,
-                processingClaim = processingClaim,
                 now = now,
             )
         }
@@ -161,20 +156,16 @@ class DispatchNotificationService(
     }
 
     private suspend fun completeAsSent(
-        notification: Notification,
-        processingClaim: ProcessingClaim,
+        claimed: Notification,
         now: Instant,
     ): DispatchNotificationResult {
         // 1. vendor 발송 성공이 확인된 뒤에만 domain 상태를 SENT로 확정한다.
-        notification.markSent(now)
+        val sent = claimed.markSent(now)
 
         // 2. 외부 API 호출은 rollback할 수 없으므로, 발송 이후 DB finalize를 별도 저장 경계로 수행한다.
         // 이때 claim fencing 조건이 맞지 않으면 늦은 worker 결과로 보고 현재 DB 상태를 따른다.
-        val savedNotification = dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = processingClaim.claimedAt,
-            expectedClaimedBy = processingClaim.claimedBy,
-        ) ?: return staleFinalizeResult(notification, now)
+        val savedNotification = saveFinalizedIfClaimMatches(claimed, sent)
+            ?: return staleFinalizeResult(claimed, now)
 
         // 3. Kafka listener는 이 결과를 보고 offset ack 여부를 결정한다.
         return DispatchNotificationResult(
@@ -187,36 +178,26 @@ class DispatchNotificationService(
     }
 
     private suspend fun completeAsRetryableFailure(
-        notification: Notification,
+        claimed: Notification,
         failure: RetryFailure,
         dedupeKey: String,
-        processingClaim: ProcessingClaim,
         now: Instant,
     ): DispatchNotificationResult {
         // 1. 이번 발송 시도를 포함한 attempts로 retry/give-up 결정을 계산한다.
-        val nextAttempts = notification.dispatchAttempts + 1
+        val nextAttempts = claimed.dispatchAttempts + 1
         val decision = policy.retryPolicy.decide(failure, nextAttempts)
         val reason = failure.message
 
         // 2. 실패 이력을 먼저 남기고, retry 정책 결과에 따라 RETRY_WAIT 또는 DEAD로 확정한다.
-        notification.markFailed(now, reason)
-        val failureClassification = when (decision) {
-            is RetryDecision.Retry -> {
-                notification.markRetryWait(now, reason)
-                DispatchFailureClassification.RETRYABLE
-            }
-            is RetryDecision.GiveUp -> {
-                notification.markDead(now, reason)
-                DispatchFailureClassification.NON_RETRYABLE
-            }
+        val failed = claimed.markFailed(now, reason)
+        val (finalized, failureClassification) = when (decision) {
+            is RetryDecision.Retry -> failed.markRetryWait(now, reason) to DispatchFailureClassification.RETRYABLE
+            is RetryDecision.GiveUp -> failed.markDead(now, reason) to DispatchFailureClassification.NON_RETRYABLE
         }
 
         // 3. 계산된 최종 상태를 DB에 먼저 저장한다. 저장 전 dedupe를 풀면 다음 메시지가 낡은 상태를 볼 수 있다.
-        val savedNotification = dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = processingClaim.claimedAt,
-            expectedClaimedBy = processingClaim.claimedBy,
-        ) ?: return staleFinalizeResult(notification, now)
+        val savedNotification = saveFinalizedIfClaimMatches(claimed, finalized)
+            ?: return staleFinalizeResult(claimed, now)
         if (failureClassification == DispatchFailureClassification.RETRYABLE) {
             // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
             deduplicationPort.release(dedupeKey)
@@ -235,24 +216,20 @@ class DispatchNotificationService(
     }
 
     private suspend fun completeAsDead(
-        notification: Notification,
+        claimed: Notification,
         failure: RetryFailure,
-        processingClaim: ProcessingClaim,
         now: Instant,
     ): DispatchNotificationResult {
         // 1. 재시도하지 않을 실패도 실패 이력을 먼저 남긴다.
         val reason = failure.message
-        notification.markFailed(now, reason)
+        val failed = claimed.markFailed(now, reason)
 
         // 2. 이후 DEAD로 종착시켜 같은 dispatch 메시지가 다시 발송을 시도하지 않게 한다.
-        notification.markDead(now, reason)
+        val dead = failed.markDead(now, reason)
 
         // 3. DEAD 저장이 성공하면 listener가 offset을 ack해 Kafka 재처리를 끝낸다.
-        val savedNotification = dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
-            notification = notification,
-            expectedClaimedAt = processingClaim.claimedAt,
-            expectedClaimedBy = processingClaim.claimedBy,
-        ) ?: return staleFinalizeResult(notification, now)
+        val savedNotification = saveFinalizedIfClaimMatches(claimed, dead)
+            ?: return staleFinalizeResult(claimed, now)
         return DispatchNotificationResult(
             notificationId = savedNotification.id,
             status = savedNotification.status,
@@ -281,21 +258,17 @@ class DispatchNotificationService(
         )
     }
 
-    private data class ProcessingClaim(
-        val claimedAt: Instant,
-        val claimedBy: String,
-    ) {
-        companion object {
-            fun from(notification: Notification): ProcessingClaim {
-                return ProcessingClaim(
-                    claimedAt = requireNotNull(notification.claimedAt) {
-                        "PROCESSING notification must have claimedAt"
-                    },
-                    claimedBy = requireNotNull(notification.claimedBy) {
-                        "PROCESSING notification must have claimedBy"
-                    },
-                )
-            }
-        }
+    /**
+     * 전이 결과를 저장하되, claim 조건은 전이 전 인스턴스가 그대로 들고 있는 값을 쓴다.
+     */
+    private suspend fun saveFinalizedIfClaimMatches(
+        claimed: Notification,
+        finalized: Notification,
+    ): Notification? {
+        return dispatchPersistencePort.saveFinalizedIfProcessingClaimMatches(
+            notification = finalized,
+            expectedClaimedAt = claimed.claimedAt!!,
+            expectedClaimedBy = claimed.claimedBy!!,
+        )
     }
 }

@@ -62,9 +62,8 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
         @DisplayName("PENDING이고 nextRetryAt이 지난 outbox만 조회한다")
         fun findPublishable() = runBlocking {
             val due = outbox(partitionKey = "due")
-            val publishing = outbox(partitionKey = "publishing").also {
-                it.markPublishing(Instant.parse("2026-06-16T00:00:01Z"), "publisher-1")
-            }
+            val publishing = outbox(partitionKey = "publishing")
+                .markPublishing(Instant.parse("2026-06-16T00:00:01Z"), "publisher-1")
             adapter.save(due)
             adapter.save(publishing)
 
@@ -81,9 +80,9 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
         @Test
         @DisplayName("DEAD outbox만 조회한다")
         fun findDead() = runBlocking {
-            val dead = outbox(partitionKey = "dead").also {
-                it.markPublishing(Instant.parse("2026-06-16T00:00:01Z"), "publisher-1")
-                it.recordFailure(
+            val dead = outbox(partitionKey = "dead")
+                .markPublishing(Instant.parse("2026-06-16T00:00:01Z"), "publisher-1")
+                .recordFailure(
                     reason = "broker-down",
                     retryPolicy = RetryPolicy(
                         maxAttempts = 1,
@@ -92,7 +91,6 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
                     ),
                     now = Instant.parse("2026-06-16T00:00:02Z"),
                 )
-            }
             val pending = outbox(partitionKey = "pending")
             adapter.save(dead)
             adapter.save(pending)
@@ -128,9 +126,9 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
         @DisplayName("nextRetryAt이 아직 도래하지 않은 PENDING outbox는 claim하지 않는다")
         fun doNotClaimBeforeNextRetryAt() = runBlocking {
             val claimAt = Instant.parse("2026-06-16T00:00:10Z")
-            val outbox = outbox().also {
-                it.markPublishing(createdAt.plusSeconds(1), "publisher-1")
-                it.recordFailure(
+            val outbox = outbox()
+                .markPublishing(createdAt.plusSeconds(1), "publisher-1")
+                .recordFailure(
                     reason = "broker-timeout",
                     retryPolicy = RetryPolicy(
                         maxAttempts = 3,
@@ -139,7 +137,6 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
                     ),
                     now = createdAt,
                 )
-            }
             adapter.save(outbox)
 
             val claimed = adapter.claimPublishing(outbox.id, "publisher-2", claimAt)
@@ -156,12 +153,10 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
         @Test
         @DisplayName("threshold보다 오래된 PUBLISHING outbox만 조회한다")
         fun findStalePublishing() = runBlocking {
-            val stale = outbox(partitionKey = "stale").also {
-                it.markPublishing(Instant.parse("2026-06-16T00:00:10Z"), "publisher-1")
-            }
-            val fresh = outbox(partitionKey = "fresh").also {
-                it.markPublishing(Instant.parse("2026-06-16T00:00:50Z"), "publisher-1")
-            }
+            val stale = outbox(partitionKey = "stale")
+                .markPublishing(Instant.parse("2026-06-16T00:00:10Z"), "publisher-1")
+            val fresh = outbox(partitionKey = "fresh")
+                .markPublishing(Instant.parse("2026-06-16T00:00:50Z"), "publisher-1")
             adapter.save(stale)
             adapter.save(fresh)
 

@@ -57,23 +57,23 @@ class NotificationAdminService(
             ?: throw NotificationNotFoundException(command.notificationId)
 
         // 2. domain 전이 규칙으로 DEAD만 REQUESTED로 되돌린다.
-        notification.recoverDeadToRequested(now, command.reason)
+        val recovered = notification.recoverDeadToRequested(now, command.reason)
 
         // 3. 기존 outbox publish 흐름을 재사용할 새 dispatch outbox를 만든다.
         val outbox = NotificationOutbox.create(
-            notificationId = notification.id,
+            notificationId = recovered.id,
             topic = policy.dispatchTopic,
-            partitionKey = notification.recipient,
-            eventPayload = eventSerializer.serializeDispatch(notification.toDispatchMessage()),
+            partitionKey = recovered.recipient,
+            eventPayload = eventSerializer.serializeDispatch(recovered.toDispatchMessage()),
             now = now,
         )
 
         // 4. Notification 상태, 상태 전이 history, 새 outbox를 같은 저장 경계에서 확정한다.
-        val saved = adminPersistencePort.recoverDeadToRequested(notification, outbox)
+        val saved = adminPersistencePort.recoverDeadToRequested(recovered, outbox)
             ?: throw InvalidNotificationStateException(
-                notificationId = notification.id,
+                notificationId = recovered.id,
                 currentStatus = null,
-                message = "notification is not recoverable from DEAD. notificationId=${notification.id.id}",
+                message = "notification is not recoverable from DEAD. notificationId=${recovered.id.id}",
             )
 
         // 5. 운영 API가 추적할 수 있도록 복구된 notification과 새 outbox 식별자를 반환한다.

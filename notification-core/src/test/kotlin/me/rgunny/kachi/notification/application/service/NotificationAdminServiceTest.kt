@@ -131,12 +131,11 @@ class NotificationAdminServiceTest {
     }
 
     private fun deadNotification(): Notification {
-        return requestedNotification("request-dead").also {
-            it.markPublished(NOW.plusSeconds(1))
-            it.markProcessing(NOW.plusSeconds(2), "worker-1")
-            it.markFailed(NOW.plusSeconds(3), "invalid recipient")
-            it.markDead(NOW.plusSeconds(4), "invalid recipient")
-        }
+        return requestedNotification("request-dead")
+            .markPublished(NOW.plusSeconds(1))
+            .markProcessing(NOW.plusSeconds(2), "worker-1")
+            .markFailed(NOW.plusSeconds(3), "invalid recipient")
+            .markDead(NOW.plusSeconds(4), "invalid recipient")
     }
 
     private fun requestedNotification(requestId: String): Notification {

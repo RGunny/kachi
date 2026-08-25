@@ -69,7 +69,6 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         if (notification.status != expectedStatus) {
             return null
         }
-        notification.markProcessing(now, workerId)
-        return notification
+        return notification.markProcessing(now, workerId).also { notifications[it.id] = it }
     }
 }

@@ -49,15 +49,19 @@ class NotificationOutboxTest {
         val claimedAt = now.plusSeconds(1)
         val publishedAt = now.plusSeconds(2)
 
-        outbox.markPublishing(claimedAt, "publisher-1")
-        outbox.markPublished(publishedAt)
-        outbox.markPublished(publishedAt.plusSeconds(1))
+        val published = outbox
+            .markPublishing(claimedAt, "publisher-1")
+            .markPublished(publishedAt)
+            .markPublished(publishedAt.plusSeconds(1))
 
-        assertEquals(NotificationOutboxStatus.PUBLISHED, outbox.outboxStatus)
-        assertEquals(publishedAt, outbox.publishedAt)
-        assertNull(outbox.claimedAt)
-        assertNull(outbox.claimedBy)
-        assertNull(outbox.lastError)
+        assertEquals(NotificationOutboxStatus.PUBLISHED, published.outboxStatus)
+        assertEquals(publishedAt, published.publishedAt)
+        assertNull(published.claimedAt)
+        assertNull(published.claimedBy)
+        assertNull(published.lastError)
+
+        assertEquals(NotificationOutboxStatus.PENDING, outbox.outboxStatus)
+        assertNull(outbox.publishedAt)
     }
 
     @Test
@@ -66,15 +70,19 @@ class NotificationOutboxTest {
         val outbox = outbox()
         val failureAt = now.plusSeconds(3)
 
-        outbox.markPublishing(now.plusSeconds(1), "publisher-1")
-        outbox.recordFailure("broker-timeout", retryPolicy, failureAt)
+        val failed = outbox
+            .markPublishing(now.plusSeconds(1), "publisher-1")
+            .recordFailure("broker-timeout", retryPolicy, failureAt)
 
-        assertEquals(NotificationOutboxStatus.PENDING, outbox.outboxStatus)
-        assertEquals(1, outbox.retryCount)
-        assertEquals("broker-timeout", outbox.lastError)
-        assertEquals(failureAt.plusSeconds(10), outbox.nextRetryAt)
-        assertNull(outbox.claimedAt)
-        assertNull(outbox.claimedBy)
+        assertEquals(NotificationOutboxStatus.PENDING, failed.outboxStatus)
+        assertEquals(1, failed.retryCount)
+        assertEquals("broker-timeout", failed.lastError)
+        assertEquals(failureAt.plusSeconds(10), failed.nextRetryAt)
+        assertNull(failed.claimedAt)
+        assertNull(failed.claimedBy)
+
+        assertEquals(0, outbox.retryCount)
+        assertNull(outbox.lastError)
     }
 
     @Test
@@ -87,14 +95,17 @@ class NotificationOutboxTest {
             maxDelay = Duration.ofMinutes(1),
         )
 
-        outbox.markPublishing(now.plusSeconds(1), "publisher-1")
-        outbox.recordFailure("broker-down", oneAttemptPolicy, now.plusSeconds(2))
+        val dead = outbox
+            .markPublishing(now.plusSeconds(1), "publisher-1")
+            .recordFailure("broker-down", oneAttemptPolicy, now.plusSeconds(2))
 
-        assertEquals(NotificationOutboxStatus.DEAD, outbox.outboxStatus)
-        assertEquals(1, outbox.retryCount)
-        assertEquals("broker-down", outbox.lastError)
-        assertNull(outbox.claimedAt)
-        assertNull(outbox.claimedBy)
+        assertEquals(NotificationOutboxStatus.DEAD, dead.outboxStatus)
+        assertEquals(1, dead.retryCount)
+        assertEquals("broker-down", dead.lastError)
+        assertNull(dead.claimedAt)
+        assertNull(dead.claimedBy)
+
+        assertEquals(NotificationOutboxStatus.PENDING, outbox.outboxStatus)
     }
 
     @Test
@@ -103,19 +114,23 @@ class NotificationOutboxTest {
         val outbox = outbox()
         val recoveredAt = now.plusSeconds(10)
 
-        outbox.markPublishing(now.plusSeconds(1), "publisher-1")
-        outbox.markDead("non-retryable")
+        val dead = outbox
+            .markPublishing(now.plusSeconds(1), "publisher-1")
+            .markDead("non-retryable")
 
-        assertEquals(NotificationOutboxStatus.DEAD, outbox.outboxStatus)
-        assertEquals("non-retryable", outbox.lastError)
+        assertEquals(NotificationOutboxStatus.DEAD, dead.outboxStatus)
+        assertEquals("non-retryable", dead.lastError)
 
-        outbox.recoverToPending(recoveredAt)
+        val recovered = dead.recoverToPending(recoveredAt)
 
-        assertEquals(NotificationOutboxStatus.PENDING, outbox.outboxStatus)
-        assertEquals(0, outbox.retryCount)
-        assertEquals(recoveredAt, outbox.nextRetryAt)
-        assertNull(outbox.lastError)
-        assertNull(outbox.publishedAt)
+        assertEquals(NotificationOutboxStatus.PENDING, recovered.outboxStatus)
+        assertEquals(0, recovered.retryCount)
+        assertEquals(recoveredAt, recovered.nextRetryAt)
+        assertNull(recovered.lastError)
+        assertNull(recovered.publishedAt)
+
+        assertEquals(NotificationOutboxStatus.DEAD, dead.outboxStatus)
+        assertEquals("non-retryable", dead.lastError)
     }
 
     @Test

@@ -98,9 +98,7 @@ class PublishNotificationDispatchServiceTest {
     @DisplayName("stale PUBLISHING outbox는 timeout 실패로 재시도 대상에 포함한다")
     fun recoverStalePublishing() = runSuspend {
         val notification = requestedNotification()
-        val staleOutbox = outbox(notification.id).also {
-            it.markPublishing(now.minusSeconds(60), "publisher-old")
-        }
+        val staleOutbox = outbox(notification.id).markPublishing(now.minusSeconds(60), "publisher-old")
         val notificationPersistence = FakeNotificationPersistencePort().also { it.put(notification) }
         val outboxPersistence = FakeOutboxPersistencePort(stale = listOf(staleOutbox))
         val service = service(notificationPersistence, outboxPersistence, FakeDispatchPublisher())
@@ -114,6 +112,49 @@ class PublishNotificationDispatchServiceTest {
         assertEquals("publishing-timeout", outboxPersistence.saved.last().lastError)
         assertEquals(NotificationStatus.PUBLISH_FAILED, notificationPersistence.saved.last().status)
         assertEquals("publishing-timeout", notificationPersistence.saved.last().failureReason)
+    }
+
+    @Test
+    @DisplayName("발행하는 사이 다른 tick이 회수해 claim이 바뀌면 발행 결과를 버리고 집계에서 뺀다")
+    fun discardPublishResultWhenClaimLost() = runSuspend {
+        val notification = requestedNotification()
+        val outbox = outbox(notification.id)
+        val notificationPersistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val outboxPersistence = FakeOutboxPersistencePort(publishable = listOf(outbox))
+        val publisher = FakeDispatchPublisher(
+            // 발행이 길어지는 사이 다음 tick이 timeout으로 회수하고 다른 publisher가 다시 claim한 상태
+            onPublish = { outboxPersistence.replaceStored(outbox.markPublishing(now.plusSeconds(1), "publisher-2")) },
+        )
+        val service = service(notificationPersistence, outboxPersistence, publisher)
+
+        val result = service.publishPending()
+
+        assertEquals(1, result.processed)
+        assertEquals(0, result.published)
+        assertEquals(0, result.failed)
+        assertTrue(outboxPersistence.saved.isEmpty())
+        assertTrue(notificationPersistence.saved.isEmpty())
+    }
+
+    @Test
+    @DisplayName("회수하는 사이 원래 publisher가 결과를 확정했으면 stale 회수를 반영하지 않는다")
+    fun discardStaleRecoveryWhenClaimLost() = runSuspend {
+        val notification = requestedNotification()
+        val pendingOutbox = outbox(notification.id)
+        val staleOutbox = pendingOutbox.markPublishing(now.minusSeconds(60), "publisher-old")
+        val notificationPersistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val outboxPersistence = FakeOutboxPersistencePort(stale = listOf(staleOutbox))
+        // 회수를 결정한 뒤 저장하기 전에 원래 publisher가 결과를 확정해 PENDING으로 돌아간 상태
+        outboxPersistence.replaceStored(pendingOutbox)
+        val service = service(notificationPersistence, outboxPersistence, FakeDispatchPublisher())
+
+        val result = service.publishPending()
+
+        assertEquals(0, result.processed)
+        assertEquals(0, result.published)
+        assertEquals(0, result.failed)
+        assertTrue(outboxPersistence.saved.isEmpty())
+        assertTrue(notificationPersistence.saved.isEmpty())
     }
 
     @Test

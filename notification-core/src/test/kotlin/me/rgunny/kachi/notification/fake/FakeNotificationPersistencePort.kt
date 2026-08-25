@@ -57,8 +57,7 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         if (notification.status != NotificationStatus.PUBLISHED) {
             return null
         }
-        notification.markProcessing(now, workerId)
-        return notification
+        return notification.markProcessing(now, workerId).also(::put)
     }
 
     override suspend fun claimFromRetryWait(
@@ -71,7 +70,6 @@ class FakeNotificationPersistencePort : NotificationPersistencePort {
         if (notification.status != NotificationStatus.RETRY_WAIT) {
             return null
         }
-        notification.markProcessing(now, workerId)
-        return notification
+        return notification.markProcessing(now, workerId).also(::put)
     }
 }

@@ -71,9 +71,8 @@ class NotificationOutboxAdminServiceTest {
             partitionKey = RECIPIENT,
             eventPayload = "{}",
             now = NOW.minusSeconds(60),
-        ).also {
-            it.markPublishing(NOW.minusSeconds(30), "publisher-1")
-            it.recordFailure(
+        ).markPublishing(NOW.minusSeconds(30), "publisher-1")
+            .recordFailure(
                 reason = "broker-down",
                 retryPolicy = RetryPolicy(
                     maxAttempts = 1,
@@ -82,6 +81,5 @@ class NotificationOutboxAdminServiceTest {
                 ),
                 now = NOW.minusSeconds(30),
             )
-        }
     }
 }

@@ -327,15 +327,14 @@ class DispatchNotificationServiceTest {
     }
 
     private fun publishedNotification(): Notification {
-        return requestedNotification().also { it.markPublished(now.minusSeconds(5)) }
+        return requestedNotification().markPublished(now.minusSeconds(5))
     }
 
     private fun retryWaitNotification(): Notification {
-        return publishedNotification().also {
-            it.markProcessing(now.minusSeconds(4), "worker-1")
-            it.markFailed(now.minusSeconds(3), "rate-limited")
-            it.markRetryWait(now.minusSeconds(2), "rate-limited")
-        }
+        return publishedNotification()
+            .markProcessing(now.minusSeconds(4), "worker-1")
+            .markFailed(now.minusSeconds(3), "rate-limited")
+            .markRetryWait(now.minusSeconds(2), "rate-limited")
     }
 
     private fun timeoutFailure(): RetryFailure {
