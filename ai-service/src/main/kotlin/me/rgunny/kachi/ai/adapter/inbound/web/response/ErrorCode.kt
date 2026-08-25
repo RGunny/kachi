@@ -15,6 +15,7 @@ enum class ErrorCode(
     KEYWORD_QUARANTINE_NOT_RELEASABLE(HttpStatus.CONFLICT, "격리 상태가 아닌 키워드는 해제할 수 없습니다"),
     AI_OUTBOX_NOT_FOUND(HttpStatus.NOT_FOUND, "outbox 행을 찾을 수 없습니다"),
     AI_OUTBOX_NOT_RECOVERABLE(HttpStatus.CONFLICT, "DEAD 상태가 아닌 outbox는 복구할 수 없습니다"),
+    LLM_PROVIDER_NOT_FOUND(HttpStatus.NOT_FOUND, "LLM provider를 찾을 수 없습니다"),
     INVALID_INTERNAL_REQUEST(HttpStatus.BAD_REQUEST, "내부 API 요청이 올바르지 않습니다"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "요청을 처리하지 못했습니다")
 }

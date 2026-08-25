@@ -587,6 +587,70 @@ class GuardedLlmProviderTest {
         assertEquals(PROVIDER_NAME, result.metadata.provider.value)
     }
 
+    @Test
+    @DisplayName("상태 스냅샷은 회로 상태와 쉬는 시각, 집계를 함께 담는다")
+    fun statusSnapshot() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        provider.summarizeNews(KEYWORD, ARTICLES)
+        delegate.failures += AiTestFixture.rateLimitedException(retryAfterMillis = 30_000)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        val status = provider.status(clock.instant())
+
+        assertEquals(LlmProviderName.of(PROVIDER_NAME), status.provider)
+        assertEquals(CircuitBreaker.State.CLOSED.name, status.circuitBreakerState)
+        assertEquals(AiTestFixture.NOW.plusSeconds(30), status.cooldownUntil)
+        assertEquals(1, status.failedCalls)
+        assertEquals(1, status.successfulCalls)
+        assertEquals(2, status.bufferedCalls)
+    }
+
+    @Test
+    @DisplayName("쉬는 시간이 지나면 상태 스냅샷에서 쉬는 시각이 빠진다")
+    fun statusDropsExpiredCooldown() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.rateLimitedException(retryAfterMillis = 30_000)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        clock.advance(Duration.ofSeconds(30))
+
+        assertNull(provider.status(clock.instant()).cooldownUntil)
+    }
+
+    @Test
+    @DisplayName("되돌리면 열린 회로가 닫히고 쉬는 시각도 지워져 호출이 다시 나간다")
+    fun resetClearsBothGuards() = runBlocking {
+        val circuitBreaker = circuitBreaker()
+        val provider = guarded(circuitBreaker = circuitBreaker)
+        // 마지막 실패를 rate limit으로 두면 회로가 열리는 시점에 cooldown도 함께 걸린다.
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
+        delegate.failures += AiTestFixture.rateLimitedException(retryAfterMillis = 30_000)
+        repeat(2) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
+        assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
+        val callsBefore = delegate.summarizeCallCount
+
+        provider.reset()
+        provider.summarizeNews(KEYWORD, ARTICLES)
+
+        assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
+        assertNull(provider.status(clock.instant()).cooldownUntil)
+        assertEquals(callsBefore + 1, delegate.summarizeCallCount)
+    }
+
+    @Test
+    @DisplayName("이미 닫혀 있는 회로를 되돌려도 실패하지 않고 쉬는 시각만 지운다")
+    fun resetClosedCircuit() = runBlocking {
+        val circuitBreaker = wideCircuitBreaker()
+        val provider = guarded(circuitBreaker = circuitBreaker)
+        delegate.failures += AiTestFixture.rateLimitedException(retryAfterMillis = 30_000)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        provider.reset()
+
+        assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
+        assertNull(provider.exclusionReason(clock.instant()))
+    }
+
     private suspend fun openCircuit(
         provider: GuardedLlmProvider,
         delegate: NamedLlmProviderPort = this.delegate

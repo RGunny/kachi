@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProviderStatus
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
@@ -76,6 +77,40 @@ class GuardedLlmProvider(
 
     /** 실제 차단은 호출 시점의 permission이 결정하므로 이 값이 틀려도 호출이 잘못 나가지 않는다. */
     override fun isLikelyAvailable(now: Instant): Boolean = exclusionReason(now) == null
+
+    /**
+     * 지금 이 provider가 어떤 상태인지의 스냅샷.
+     *
+     * cooldown 종료 시각은 쉬는 중일 때만 담는다. 지나간 시각은 호출을 막는 이유가 아니다.
+     */
+    fun status(now: Instant): LlmProviderStatus {
+        val metrics = circuitBreaker.metrics
+
+        return LlmProviderStatus(
+            provider = provider,
+            circuitBreakerState = circuitBreaker.state.name,
+            cooldownUntil = coolingDownUntil(now),
+            failureRate = metrics.failureRate,
+            slowCallRate = metrics.slowCallRate,
+            bufferedCalls = metrics.numberOfBufferedCalls,
+            successfulCalls = metrics.numberOfSuccessfulCalls,
+            failedCalls = metrics.numberOfFailedCalls,
+            notPermittedCalls = metrics.numberOfNotPermittedCalls
+        )
+    }
+
+    /**
+     * 운영자가 원인 해소를 확인한 뒤 두 차단 장치를 함께 푼다.
+     *
+     * 이미 닫혀 있는 회로에 전이를 요청하면 라이브러리가 거부하므로 상태를 보고 건너뛴다.
+     * cooldown은 회로와 별개라 그때도 지운다.
+     */
+    fun reset() {
+        if (circuitBreaker.state != CircuitBreaker.State.CLOSED) {
+            circuitBreaker.transitionToClosedState()
+        }
+        cooldownUntil.set(null)
+    }
 
     /** 후보에서 빠질 이유. 빠질 이유가 없으면 null이다. */
     fun exclusionReason(now: Instant): String? {

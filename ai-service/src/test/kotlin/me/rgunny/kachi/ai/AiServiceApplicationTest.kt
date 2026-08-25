@@ -5,6 +5,12 @@ import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiOutboxRelayScheduler
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
+import me.rgunny.kachi.ai.application.port.inbound.outbox.FindAiOutboxesUseCase
+import me.rgunny.kachi.ai.application.port.inbound.outbox.RecoverAiOutboxUseCase
+import me.rgunny.kachi.ai.application.port.inbound.quarantine.FindKeywordQuarantinesUseCase
+import me.rgunny.kachi.ai.application.port.inbound.quarantine.ReleaseKeywordQuarantineUseCase
+import me.rgunny.kachi.ai.application.port.inbound.watermark.FindSummaryWatermarksUseCase
+import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxEventSerializer
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.AiOutboxEvent
@@ -39,6 +45,9 @@ class AiServiceApplicationTest {
 
     @Autowired
     private lateinit var llmProviderPort: LlmProviderPort
+
+    @Autowired
+    private lateinit var llmProviderAdminPort: LlmProviderAdminPort
 
     @Autowired
     private lateinit var transactionalOperator: TransactionalOperator
@@ -100,6 +109,35 @@ class AiServiceApplicationTest {
         ).forEach { type ->
             assertTrue(applicationContext.getBeanNamesForType(type).isEmpty(), "${type.simpleName} 빈이 없어야 합니다")
         }
+    }
+
+    /**
+     * 운영 API의 진입점은 컨트롤러가 아니라 유스케이스 빈이다.
+     * 컨트롤러 슬라이스는 fake로 서기 때문에 실제 빈이 없어도 통과한다.
+     */
+    @Test
+    @DisplayName("운영 API가 쓰는 유스케이스 빈이 모두 등록된다")
+    fun registerInternalApiUseCases() {
+        listOf(
+            FindKeywordQuarantinesUseCase::class.java,
+            ReleaseKeywordQuarantineUseCase::class.java,
+            FindSummaryWatermarksUseCase::class.java,
+            FindAiOutboxesUseCase::class.java,
+            RecoverAiOutboxUseCase::class.java
+        ).forEach { type ->
+            assertEquals(1, applicationContext.getBeanNamesForType(type).size, "${type.simpleName} 빈이 하나여야 합니다")
+        }
+    }
+
+    @Test
+    @DisplayName("provider 차단 상태 조회 포트는 router와 같은 provider 목록을 본다")
+    fun shareGuardedProvidersWithAdminPort() {
+        val router = assertIs<RoutingLlmProvider>(llmProviderPort)
+
+        assertEquals(
+            router.providers.map { assertIs<GuardedLlmProvider>(it).provider.value },
+            llmProviderAdminPort.statuses().map { it.provider.value }
+        )
     }
 
     @Test
