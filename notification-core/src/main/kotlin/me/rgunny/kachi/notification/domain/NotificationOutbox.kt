@@ -26,35 +26,14 @@ class NotificationOutbox private constructor(
     val partitionKey: String,
     val eventPayload: String,
     val createdAt: Instant,
-    outboxStatus: NotificationOutboxStatus = NotificationOutboxStatus.PENDING,
-    retryCount: Int = 0,
-    nextRetryAt: Instant = createdAt,
-    lastError: String? = null,
-    publishedAt: Instant? = null,
-    claimedAt: Instant? = null,
-    claimedBy: String? = null,
+    val outboxStatus: NotificationOutboxStatus,
+    val retryCount: Int,
+    val nextRetryAt: Instant,
+    val lastError: String?,
+    val publishedAt: Instant?,
+    val claimedAt: Instant?,
+    val claimedBy: String?,
 ) {
-    var outboxStatus: NotificationOutboxStatus = outboxStatus
-        private set
-
-    var retryCount: Int = retryCount
-        private set
-
-    var nextRetryAt: Instant = nextRetryAt
-        private set
-
-    var lastError: String? = lastError
-        private set
-
-    var publishedAt: Instant? = publishedAt
-        private set
-
-    var claimedAt: Instant? = claimedAt
-        private set
-
-    var claimedBy: String? = claimedBy
-        private set
-
     companion object {
 
         fun create(
@@ -75,6 +54,13 @@ class NotificationOutbox private constructor(
                 partitionKey = partitionKey,
                 eventPayload = eventPayload,
                 createdAt = now,
+                outboxStatus = NotificationOutboxStatus.PENDING,
+                retryCount = 0,
+                nextRetryAt = now,
+                lastError = null,
+                publishedAt = null,
+                claimedAt = null,
+                claimedBy = null,
             )
         }
 
@@ -141,98 +127,141 @@ class NotificationOutbox private constructor(
      * 처리 권한 획득.
      * NotificationOutboxStatus: [PENDING --> PUBLISHING]
      */
-    fun markPublishing(now: Instant, claimedBy: String) {
+    fun markPublishing(now: Instant, claimedBy: String): NotificationOutbox {
         requireNonBlank(claimedBy, "claimedBy")
-
-        if (this.outboxStatus != NotificationOutboxStatus.PENDING) {
-            throw IllegalStateException("markPublishing requires PENDING, current=${this.outboxStatus}")
+        check(outboxStatus == NotificationOutboxStatus.PENDING) {
+            "markPublishing requires PENDING, current=$outboxStatus"
         }
 
-        this.outboxStatus = NotificationOutboxStatus.PUBLISHING
-        this.claimedAt = now
-        this.claimedBy = claimedBy
+        return copy(
+            outboxStatus = NotificationOutboxStatus.PUBLISHING,
+            claimedAt = now,
+            claimedBy = claimedBy,
+        )
     }
 
     /**
      * 발행 성공 처리.
      * NotificationOutboxStatus: [PUBLISHING --> PUBLISHED]
+     *
+     * consumer 재전달로 같은 발행 결과가 두 번 도착할 수 있어 이미 PUBLISHED면 그대로 둔다.
      */
-    fun markPublished(now: Instant) {
-        if (this.outboxStatus == NotificationOutboxStatus.PUBLISHED) {
-            return
+    fun markPublished(now: Instant): NotificationOutbox {
+        if (outboxStatus == NotificationOutboxStatus.PUBLISHED) {
+            return this
+        }
+        check(outboxStatus == NotificationOutboxStatus.PUBLISHING) {
+            "markPublished requires PUBLISHING, current=$outboxStatus"
         }
 
-        if (this.outboxStatus != NotificationOutboxStatus.PUBLISHING) {
-            throw IllegalStateException("markPublished requires PUBLISHING, current=${this.outboxStatus}")
-        }
-
-        this.outboxStatus = NotificationOutboxStatus.PUBLISHED
-        this.publishedAt = now
-        this.lastError = null
-        clearClaim()
+        return copy(
+            outboxStatus = NotificationOutboxStatus.PUBLISHED,
+            lastError = null,
+            publishedAt = now,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
     /**
      * 발행 실패 처리.
      * NotificationOutboxStatus: [PUBLISHING --> PENDING] 또는 [PUBLISHING --> DEAD]
      */
-    fun recordFailure(reason: String, retryPolicy: RetryPolicy, now: Instant) {
+    fun recordFailure(reason: String, retryPolicy: RetryPolicy, now: Instant): NotificationOutbox {
         requireNonBlank(reason, "reason")
-
-        if (this.outboxStatus != NotificationOutboxStatus.PUBLISHING) {
-            throw IllegalStateException("recordFailure requires PUBLISHING, current=${this.outboxStatus}")
+        check(outboxStatus == NotificationOutboxStatus.PUBLISHING) {
+            "recordFailure requires PUBLISHING, current=$outboxStatus"
         }
 
-        val nextRetryCount = this.retryCount + 1
-        this.retryCount = nextRetryCount
-        this.lastError = reason
+        val nextRetryCount = retryCount + 1
 
         if (retryPolicy.exhausted(nextRetryCount)) {
-            this.outboxStatus = NotificationOutboxStatus.DEAD
-        } else {
-            this.outboxStatus = NotificationOutboxStatus.PENDING
-            this.nextRetryAt = now.plus(retryPolicy.backoff(nextRetryCount))
+            return copy(
+                outboxStatus = NotificationOutboxStatus.DEAD,
+                retryCount = nextRetryCount,
+                lastError = reason,
+                claimedAt = null,
+                claimedBy = null,
+            )
         }
 
-        clearClaim()
+        return copy(
+            outboxStatus = NotificationOutboxStatus.PENDING,
+            retryCount = nextRetryCount,
+            nextRetryAt = now.plus(retryPolicy.backoff(nextRetryCount)),
+            lastError = reason,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
     /**
      * 즉시 DEAD 처리.
      * NotificationOutboxStatus: [PUBLISHING --> DEAD]
      */
-    fun markDead(reason: String) {
+    fun markDead(reason: String): NotificationOutbox {
         requireNonBlank(reason, "reason")
-
-        if (this.outboxStatus != NotificationOutboxStatus.PUBLISHING) {
-            throw IllegalStateException("markDead requires PUBLISHING, current=${this.outboxStatus}")
+        check(outboxStatus == NotificationOutboxStatus.PUBLISHING) {
+            "markDead requires PUBLISHING, current=$outboxStatus"
         }
 
-        this.outboxStatus = NotificationOutboxStatus.DEAD
-        this.lastError = reason
-        clearClaim()
+        return copy(
+            outboxStatus = NotificationOutboxStatus.DEAD,
+            lastError = reason,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
     /**
      * 운영자 복구.
      * NotificationOutboxStatus: [DEAD --> PENDING]
      */
-    fun recoverToPending(now: Instant) {
-        if (this.outboxStatus != NotificationOutboxStatus.DEAD) {
-            throw IllegalStateException("recoverToPending requires DEAD, current=${this.outboxStatus}")
+    fun recoverToPending(now: Instant): NotificationOutbox {
+        check(outboxStatus == NotificationOutboxStatus.DEAD) {
+            "recoverToPending requires DEAD, current=$outboxStatus"
         }
 
-        this.outboxStatus = NotificationOutboxStatus.PENDING
-        this.retryCount = 0
-        this.nextRetryAt = now
-        this.lastError = null
-        this.publishedAt = null
-        clearClaim()
+        return copy(
+            outboxStatus = NotificationOutboxStatus.PENDING,
+            retryCount = 0,
+            nextRetryAt = now,
+            lastError = null,
+            publishedAt = null,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
-    private fun clearClaim() {
-        this.claimedAt = null
-        this.claimedBy = null
+    /**
+     * 전이 결과 인스턴스를 만든다.
+     *
+     * 전이해도 바뀌지 않는 식별자·발행 대상·payload·생성 시각은 인자로 받지 않는다.
+     */
+    private fun copy(
+        outboxStatus: NotificationOutboxStatus = this.outboxStatus,
+        retryCount: Int = this.retryCount,
+        nextRetryAt: Instant = this.nextRetryAt,
+        lastError: String? = this.lastError,
+        publishedAt: Instant? = this.publishedAt,
+        claimedAt: Instant? = this.claimedAt,
+        claimedBy: String? = this.claimedBy,
+    ): NotificationOutbox {
+        return NotificationOutbox(
+            id = id,
+            notificationId = notificationId,
+            topic = topic,
+            partitionKey = partitionKey,
+            eventPayload = eventPayload,
+            createdAt = createdAt,
+            outboxStatus = outboxStatus,
+            retryCount = retryCount,
+            nextRetryAt = nextRetryAt,
+            lastError = lastError,
+            publishedAt = publishedAt,
+            claimedAt = claimedAt,
+            claimedBy = claimedBy,
+        )
     }
 
     private fun requireNonBlank(value: String, name: String) {

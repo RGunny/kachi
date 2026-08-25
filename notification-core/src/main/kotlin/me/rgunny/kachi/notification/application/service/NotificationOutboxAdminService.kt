@@ -37,10 +37,10 @@ class NotificationOutboxAdminService(
             ?: throw NotificationOutboxNotFoundException(command.outboxId)
 
         // 2. domain 전이 규칙으로 DEAD outbox만 PENDING으로 되돌린다.
-        outbox.recoverToPending(now)
+        val recovered = outbox.recoverToPending(now)
 
         // 3. 다음 scheduler tick에서 기존 outbox 발행 흐름을 다시 타도록 저장한다.
-        val saved = outboxPersistencePort.save(outbox)
+        val saved = outboxPersistencePort.save(recovered)
         return RecoverNotificationOutboxResult(
             outbox = NotificationOutboxSummary.from(saved),
             recoveredAt = now,

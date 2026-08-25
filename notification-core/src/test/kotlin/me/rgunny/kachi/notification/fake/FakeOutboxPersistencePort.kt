@@ -39,8 +39,7 @@ class FakeOutboxPersistencePort(
             return null
         }
         val outbox = publishable.firstOrNull { it.id == outboxId } ?: return null
-        outbox.markPublishing(now, claimedBy)
-        return outbox
+        return outbox.markPublishing(now, claimedBy)
     }
 
     override suspend fun findStalePublishing(

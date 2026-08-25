@@ -50,9 +50,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     @DisplayName("발행 성공 결과로 outbox와 notification을 하나의 transaction에 저장한다")
     fun savePublished() = runBlocking {
         val notification = notification("request-1")
-        val outbox = publishingOutbox(notification.id).also {
-            it.markPublished(transitionAt)
-        }
+        val outbox = publishingOutbox(notification.id).markPublished(transitionAt)
         notificationPersistenceAdapter.save(notification)
 
         adapter.savePublished(outbox, transitionAt)
@@ -70,17 +68,15 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     @DisplayName("발행 실패 결과로 outbox retry 상태와 notification 실패 상태를 하나의 transaction에 저장한다")
     fun savePublishFailed() = runBlocking {
         val notification = notification("request-2")
-        val outbox = publishingOutbox(notification.id).also {
-            it.recordFailure(
-                reason = "broker-down",
-                retryPolicy = RetryPolicy(
-                    maxAttempts = 3,
-                    baseDelay = Duration.ofSeconds(10),
-                    maxDelay = Duration.ofMinutes(1),
-                ),
-                now = transitionAt,
-            )
-        }
+        val outbox = publishingOutbox(notification.id).recordFailure(
+            reason = "broker-down",
+            retryPolicy = RetryPolicy(
+                maxAttempts = 3,
+                baseDelay = Duration.ofSeconds(10),
+                maxDelay = Duration.ofMinutes(1),
+            ),
+            now = transitionAt,
+        )
         notificationPersistenceAdapter.save(notification)
 
         adapter.savePublishFailed(outbox, transitionAt, "broker-down")
@@ -99,9 +95,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
     @Test
     @DisplayName("notification 조회 실패 시 outbox 저장도 rollback한다")
     fun rollbackWhenNotificationNotFound() = runBlocking {
-        val outbox = publishingOutbox(NotificationId.newId()).also {
-            it.markPublished(transitionAt)
-        }
+        val outbox = publishingOutbox(NotificationId.newId()).markPublished(transitionAt)
 
         assertFailsWith<IllegalStateException> {
             adapter.savePublished(outbox, transitionAt)
@@ -128,8 +122,6 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
             partitionKey = "C123",
             eventPayload = """{"notificationId":"${notificationId.id}"}""",
             now = requestedAt,
-        ).also {
-            it.markPublishing(transitionAt.minusSeconds(1), "publisher-1")
-        }
+        ).markPublishing(transitionAt.minusSeconds(1), "publisher-1")
     }
 }

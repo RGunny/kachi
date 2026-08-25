@@ -98,9 +98,7 @@ class PublishNotificationDispatchServiceTest {
     @DisplayName("stale PUBLISHING outbox는 timeout 실패로 재시도 대상에 포함한다")
     fun recoverStalePublishing() = runSuspend {
         val notification = requestedNotification()
-        val staleOutbox = outbox(notification.id).also {
-            it.markPublishing(now.minusSeconds(60), "publisher-old")
-        }
+        val staleOutbox = outbox(notification.id).markPublishing(now.minusSeconds(60), "publisher-old")
         val notificationPersistence = FakeNotificationPersistencePort().also { it.put(notification) }
         val outboxPersistence = FakeOutboxPersistencePort(stale = listOf(staleOutbox))
         val service = service(notificationPersistence, outboxPersistence, FakeDispatchPublisher())

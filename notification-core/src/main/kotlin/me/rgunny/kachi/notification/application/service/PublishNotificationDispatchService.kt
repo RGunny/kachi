@@ -31,8 +31,8 @@ class PublishNotificationDispatchService(
         // 2. timeout된 PUBLISHING은 이전 publisher가 중단된 것으로 보고 실패 처리해 재시도 대상으로 돌린다.
         var failed = 0
         staleOutboxes.forEach { outbox ->
-            outbox.recordFailure(PUBLISHING_TIMEOUT_REASON, policy.retryPolicy, now)
-            publishPersistencePort.savePublishFailed(outbox, now, PUBLISHING_TIMEOUT_REASON)
+            val timedOut = outbox.recordFailure(PUBLISHING_TIMEOUT_REASON, policy.retryPolicy, now)
+            publishPersistencePort.savePublishFailed(timedOut, now, PUBLISHING_TIMEOUT_REASON)
             failed += 1
         }
 
@@ -60,16 +60,16 @@ class PublishNotificationDispatchService(
                 val reason = publishFailure.message?.takeIf { it.isNotBlank() }
                     ?: publishFailure::class.simpleName
                     ?: PUBLISH_FAILED
-                claimedOutbox.recordFailure(reason, policy.retryPolicy, now)
-                publishPersistencePort.savePublishFailed(claimedOutbox, now, reason)
+                val failedOutbox = claimedOutbox.recordFailure(reason, policy.retryPolicy, now)
+                publishPersistencePort.savePublishFailed(failedOutbox, now, reason)
 
                 failed += 1
                 return@forEach
             }
 
             // 5. broker 발행이 끝난 뒤 outbox와 notification의 발행 완료 상태를 같은 DB transaction으로 맞춘다.
-            claimedOutbox.markPublished(now)
-            publishPersistencePort.savePublished(claimedOutbox, now)
+            val publishedOutbox = claimedOutbox.markPublished(now)
+            publishPersistencePort.savePublished(publishedOutbox, now)
 
             published += 1
         }
