@@ -6,10 +6,11 @@ notification-service(접수·outbox 발행)와 notification-worker(dispatch·ven
 
 관련 결정: ADR 012(모듈 설계), 013(outbox dispatch flow), 014(재시도 분류),
 015(outbox 발행 runtime), 016(vendor sender 구조), 017(Mongo 트랜잭션 전제),
-018(재시도 폭주 방지).
+018(재시도 폭주 방지), 024(aggregate 불변화와 finalize CAS).
 
-이 컨텍스트의 상태 기계 aggregate는 다른 컨텍스트와 달리 `private set` 가변 프로퍼티로 전이를 표현한다. 
-상태 전이가 도메인의 본질이라 전이 메서드가 자기 상태를 바꾸는 모양이 자연스럽고, 전이 가드가 최종 방어선 역할을 한다.
+이 컨텍스트의 상태 전이 aggregate는 불변이다. 전이 메서드는 전이 결과를 새 인스턴스로 반환하고 전이 전 인스턴스는 그대로 남는다.
+전이 가드는 최종 방어선이며, 외부 side effect(Kafka 발행, vendor 호출) 뒤의 결과 확정은 전이 전 인스턴스가 들고 있던 claim을
+기대값으로 하는 저장소 CAS로만 한다 (ADR 024).
 
 ## 알림 애그리거트
 
@@ -138,7 +139,7 @@ _Aggregate Root_
 - 알림 요청 접수와 dispatch outbox 저장은 같은 저장 경계에서 확정한다.
 - `PENDING`만 `PUBLISHING`으로 claim할 수 있고, `PUBLISHING`만 `PUBLISHED`/`PENDING`/`DEAD`로 전이할 수 있다.
 - claim에 성공한 인스턴스만 publish를 수행하며, 결과는 callback에서 별도 트랜잭션으로 반영한다.
-  늦은 callback은 `PUBLISHING`일 때만 반영한다 (ADR 015).
+  늦은 callback은 `PUBLISHING`일 때만 반영하며, 이 조건은 저장소가 `_id + PUBLISHING + claim` CAS로 강제한다 (ADR 015, 024).
 - 오래된 `PUBLISHING`은 publisher 중단으로 보고 stale 회수 대상에 포함한다
   (`publishingVisibilityTimeout`).
 - claim은 동시 발행을 막는 1차 방어선이다. publish 성공 후 DB 반영 전 timeout 회수가

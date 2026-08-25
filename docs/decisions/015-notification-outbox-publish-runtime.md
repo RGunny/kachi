@@ -112,6 +112,11 @@ publish 결과 반영은 outbox가 아직 `PUBLISHING`일 때만 수행한다.
 
 이 규칙은 stale 회수와 늦은 callback이 같은 outbox를 서로 덮어쓰는 것을 막는다.
 
+저장소가 이 규칙을 강제한다. `savePublished`/`savePublishFailed`는 outbox 행을 덮어쓰지 않고
+`_id + PUBLISHING + claimedAt + claimedBy` 조건의 `findAndModify`로 갱신하며, 기대값은 publish를 시작할 때 claim한 인스턴스가 들고 있던 값이다. 
+조건이 어긋나면 outbox도 `Notification`도 바꾸지 않고 `false`를 돌려주고, 서비스는 warn만 남기고 집계에서 뺀다.
+`processed` 집계는 조회된 행 수가 아니라 실제로 claim한 행 수다 (ADR 024).
+
 ## Retry 정책
 
 outbox retry는 dispatch message 발행 보장을 위한 정책이다.
