@@ -1,5 +1,6 @@
 package me.rgunny.kachi.ai.application.port.outbound.persistence
 
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
@@ -19,6 +20,11 @@ interface KeywordQuarantinePersistencePort {
      * 실패한 적 없는 키워드는 기록 자체가 없다. 결과에 없다는 것은 연속 실패 0회를 뜻한다.
      */
     suspend fun findAllBy(targetType: AiRunTargetType): List<KeywordQuarantine>
+
+    /**
+     * 대상 종류의 특정 키워드 기록을 읽는다. null은 실패한 적 없는 키워드다.
+     */
+    suspend fun findBy(targetType: AiRunTargetType, keyword: AiKeyword): KeywordQuarantine?
 
     /**
      * 격리 기록을 저장한다. 기존 기록의 갱신은 새 기록으로 쌓이지 않고 그 기록을 대체한다.

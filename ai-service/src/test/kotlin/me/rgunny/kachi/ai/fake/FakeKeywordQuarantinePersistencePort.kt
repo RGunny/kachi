@@ -22,6 +22,10 @@ class FakeKeywordQuarantinePersistencePort : KeywordQuarantinePersistencePort {
         return quarantines.filter { it.targetType == targetType }
     }
 
+    override suspend fun findBy(targetType: AiRunTargetType, keyword: AiKeyword): KeywordQuarantine? {
+        return quarantines.firstOrNull { it.targetType == targetType && it.keyword == keyword }
+    }
+
     override suspend fun save(quarantine: KeywordQuarantine): KeywordQuarantine {
         saveCount += 1
         quarantines.removeAll { it.targetType == quarantine.targetType && it.keyword == quarantine.keyword }

@@ -20,6 +20,7 @@ import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @DisplayName("KeywordQuarantinePersistenceAdapter 통합 테스트")
@@ -130,6 +131,34 @@ class KeywordQuarantinePersistenceAdapterIntegrationTest : PersistenceAdapterInt
 
             assertTrue(adapter.findAllBy(AiRunTargetType.NEWS_SUMMARY).isEmpty())
             assertEquals(1, adapter.findAllBy(AiRunTargetType.KEYWORD_EXPANSION).size)
+        }
+    }
+
+    @Nested
+    @DisplayName("findBy()")
+    inner class FindBy {
+
+        @Test
+        @DisplayName("대상 종류와 키워드가 모두 맞는 기록을 돌려준다")
+        fun findByTargetTypeAndKeyword() = runBlocking {
+            adapter.save(quarantined())
+
+            val found = adapter.findBy(AiRunTargetType.NEWS_SUMMARY, keyword)
+
+            assertNotNull(found)
+            assertEquals(keyword, found.keyword)
+            assertEquals(KeywordQuarantineStatus.QUARANTINED, found.status)
+        }
+
+        @Test
+        @DisplayName("기록이 없거나 대상 종류가 다르면 null을 돌려준다")
+        fun returnNullWhenNotMatched() = runBlocking {
+            assertNull(adapter.findBy(AiRunTargetType.NEWS_SUMMARY, keyword))
+
+            adapter.save(quarantined())
+
+            assertNull(adapter.findBy(AiRunTargetType.KEYWORD_EXPANSION, keyword))
+            assertNull(adapter.findBy(AiRunTargetType.NEWS_SUMMARY, AiKeyword.of("AMD")))
         }
     }
 

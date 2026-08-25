@@ -1,7 +1,9 @@
 package me.rgunny.kachi.ai.adapter.outbound.persistence
 
 import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
+import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
@@ -27,6 +29,12 @@ class KeywordQuarantinePersistenceAdapter(
             .collectList()
             .awaitSingle()
             .map { it.toDomain() }
+    }
+
+    override suspend fun findBy(targetType: AiRunTargetType, keyword: AiKeyword): KeywordQuarantine? {
+        return repository.findByTargetTypeAndKeyword(targetType, keyword.value)
+            .awaitSingleOrNull()
+            ?.toDomain()
     }
 
     override suspend fun save(quarantine: KeywordQuarantine): KeywordQuarantine {
