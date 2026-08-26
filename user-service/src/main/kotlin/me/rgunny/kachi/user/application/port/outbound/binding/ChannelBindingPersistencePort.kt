@@ -18,6 +18,8 @@ interface ChannelBindingPersistencePort {
 
     fun findAllByUserId(userId: UserId): List<ChannelBinding>
 
+    fun findAllByUserIds(userIds: Set<UserId>): List<ChannelBinding>
+
     fun findByLinkTokenHash(linkTokenHash: LinkTokenHash): ChannelBinding?
 
     fun save(binding: ChannelBinding): ChannelBinding

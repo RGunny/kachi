@@ -3,6 +3,7 @@ package me.rgunny.kachi.user.config
 import me.rgunny.kachi.user.adapter.inbound.web.AuthController
 import me.rgunny.kachi.user.adapter.inbound.web.ChannelBindingController
 import me.rgunny.kachi.user.adapter.inbound.web.InternalChannelBindingController
+import me.rgunny.kachi.user.adapter.inbound.web.InternalSubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeOAuth2Config
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
 import java.time.Clock
 import java.time.Duration
+import java.util.UUID
 
 @WebMvcTest(
     controllers = [
@@ -40,7 +42,8 @@ import java.time.Duration
         UserController::class,
         SubscriptionController::class,
         ChannelBindingController::class,
-        InternalChannelBindingController::class
+        InternalChannelBindingController::class,
+        InternalSubscriptionController::class
     ]
 )
 @AutoConfigureMockMvc
@@ -107,6 +110,27 @@ class SecurityConfigTest @Autowired constructor(
                 content = telegramLinkBody()
             }.andExpect {
                 status { isNoContent() }
+            }
+        }
+
+        @Test
+        @DisplayName("구독 조회 internal API는 인증 없이 접근할 수 있다")
+        fun permitSubscriptionsInternalApi() {
+            mockMvc.get("/api/v1/internal/subscriptions") {
+                param("keyword", "tesla")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 조회 internal API는 인증 없이 접근할 수 있다")
+        fun permitChannelBindingInternalApi() {
+            mockMvc.get("/api/v1/internal/channel-bindings/${UUID.randomUUID()}") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
             }
         }
 
@@ -305,7 +329,7 @@ class SecurityConfigTest @Autowired constructor(
         @Test
         @DisplayName("허용하지 않은 API는 인증을 요구한다")
         fun requireAuthenticationForOtherApis() {
-            mockMvc.get("/api/v1/internal") {
+            mockMvc.get("/api/v1/unknown") {
                 accept = MediaType.APPLICATION_JSON
             }.andExpect {
                 status { isForbidden() }

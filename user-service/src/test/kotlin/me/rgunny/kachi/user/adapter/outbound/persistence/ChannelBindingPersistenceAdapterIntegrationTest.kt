@@ -123,5 +123,22 @@ class ChannelBindingPersistenceAdapterIntegrationTest : PersistenceAdapterIntegr
                 channelBindingPersistenceAdapter.findAllByUserId(userId).map { it.channel }.toSet()
             )
         }
+
+        @Test
+        @DisplayName("여러 사용자의 바인딩을 한 번에 조회하고 주소를 복호화한다")
+        fun findAllByUserIds() {
+            val alice = UserId.newId()
+            val bob = UserId.newId()
+            channelBindingPersistenceAdapter.save(activeBinding(alice, SubscriptionChannel.SLACK))
+            channelBindingPersistenceAdapter.save(activeBinding(bob, SubscriptionChannel.TELEGRAM))
+            channelBindingPersistenceAdapter.save(activeBinding(UserId.newId(), SubscriptionChannel.SLACK))
+            flushAndClear()
+
+            val bindings = channelBindingPersistenceAdapter.findAllByUserIds(setOf(alice, bob))
+
+            assertEquals(setOf(alice to SubscriptionChannel.SLACK, bob to SubscriptionChannel.TELEGRAM), bindings.map { it.userId to it.channel }.toSet())
+            assertEquals(address(SubscriptionChannel.TELEGRAM), bindings.single { it.userId == bob }.address)
+            assertEquals(emptyList(), channelBindingPersistenceAdapter.findAllByUserIds(emptySet()))
+        }
     }
 }

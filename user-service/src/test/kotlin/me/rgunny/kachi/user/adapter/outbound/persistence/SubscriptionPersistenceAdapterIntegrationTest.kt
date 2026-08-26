@@ -100,6 +100,23 @@ class SubscriptionPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrat
             assertTrue(subscriptionPersistenceAdapter.existsByUserIdAndKeywordId(userId, keyword.id))
             assertEquals(false, subscriptionPersistenceAdapter.existsByUserIdAndKeywordId(UserId.newId(), keyword.id))
         }
+
+        @Test
+        @DisplayName("키워드의 enabled 구독만 조회한다")
+        fun findAllEnabledByKeywordId() {
+            val enabledUser = UserId.newId()
+            val other = keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("NVIDIA"), now))
+            subscriptionPersistenceAdapter.save(subscription(enabledUser, setOf(SubscriptionChannel.SLACK)))
+            subscriptionPersistenceAdapter.save(subscription(UserId.newId(), setOf(SubscriptionChannel.SLACK)).disable(now))
+            subscriptionPersistenceAdapter.save(
+                Subscription.create(UserId.newId(), other.id, setOf(SubscriptionChannel.SLACK), now)
+            )
+            flushAndClear()
+
+            val subscriptions = subscriptionPersistenceAdapter.findAllEnabledByKeywordId(keyword.id)
+
+            assertEquals(listOf(enabledUser), subscriptions.map { it.userId })
+        }
     }
 
     private fun subscription(userId: UserId, channels: Set<SubscriptionChannel>): Subscription {

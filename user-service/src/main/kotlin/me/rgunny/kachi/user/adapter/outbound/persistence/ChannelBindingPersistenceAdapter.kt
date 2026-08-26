@@ -34,6 +34,13 @@ class ChannelBindingPersistenceAdapter(
             .map { it.toDomain(addressCipherPort) }
     }
 
+    override fun findAllByUserIds(userIds: Set<UserId>): List<ChannelBinding> {
+        if (userIds.isEmpty()) return emptyList()
+
+        return channelBindingJpaRepository.findAllByUserIdIn(userIds.map { it.value })
+            .map { it.toDomain(addressCipherPort) }
+    }
+
     override fun findByLinkTokenHash(linkTokenHash: LinkTokenHash): ChannelBinding? {
         return channelBindingJpaRepository.findByLinkTokenHash(linkTokenHash.value)?.toDomain(addressCipherPort)
     }

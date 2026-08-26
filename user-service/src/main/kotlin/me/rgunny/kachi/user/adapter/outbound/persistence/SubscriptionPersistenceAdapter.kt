@@ -27,6 +27,11 @@ class SubscriptionPersistenceAdapter(
             .map { it.toDomain() }
     }
 
+    override fun findAllEnabledByKeywordId(keywordId: KeywordId): List<Subscription> {
+        return subscriptionJpaRepository.findAllByKeywordIdAndEnabledTrue(keywordId.value)
+            .map { it.toDomain() }
+    }
+
     override fun existsByUserIdAndKeywordId(userId: UserId, keywordId: KeywordId): Boolean {
         return subscriptionJpaRepository.existsByUserIdAndKeywordId(
             userId = userId.value,

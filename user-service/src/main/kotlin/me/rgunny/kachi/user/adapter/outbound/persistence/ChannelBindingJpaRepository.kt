@@ -12,5 +12,7 @@ interface ChannelBindingJpaRepository : JpaRepository<ChannelBindingJpaEntity, U
 
     fun findAllByUserId(userId: UUID): List<ChannelBindingJpaEntity>
 
+    fun findAllByUserIdIn(userIds: Collection<UUID>): List<ChannelBindingJpaEntity>
+
     fun findByLinkTokenHash(linkTokenHash: ByteArray): ChannelBindingJpaEntity?
 }

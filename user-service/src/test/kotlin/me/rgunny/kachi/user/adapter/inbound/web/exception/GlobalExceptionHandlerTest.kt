@@ -8,6 +8,7 @@ import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeCompleteTelegramLinkUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterSubscriptionUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterWebhookBindingUseCase
+import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeResolveChannelBindingUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterUserUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRefreshTokenUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRevokeChannelBindingUseCase
@@ -16,6 +17,7 @@ import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.inbound.web.security.AuthenticatedUser
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
+import me.rgunny.kachi.user.application.exception.ChannelBindingRefNotFoundException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
 import me.rgunny.kachi.user.application.exception.InvalidChannelAddressException
@@ -24,6 +26,7 @@ import me.rgunny.kachi.user.application.exception.LinkTokenInvalidException
 import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
 import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
 import me.rgunny.kachi.user.config.ApiVersionConfig
+import me.rgunny.kachi.user.domain.ChannelBindingId
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.KeywordName
@@ -48,6 +51,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
+import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
@@ -79,7 +83,8 @@ class GlobalExceptionHandlerTest @Autowired constructor(
     private val updateSubscriptionUseCase: FakeUpdateSubscriptionUseCase,
     private val registerWebhookBindingUseCase: FakeRegisterWebhookBindingUseCase,
     private val revokeChannelBindingUseCase: FakeRevokeChannelBindingUseCase,
-    private val completeTelegramLinkUseCase: FakeCompleteTelegramLinkUseCase
+    private val completeTelegramLinkUseCase: FakeCompleteTelegramLinkUseCase,
+    private val resolveChannelBindingUseCase: FakeResolveChannelBindingUseCase
 ) {
 
     @BeforeEach
@@ -91,6 +96,7 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         registerWebhookBindingUseCase.exception = null
         revokeChannelBindingUseCase.exception = null
         completeTelegramLinkUseCase.exception = null
+        resolveChannelBindingUseCase.exception = null
     }
 
     @Nested
@@ -241,6 +247,23 @@ class GlobalExceptionHandlerTest @Autowired constructor(
                 actual = response.contentAsString,
                 code = "CHANNEL_BINDING_NOT_FOUND",
                 message = "채널 바인딩을 찾을 수 없습니다: channel=DISCORD"
+            )
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 참조 없음 예외는 404 응답으로 변환한다")
+        fun handleChannelBindingRefNotFound() {
+            val ref = ChannelBindingId.newId()
+            resolveChannelBindingUseCase.exception = ChannelBindingRefNotFoundException(ref)
+
+            val response = mockMvc.get("/api/v1/internal/channel-bindings/${ref.value}").andExpect {
+                status { isNotFound() }
+            }.andReturn().response
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "CHANNEL_BINDING_NOT_FOUND",
+                message = "채널 바인딩을 찾을 수 없습니다: ref=${ref.value}"
             )
         }
 

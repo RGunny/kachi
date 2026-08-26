@@ -26,6 +26,8 @@ class FakeChannelBindingPersistencePort(
 
     override fun findAllByUserId(userId: UserId): List<ChannelBinding> = bindings.values.filter { it.userId == userId }
 
+    override fun findAllByUserIds(userIds: Set<UserId>): List<ChannelBinding> = bindings.values.filter { it.userId in userIds }
+
     override fun findByLinkTokenHash(linkTokenHash: LinkTokenHash): ChannelBinding? {
         return bindings.values.singleOrNull { it.linkTokenHash == linkTokenHash }
     }
