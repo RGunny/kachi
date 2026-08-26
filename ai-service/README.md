@@ -58,6 +58,27 @@ local에서는 자동 LLM 호출을 피하기 위해 둘 다 기본 비활성화
 
 실행 중인 같은 AI 작업이 있으면 이번 tick은 건너뛰고 로그만 남긴다.
 
+## 이벤트 발행
+
+요약 생성과 키워드 격리는 outbox에 기록되고, relay가 그 행을 Kafka topic으로 내보낸다(ADR 022, 023).
+outbox 행 하나가 레코드 하나다. topic은 행의 eventType이 고르고, key는 keyword, value는 기록 시점의 계약 JSON이다.
+계약 타입은 `ai-contract` 모듈에 있다.
+
+| eventType | topic | 계약 |
+| --- | --- | --- |
+| `SUMMARY_CREATED` | `ai.summary.created` | `AiSummaryCreatedEvent` |
+| `KEYWORD_QUARANTINED` | `ai.keyword.quarantined` | `AiKeywordQuarantinedEvent` |
+
+스위치는 둘이고 뜻이 다르다.
+
+| 키 | 뜻 | 기본값 |
+| --- | --- | --- |
+| `kachi.ai.outbox.relay.enabled` | outbox를 읽어 발행 포트로 넘기는 relay | `true` |
+| `kachi.ai.events.enabled` | Kafka 발행 어댑터 | `true` |
+
+relay만 켜고 어댑터가 없으면 기동에 실패한다. local·test 프로파일은 둘 다 `false`다.
+누가 어떤 채널로 받는지는 이 서비스가 모른다. 요약을 알림으로 펼치는 일은 notification-service의 routing이 한다(ADR 025).
+
 ## 제외 범위
 
 - 사용자별 개인화 프롬프트

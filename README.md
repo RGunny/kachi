@@ -55,8 +55,8 @@ Kachi는 사용자가 등록한 관심 키워드를 기준으로 뉴스와 시�
 user-service
   └─ 관심 키워드 등록/관리
       -> collector-service ── 활성 키워드 조회(HTTP internal) 후 뉴스 수집
-          -> ai-service ── 수집 뉴스를 키워드별로 LLM 요약 (newsHash 중복 방지)
-              -> notification-service ── 알림 접수, outbox 발행 (ai 연결은 예정)
+          -> ai-service ── 수집 뉴스를 키워드별로 LLM 요약 (newsHash 중복 방지), `ai.summary.created`·`ai.keyword.quarantined` 발행
+              -> notification-service ── 알림 접수, outbox 발행 (ai 이벤트 소비는 routing 예정)
                   -> notification-worker ── Slack/Discord/Telegram 발송
                       -> history-service ── 이력 적재 / 통계 집계 (미구현)
 ```
@@ -77,7 +77,7 @@ user-service
 | --- | --- | --- |
 | `user-service` | 사용자, 키워드, OAuth2/JWT, refresh token, MySQL/Redis 저장소 기본 흐름 구현 | [user-service README](./user-service/README.md) |
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
-| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동과 circuit breaker/failover, LLM 실패 분류와 키워드 격리, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay(Kafka 발행은 예정), scheduler/internal API 진입점, 격리·watermark·outbox·LLM provider 운영 internal API | [ai-service README](./ai-service/README.md) |
+| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동과 circuit breaker/failover, LLM 실패 분류와 키워드 격리, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox·LLM provider 운영 internal API | [ai-service README](./ai-service/README.md) |
 | `notification-service` | notification-core/service/worker/contract 모듈 구성, 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
 | `history-service` | 미구현 | - |
 
@@ -160,3 +160,6 @@ set +a
 | [020. ai-service scheduler 실행 모델과 요약 window](./docs/decisions/020-ai-service-scheduler-실행-모델과-요약-window.md) | scheduler/internal API 실행 모델, 중복 실행 방지, watermark 기반 요약 window, 실패 키워드 격리와 해제 |
 | [021. ai-service LLM 실패 분류와 provider circuit breaker](./docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md) | LLM 실패 모델, 격리 카운트 규칙, provider circuit breaker와 failover |
 | [022. ai-service outbox와 이벤트 발행 보장](./docs/decisions/022-ai-service-outbox와-이벤트-발행-보장.md) | 요약/격리 이벤트 outbox, claim/finalize CAS, publish 실패 분류와 재시도 |
+| [023. ai-service 도메인 이벤트 발행과 ai-contract](./docs/decisions/023-ai-service-도메인-이벤트-발행과-ai-contract.md) | `ai.*` topic과 계약 모듈, Kafka 발행 실패 분류, producer timeout, relay와 발행 어댑터 스위치 분리 |
+| [024. 상태 전이 aggregate 불변화와 finalize CAS](./docs/decisions/024-상태-전이-aggregate-불변화와-finalize-cas.md) | notification aggregate 불변 전환, outbox finalize의 claim CAS, ai-service와 남기는 차이 |
+| [025. 키워드 구독과 알림 라우팅](./docs/decisions/025-키워드-구독과-알림-라우팅.md) | 구독·채널 바인딩 소유권, 키워드 identity 정규화, notification routing fan-out, 홉별 멱등 키, 주소 참조 |
