@@ -1,9 +1,13 @@
 package me.rgunny.kachi.user.adapter.outbound.persistence
 
 import jakarta.persistence.EntityManager
+import me.rgunny.kachi.user.adapter.outbound.crypto.AesGcmAddressCipher
+import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 
@@ -19,6 +23,8 @@ import org.springframework.test.context.ActiveProfiles
     UserPersistenceAdapter::class,
     KeywordPersistenceAdapter::class,
     SubscriptionPersistenceAdapter::class,
+    ChannelBindingPersistenceAdapter::class,
+    PersistenceAdapterIntegrationTest.CipherTestConfig::class,
     PersistenceAdapterTestContainersConfig::class
 )
 abstract class PersistenceAdapterIntegrationTest {
@@ -30,5 +36,15 @@ abstract class PersistenceAdapterIntegrationTest {
     protected fun flushAndClear() {
         entityManager.flush()
         entityManager.clear()
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    class CipherTestConfig {
+
+        /** DataJpaTest 슬라이스는 config 빈을 올리지 않으므로 바인딩 저장소가 쓸 cipher만 고정 키로 직접 만든다. */
+        @Bean
+        fun addressCipherPort(): AddressCipherPort {
+            return AesGcmAddressCipher(base64Key = "dGVzdC1iaW5kaW5nLWtleS10ZXN0LWJpbmRpbmctMzI=")
+        }
     }
 }

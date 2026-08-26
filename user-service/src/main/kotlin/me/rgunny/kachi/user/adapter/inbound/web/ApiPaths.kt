@@ -13,7 +13,10 @@ object ApiPaths {
     const val ME = "/me"
     const val ME_KEYWORDS = "/me/keywords"
     const val ME_KEYWORD = "/me/keywords/{subscriptionId}"
+    const val ME_CHANNEL_BINDINGS = "/me/channel-bindings"
+    const val ME_CHANNEL_BINDING = "/me/channel-bindings/{channel}"
     const val INTERNAL_ACTIVE_KEYWORDS = "/internal/keywords/active"
+    const val INTERNAL_TELEGRAM_LINK = "/internal/channel-bindings/telegram/link"
 
     const val V1_AUTH_TOKEN_REFRESH = "${ApiVersions.V1_PATH_PREFIX}$AUTH_TOKEN_REFRESH"
     const val V1_AUTH_LOGOUT = "${ApiVersions.V1_PATH_PREFIX}$AUTH_LOGOUT"
@@ -21,5 +24,8 @@ object ApiPaths {
     const val V1_ME = "${ApiVersions.V1_PATH_PREFIX}$ME"
     const val V1_ME_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$ME_KEYWORDS"
     const val V1_ME_KEYWORD = "${ApiVersions.V1_PATH_PREFIX}$ME_KEYWORD"
+    const val V1_ME_CHANNEL_BINDINGS = "${ApiVersions.V1_PATH_PREFIX}$ME_CHANNEL_BINDINGS"
+    const val V1_ME_CHANNEL_BINDING = "${ApiVersions.V1_PATH_PREFIX}$ME_CHANNEL_BINDING"
     const val V1_INTERNAL_ACTIVE_KEYWORDS = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_ACTIVE_KEYWORDS"
+    const val V1_INTERNAL_TELEGRAM_LINK = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_TELEGRAM_LINK"
 }

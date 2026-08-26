@@ -50,6 +50,7 @@ class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_AUTH_LOGOUT).permitAll()
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_USERS).permitAll()
                     .requestMatchers(HttpMethod.GET, ApiPaths.V1_INTERNAL_ACTIVE_KEYWORDS).permitAll()
+                    .requestMatchers(HttpMethod.POST, ApiPaths.V1_INTERNAL_TELEGRAM_LINK).permitAll()
                     // 그 외 API는 access token 인증을 요구한다.
                     .anyRequest().authenticated()
             }

@@ -3,10 +3,14 @@ package me.rgunny.kachi.user.adapter.inbound.web.exception
 import me.rgunny.kachi.user.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorResponse
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
+import me.rgunny.kachi.user.application.exception.InvalidChannelAddressException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
+import me.rgunny.kachi.user.application.exception.LinkTokenInvalidException
 import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
 import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
@@ -51,6 +55,26 @@ class GlobalExceptionHandler {
     @ExceptionHandler(SubscriptionAccessDeniedException::class)
     fun handleSubscriptionAccessDenied(exception: SubscriptionAccessDeniedException): ResponseEntity<ApiResponse<Unit>> {
         return error(ErrorCode.SUBSCRIPTION_ACCESS_DENIED, exception.message)
+    }
+
+    @ExceptionHandler(ChannelBindingNotFoundException::class)
+    fun handleChannelBindingNotFound(exception: ChannelBindingNotFoundException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.CHANNEL_BINDING_NOT_FOUND, exception.message)
+    }
+
+    @ExceptionHandler(ChannelBindingNotActiveException::class)
+    fun handleChannelBindingNotActive(exception: ChannelBindingNotActiveException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.CHANNEL_BINDING_NOT_ACTIVE, exception.message)
+    }
+
+    @ExceptionHandler(InvalidChannelAddressException::class)
+    fun handleInvalidChannelAddress(exception: InvalidChannelAddressException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.INVALID_CHANNEL_ADDRESS, exception.message)
+    }
+
+    @ExceptionHandler(LinkTokenInvalidException::class)
+    fun handleLinkTokenInvalid(exception: LinkTokenInvalidException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.LINK_TOKEN_INVALID, exception.message)
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)

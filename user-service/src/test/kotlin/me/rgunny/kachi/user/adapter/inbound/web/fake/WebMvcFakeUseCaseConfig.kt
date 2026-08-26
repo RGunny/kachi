@@ -29,4 +29,19 @@ class WebMvcFakeUseCaseConfig {
 
     @Bean
     fun listSubscriptionsUseCase(): FakeListSubscriptionsUseCase = FakeListSubscriptionsUseCase()
+
+    @Bean
+    fun registerWebhookBindingUseCase(): FakeRegisterWebhookBindingUseCase = FakeRegisterWebhookBindingUseCase()
+
+    @Bean
+    fun issueTelegramLinkUseCase(): FakeIssueTelegramLinkUseCase = FakeIssueTelegramLinkUseCase()
+
+    @Bean
+    fun completeTelegramLinkUseCase(): FakeCompleteTelegramLinkUseCase = FakeCompleteTelegramLinkUseCase()
+
+    @Bean
+    fun revokeChannelBindingUseCase(): FakeRevokeChannelBindingUseCase = FakeRevokeChannelBindingUseCase()
+
+    @Bean
+    fun listChannelBindingsUseCase(): FakeListChannelBindingsUseCase = FakeListChannelBindingsUseCase()
 }

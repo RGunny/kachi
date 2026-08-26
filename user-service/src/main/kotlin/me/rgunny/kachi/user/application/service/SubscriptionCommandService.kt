@@ -1,5 +1,6 @@
 package me.rgunny.kachi.user.application.service
 
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
 import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
 import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
@@ -8,12 +9,15 @@ import me.rgunny.kachi.user.application.port.inbound.subscription.UpdateSubscrip
 import me.rgunny.kachi.user.application.port.inbound.subscription.model.RegisterSubscriptionCommand
 import me.rgunny.kachi.user.application.port.inbound.subscription.model.SubscriptionResult
 import me.rgunny.kachi.user.application.port.inbound.subscription.model.UpdateSubscriptionCommand
+import me.rgunny.kachi.user.application.port.outbound.binding.ChannelBindingPersistencePort
 import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
 import me.rgunny.kachi.user.application.port.outbound.subscription.SubscriptionPersistencePort
 import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.domain.Subscription
+import me.rgunny.kachi.user.domain.SubscriptionChannel
+import me.rgunny.kachi.user.domain.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
@@ -24,19 +28,23 @@ import java.time.Instant
  *
  * 등록은 원문을 정규화해 canonical 키워드를 찾거나 만들고, 그 키워드에 사용자의 구독을 건다. 키워드 생성과 구독 저장이
  * 한 트랜잭션이라 키워드만 남고 구독이 없는 상태가 생기지 않는다. 같은 사용자의 같은 canonical 키워드는 한 번만 구독된다.
+ * 구독 채널은 등록·변경 시점에 그 사용자의 바인딩이 ACTIVE여야 한다.
+ * 바인딩이 나중에 해지돼도 구독은 그대로 두고, 수신처 조회가 그 채널을 걸러낸다.
  */
 @Service
 @Transactional
 class SubscriptionCommandService(
     private val keywordPersistencePort: KeywordPersistencePort,
     private val subscriptionPersistencePort: SubscriptionPersistencePort,
+    private val channelBindingPersistencePort: ChannelBindingPersistencePort,
     private val activeUserValidator: ActiveUserValidator,
     private val clock: Clock
 ) : RegisterSubscriptionUseCase, UpdateSubscriptionUseCase {
 
     override fun register(command: RegisterSubscriptionCommand): SubscriptionResult {
-        // 1. 활성 사용자만 구독할 수 있다.
+        // 1. 활성 사용자만, 연결된 채널로만 구독할 수 있다.
         activeUserValidator.get(command.userId)
+        requireActiveBindings(command.userId, command.channels)
 
         val displayName = KeywordName.of(command.name)
         val now = Instant.now(clock)
@@ -72,6 +80,7 @@ class SubscriptionCommandService(
         var updated = subscription
 
         if (command.channels != null) {
+            requireActiveBindings(subscription.userId, command.channels)
             updated = updated.changeChannels(command.channels)
         }
 
@@ -88,6 +97,16 @@ class SubscriptionCommandService(
         }
 
         return SubscriptionResult.of(subscriptionPersistencePort.save(updated), keyword)
+    }
+
+    private fun requireActiveBindings(userId: UserId, channels: Set<SubscriptionChannel>) {
+        channels.sorted().forEach { channel ->
+            val binding = channelBindingPersistencePort.findByUserIdAndChannel(userId, channel)
+
+            if (binding == null || !binding.isActive) {
+                throw ChannelBindingNotActiveException(userId, channel)
+            }
+        }
     }
 
     private fun findOrCreateKeyword(displayName: KeywordName, now: Instant): Keyword {

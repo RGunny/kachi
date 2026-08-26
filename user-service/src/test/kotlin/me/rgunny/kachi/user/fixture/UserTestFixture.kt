@@ -1,6 +1,8 @@
 package me.rgunny.kachi.user.fixture
 
 import me.rgunny.kachi.user.domain.AuthProvider
+import me.rgunny.kachi.user.domain.ChannelAddress
+import me.rgunny.kachi.user.domain.ChannelBinding
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
@@ -47,6 +49,22 @@ object UserTestFixture {
     /** 원문 [name]으로 만든 canonical 키워드. canonicalKey는 정규화 결과다. */
     fun keyword(name: String, createdAt: Instant = NOW): Keyword {
         return Keyword.create(displayName = KeywordName.of(name), createdAt = createdAt)
+    }
+
+    /** 채널별로 형식이 맞는 주소. 바인딩 시나리오에서 주소 값 자체는 관심사가 아니다. */
+    fun address(channel: SubscriptionChannel): ChannelAddress {
+        val value = when (channel) {
+            SubscriptionChannel.SLACK -> "https://hooks.slack.com/services/T000/B000/XXXX"
+            SubscriptionChannel.DISCORD -> "https://discord.com/api/webhooks/1234/abcd"
+            SubscriptionChannel.TELEGRAM -> "123456789"
+        }
+
+        return ChannelAddress.of(channel, value)
+    }
+
+    /** 주소가 있는 ACTIVE 바인딩. */
+    fun activeBinding(userId: UserId, channel: SubscriptionChannel, boundAt: Instant = NOW): ChannelBinding {
+        return ChannelBinding.createWithAddress(userId = userId, address = address(channel), createdAt = boundAt)
     }
 
     /** 활성 구독. 채널을 지정하지 않으면 SLACK 하나다. */

@@ -6,8 +6,5 @@ package me.rgunny.kachi.user.domain
 enum class SubscriptionChannel {
     SLACK,
     DISCORD,
-    TELEGRAM,
-
-    SMS,
-    EMAIL
+    TELEGRAM
 }

@@ -1,23 +1,33 @@
 package me.rgunny.kachi.user.adapter.inbound.web.exception
 
 import me.rgunny.kachi.user.adapter.inbound.web.AuthController
+import me.rgunny.kachi.user.adapter.inbound.web.ChannelBindingController
+import me.rgunny.kachi.user.adapter.inbound.web.InternalChannelBindingController
 import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
+import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeCompleteTelegramLinkUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterSubscriptionUseCase
+import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterWebhookBindingUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRegisterUserUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRefreshTokenUseCase
+import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeRevokeChannelBindingUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.FakeUpdateSubscriptionUseCase
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.inbound.web.security.AuthenticatedUser
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
+import me.rgunny.kachi.user.application.exception.InvalidChannelAddressException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
+import me.rgunny.kachi.user.application.exception.LinkTokenInvalidException
 import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
 import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
 import me.rgunny.kachi.user.config.ApiVersionConfig
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.KeywordName
+import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import org.junit.jupiter.api.BeforeEach
@@ -37,12 +47,22 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@WebMvcTest(controllers = [AuthController::class, UserController::class, SubscriptionController::class])
+@WebMvcTest(
+    controllers = [
+        AuthController::class,
+        UserController::class,
+        SubscriptionController::class,
+        ChannelBindingController::class,
+        InternalChannelBindingController::class
+    ]
+)
 @AutoConfigureMockMvc(addFilters = false)
 @ImportAutoConfiguration(
     SecurityAutoConfiguration::class,
@@ -56,7 +76,10 @@ class GlobalExceptionHandlerTest @Autowired constructor(
     private val refreshTokenUseCase: FakeRefreshTokenUseCase,
     private val registerUserUseCase: FakeRegisterUserUseCase,
     private val registerSubscriptionUseCase: FakeRegisterSubscriptionUseCase,
-    private val updateSubscriptionUseCase: FakeUpdateSubscriptionUseCase
+    private val updateSubscriptionUseCase: FakeUpdateSubscriptionUseCase,
+    private val registerWebhookBindingUseCase: FakeRegisterWebhookBindingUseCase,
+    private val revokeChannelBindingUseCase: FakeRevokeChannelBindingUseCase,
+    private val completeTelegramLinkUseCase: FakeCompleteTelegramLinkUseCase
 ) {
 
     @BeforeEach
@@ -65,6 +88,9 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         refreshTokenUseCase.exception = null
         registerSubscriptionUseCase.exception = null
         updateSubscriptionUseCase.exception = null
+        registerWebhookBindingUseCase.exception = null
+        revokeChannelBindingUseCase.exception = null
+        completeTelegramLinkUseCase.exception = null
     }
 
     @Nested
@@ -170,6 +196,101 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         }
 
         @Test
+        @DisplayName("채널 바인딩 비활성 예외는 409 응답으로 변환한다")
+        fun handleChannelBindingNotActive() {
+            val userId = UserId.newId()
+            registerSubscriptionUseCase.exception = ChannelBindingNotActiveException(userId, SubscriptionChannel.SLACK)
+
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication(userId)
+
+            val response = try {
+                mockMvc.post("/api/v1/me/keywords") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = registerSubscriptionBody(name = "Trump")
+                }.andExpect {
+                    status { isConflict() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "CHANNEL_BINDING_NOT_ACTIVE",
+                message = "연결된 채널이 아닙니다: channel=SLACK"
+            )
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 없음 예외는 404 응답으로 변환한다")
+        fun handleChannelBindingNotFound() {
+            val userId = UserId.newId()
+            revokeChannelBindingUseCase.exception = ChannelBindingNotFoundException(userId, SubscriptionChannel.DISCORD)
+
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication(userId)
+
+            val response = try {
+                mockMvc.delete("/api/v1/me/channel-bindings/DISCORD").andExpect {
+                    status { isNotFound() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "CHANNEL_BINDING_NOT_FOUND",
+                message = "채널 바인딩을 찾을 수 없습니다: channel=DISCORD"
+            )
+        }
+
+        @Test
+        @DisplayName("채널 주소 형식 예외는 400 응답으로 변환한다")
+        fun handleInvalidChannelAddress() {
+            val userId = UserId.newId()
+            registerWebhookBindingUseCase.exception =
+                InvalidChannelAddressException(SubscriptionChannel.SLACK, "Slack 주소가 아닙니다")
+
+            SecurityContextHolder.getContext().authentication = authenticatedUserAuthentication(userId)
+
+            val response = try {
+                mockMvc.put("/api/v1/me/channel-bindings/SLACK") {
+                    contentType = MediaType.APPLICATION_JSON
+                    content = webhookBindingBody("https://example.com/x")
+                }.andExpect {
+                    status { isBadRequest() }
+                }.andReturn().response
+            } finally {
+                SecurityContextHolder.clearContext()
+            }
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "INVALID_CHANNEL_ADDRESS",
+                message = "Slack 주소가 아닙니다"
+            )
+        }
+
+        @Test
+        @DisplayName("연결 토큰 예외는 400 응답으로 변환한다")
+        fun handleLinkTokenInvalid() {
+            completeTelegramLinkUseCase.exception = LinkTokenInvalidException()
+
+            val response = mockMvc.post("/api/v1/internal/channel-bindings/telegram/link") {
+                contentType = MediaType.APPLICATION_JSON
+                content = telegramLinkBody()
+            }.andExpect {
+                status { isBadRequest() }
+            }.andReturn().response
+
+            assertErrorResponse(
+                actual = response.contentAsString,
+                code = "LINK_TOKEN_INVALID",
+                message = "연결 토큰이 유효하지 않습니다"
+            )
+        }
+
+        @Test
         @DisplayName("유효하지 않은 토큰 예외는 401 응답으로 변환한다")
         fun handleInvalidToken() {
             refreshTokenUseCase.exception = InvalidTokenException()
@@ -242,6 +363,23 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         return """
             {
               "enabled": true
+            }
+        """.trimIndent()
+    }
+
+    private fun webhookBindingBody(webhookUrl: String): String {
+        return """
+            {
+              "webhookUrl": "$webhookUrl"
+            }
+        """.trimIndent()
+    }
+
+    private fun telegramLinkBody(): String {
+        return """
+            {
+              "token": "token",
+              "chatId": "123456789"
             }
         """.trimIndent()
     }

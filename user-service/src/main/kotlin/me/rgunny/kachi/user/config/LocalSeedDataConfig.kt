@@ -1,13 +1,18 @@
 package me.rgunny.kachi.user.config
 
+import me.rgunny.kachi.user.adapter.outbound.persistence.ChannelBindingJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.ChannelBindingJpaRepository
 import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaEntity
 import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaRepository
 import me.rgunny.kachi.user.adapter.outbound.persistence.SubscriptionJpaEntity
 import me.rgunny.kachi.user.adapter.outbound.persistence.SubscriptionJpaRepository
 import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaEntity
 import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaRepository
+import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.CanonicalKey
+import me.rgunny.kachi.user.domain.ChannelAddress
+import me.rgunny.kachi.user.domain.ChannelBinding
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordName
@@ -26,8 +31,10 @@ import java.time.Instant
 /**
  * 로컬 개발용 시드 데이터.
  *
- * `local` 프로파일에서만 기동 시 한 번 실행되어 시드 사용자와 키워드 구독을 심는다. 사용자 등록·로그인·구독을 손으로 하지 않아도
- * 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있다. 모든 단계가 find-or-create라 재기동해도 중복이 생기지 않는다.
+ * `local` 프로파일에서만 기동 시 한 번 실행되어 시드 사용자와 SLACK 바인딩, 키워드 구독을 심는다.
+ * 사용자 등록·로그인·구독을 손으로 하지 않아도 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있다.
+ * 모든 단계가 find-or-create라 재기동해도 중복이 생기지 않는다.
+ * 바인딩 주소는 형식만 맞추고, 실제 발송 주소는 알림 쪽 설정이 갖는다.
  *
  * 유스케이스가 아니라 JPA repository를 직접 쓴다. 유스케이스를 거치면 활성 사용자·채널 바인딩 검증을 시드가 만족시켜야 하고,
  * repository를 직접 만지는 코드는 레이어 규칙상 config에만 둘 수 있다.
@@ -36,17 +43,20 @@ import java.time.Instant
 @Profile("local")
 class LocalSeedDataConfig {
 
-    /** 시드 사용자 → canonical 키워드 → 구독 순으로 심고 결과를 한 줄 남긴다. */
+    /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 순으로 심고 결과를 한 줄 남긴다. */
     @Bean
     fun localSeedDataInitializer(
         userJpaRepository: UserJpaRepository,
+        channelBindingJpaRepository: ChannelBindingJpaRepository,
         keywordJpaRepository: KeywordJpaRepository,
         subscriptionJpaRepository: SubscriptionJpaRepository,
+        addressCipherPort: AddressCipherPort,
         clock: Clock
     ): ApplicationRunner {
         return ApplicationRunner {
             val now = Instant.now(clock)
             val seedUser = findOrCreateSeedUser(userJpaRepository, now)
+            findOrCreateSlackBinding(channelBindingJpaRepository, addressCipherPort, seedUser, now)
             val keywords = SEED_KEYWORD_NAMES.map { findOrCreateKeyword(keywordJpaRepository, it, now) }
             val subscriptions = keywords.map { findOrCreateSubscription(subscriptionJpaRepository, seedUser, it, now) }
 
@@ -75,6 +85,30 @@ class LocalSeedDataConfig {
         )
 
         return userJpaRepository.save(UserJpaEntity.from(seedUser)).toDomain()
+    }
+
+    /** 시드 구독이 쓰는 SLACK 바인딩을 찾고, 없으면 만들고, 해지돼 있으면 되살린다. */
+    private fun findOrCreateSlackBinding(
+        channelBindingJpaRepository: ChannelBindingJpaRepository,
+        addressCipherPort: AddressCipherPort,
+        seedUser: User,
+        createdAt: Instant
+    ): ChannelBinding {
+        val address = ChannelAddress.of(SubscriptionChannel.SLACK, SEED_SLACK_WEBHOOK_URL)
+        val existing = channelBindingJpaRepository.findByUserIdAndChannel(seedUser.id.value, SubscriptionChannel.SLACK)
+        if (existing != null) {
+            val binding = existing.toDomain(addressCipherPort)
+            return if (binding.isActive) {
+                binding
+            } else {
+                channelBindingJpaRepository.save(ChannelBindingJpaEntity.from(binding.bindAddress(address, createdAt), addressCipherPort))
+                    .toDomain(addressCipherPort)
+            }
+        }
+
+        val binding = ChannelBinding.createWithAddress(userId = seedUser.id, address = address, createdAt = createdAt)
+
+        return channelBindingJpaRepository.save(ChannelBindingJpaEntity.from(binding, addressCipherPort)).toDomain(addressCipherPort)
     }
 
     /** 이름을 정규화해 canonical 키워드를 찾고 없으면 원문을 displayName으로 만든다. */
@@ -128,5 +162,6 @@ class LocalSeedDataConfig {
         private const val SEED_USER_NICKNAME = "collector-admin"
         private val SEED_KEYWORD_NAMES = listOf("TRUMP", "NVIDIA", "SPACE-X", "TESLA", "이란")
         private val SEED_CHANNELS = setOf(SubscriptionChannel.SLACK)
+        private const val SEED_SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/LOCAL/SEED/WEBHOOK"
     }
 }

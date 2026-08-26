@@ -1,5 +1,6 @@
 package me.rgunny.kachi.user.application.service
 
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
@@ -7,12 +8,15 @@ import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import me.rgunny.kachi.user.application.port.inbound.subscription.model.RegisterSubscriptionCommand
 import me.rgunny.kachi.user.application.port.inbound.subscription.model.UpdateSubscriptionCommand
+import me.rgunny.kachi.user.application.service.fake.FakeChannelBindingPersistencePort
 import me.rgunny.kachi.user.application.service.fake.FakeKeywordPersistencePort
 import me.rgunny.kachi.user.application.service.fake.FakeSubscriptionPersistencePort
 import me.rgunny.kachi.user.application.service.fake.FakeUserPersistencePort
+import me.rgunny.kachi.user.fixture.UserTestFixture.activeBinding
 import me.rgunny.kachi.user.fixture.UserTestFixture.keyword
 import me.rgunny.kachi.user.fixture.UserTestFixture.subscription
 import me.rgunny.kachi.user.fixture.UserTestFixture.user
+import me.rgunny.kachi.user.domain.ChannelBinding
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.User
@@ -89,6 +93,34 @@ class SubscriptionCommandServiceTest {
         }
 
         @Test
+        @DisplayName("채널 바인딩이 없으면 구독할 수 없다")
+        fun rejectMissingBinding() {
+            val subscriptionPort = FakeSubscriptionPersistencePort()
+            val service = service(FakeKeywordPersistencePort(), subscriptionPort, bindings = emptyList())
+
+            val exception = assertFailsWith<ChannelBindingNotActiveException> {
+                service.register(RegisterSubscriptionCommand(userId, "Tesla", slack))
+            }
+
+            assertEquals(SubscriptionChannel.SLACK, exception.channel)
+            assertFalse(subscriptionPort.existsCalled)
+        }
+
+        @Test
+        @DisplayName("채널 바인딩이 해지돼 있으면 구독할 수 없다")
+        fun rejectRevokedBinding() {
+            val revoked = activeBinding(userId, SubscriptionChannel.SLACK).revoke(now)
+            val subscriptionPort = FakeSubscriptionPersistencePort()
+            val service = service(FakeKeywordPersistencePort(), subscriptionPort, bindings = listOf(revoked))
+
+            assertFailsWith<ChannelBindingNotActiveException> {
+                service.register(RegisterSubscriptionCommand(userId, "Tesla", slack))
+            }
+
+            assertFalse(subscriptionPort.existsCalled)
+        }
+
+        @Test
         @DisplayName("사용자가 없으면 구독할 수 없다")
         fun rejectMissingUser() {
             val subscriptionPort = FakeSubscriptionPersistencePort()
@@ -138,6 +170,26 @@ class SubscriptionCommandServiceTest {
             assertEquals(setOf(SubscriptionChannel.DISCORD), result.channels)
             assertEquals("Tesla", result.name)
             assertEquals(setOf(SubscriptionChannel.DISCORD), subscriptionPort.savedSubscriptions.single().channels)
+        }
+
+        @Test
+        @DisplayName("바인딩이 없는 채널로는 바꿀 수 없다")
+        fun rejectChangeToUnboundChannel() {
+            val subscriptionPort = FakeSubscriptionPersistencePort(listOf(subscription))
+            val service = service(
+                FakeKeywordPersistencePort(listOf(keyword)),
+                subscriptionPort,
+                bindings = listOf(activeBinding(userId, SubscriptionChannel.SLACK))
+            )
+
+            val exception = assertFailsWith<ChannelBindingNotActiveException> {
+                service.update(
+                    UpdateSubscriptionCommand(subscription.id, userId, channels = setOf(SubscriptionChannel.TELEGRAM))
+                )
+            }
+
+            assertEquals(SubscriptionChannel.TELEGRAM, exception.channel)
+            assertTrue(subscriptionPort.savedSubscriptions.isEmpty())
         }
 
         @Test
@@ -219,14 +271,20 @@ class SubscriptionCommandServiceTest {
         }
     }
 
+    /** 기본값은 사용자가 SLACK·DISCORD 바인딩을 모두 가진 상태다. 바인딩 검증 시나리오만 [bindings]를 바꾼다. */
     private fun service(
         keywordPort: FakeKeywordPersistencePort,
         subscriptionPort: FakeSubscriptionPersistencePort,
-        users: Map<UserId, User> = mapOf(userId to user(userId))
+        users: Map<UserId, User> = mapOf(userId to user(userId)),
+        bindings: List<ChannelBinding> = listOf(
+            activeBinding(userId, SubscriptionChannel.SLACK),
+            activeBinding(userId, SubscriptionChannel.DISCORD)
+        )
     ): SubscriptionCommandService {
         return SubscriptionCommandService(
             keywordPersistencePort = keywordPort,
             subscriptionPersistencePort = subscriptionPort,
+            channelBindingPersistencePort = FakeChannelBindingPersistencePort(bindings),
             activeUserValidator = ActiveUserValidator(FakeUserPersistencePort(users)),
             clock = UserTestFixture.CLOCK
         )
