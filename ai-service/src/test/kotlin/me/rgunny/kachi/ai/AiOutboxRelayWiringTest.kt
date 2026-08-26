@@ -26,8 +26,9 @@ import kotlin.test.assertTrue
 /**
  * relay를 켠 컨텍스트가 실제로 조립되는지 확인한다.
  *
- * 운영에서는 broker 어댑터가 붙기 전까지 꺼져 있어 [AiServiceApplicationTest]가 "빈이 없다"를 고정한다.
- * 켰을 때 무엇이 살아나는지는 여기서만 볼 수 있으므로, 발행 어댑터 자리에 fake를 넣고 한 tick을 끝까지 돌린다.
+ * test 프로파일의 기본값은 relay와 events 둘 다 꺼짐이고, 이 테스트는 properties로 relay만 켠다.
+ * events는 꺼진 채라 Kafka 발행 어댑터가 없으므로 발행 포트 자리에 fake를 넣고 한 tick을 끝까지 돌린다.
+ * 검증 대상은 relay 빈의 조립과 tick의 완주이지 broker 발행이 아니다. 발행 어댑터 자체는 단위 테스트가, 실 broker 발행은 단계 G의 통합 테스트가 본다.
  */
 @ActiveProfiles("test")
 // scheduler는 컨텍스트가 캐시에 남는 동안 계속 돌 수 있다. 다른 테스트가 넣은 행을 집어가지 않도록 첫 실행을 멀리 미룬다.

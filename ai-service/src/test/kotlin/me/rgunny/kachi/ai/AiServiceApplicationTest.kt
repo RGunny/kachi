@@ -13,10 +13,12 @@ import me.rgunny.kachi.ai.application.port.inbound.watermark.FindSummaryWatermar
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxEventSerializer
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.AiOutboxEvent
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
 import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
 import me.rgunny.kachi.ai.application.service.outbox.RelayAiOutboxService
+import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -62,6 +64,9 @@ class AiServiceApplicationTest {
     private lateinit var relayProperties: AiOutboxRelayProperties
 
     @Autowired
+    private lateinit var eventsProperties: AiEventsProperties
+
+    @Autowired
     private lateinit var applicationContext: ApplicationContext
 
     @Test
@@ -93,8 +98,9 @@ class AiServiceApplicationTest {
     }
 
     /**
-     * 발행 어댑터가 아직 없으므로 relay를 켜면 이벤트가 유실되거나 전부 실패로 쌓인다.
-     * 켜고 끄는 스위치를 빈 생성 조건에 둔 이유가 이것이라, 꺼진 상태에서 빈이 없다는 사실 자체가 검증 대상이다.
+     * test 프로파일의 기본값은 relay와 events 둘 다 꺼짐이다. 이 테스트는 그 기본값으로 컨텍스트를 띄운다.
+     * 켜서 검증하는 것은 각자 properties로 켜는 테스트의 몫이다 — 배선은 [AiOutboxRelayWiringTest], 실 broker 발행은 단계 G의 통합 테스트.
+     * 여기서 보는 것은 꺼진 상태에서 빈이 없다는 사실이다. 스위치를 빈 생성 조건에 둔 이유가 그것이라 검증 대상이다.
      */
     @Test
     @DisplayName("relay가 꺼져 있으면 relay 빈이 만들어지지 않는다")
@@ -109,6 +115,24 @@ class AiServiceApplicationTest {
         ).forEach { type ->
             assertTrue(applicationContext.getBeanNamesForType(type).isEmpty(), "${type.simpleName} 빈이 없어야 합니다")
         }
+    }
+
+    @Test
+    @DisplayName("events가 꺼져 있으면 Kafka 발행 어댑터가 만들어지지 않는다")
+    fun skipPublisherBeanWhenEventsAreDisabled() {
+        assertFalse(eventsProperties.enabled)
+
+        assertTrue(applicationContext.getBeanNamesForType(AiOutboxPublisherPort::class.java).isEmpty())
+    }
+
+    /**
+     * 켜지 않아도 운영 yaml의 topic 이름이 바인딩되는지 본다. 소비자가 같은 이름을 구독하므로 값 자체가 계약이다.
+     */
+    @Test
+    @DisplayName("events 설정은 운영 yaml의 topic 이름으로 바인딩된다")
+    fun bindProductionEventTopics() {
+        assertEquals("ai.summary.created", eventsProperties.topics.summaryCreated)
+        assertEquals("ai.keyword.quarantined", eventsProperties.topics.keywordQuarantined)
     }
 
     /**

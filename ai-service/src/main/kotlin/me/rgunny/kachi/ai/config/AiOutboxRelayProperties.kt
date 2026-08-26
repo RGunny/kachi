@@ -8,8 +8,8 @@ import java.time.Duration
 /**
  * outbox relay 실행 설정.
  *
- * [enabled]가 false면 relay를 구성하는 빈이 아예 만들어지지 않는다.
- * 발행 대상 broker가 아직 없는 동안에는 이벤트를 발행 대기 상태로 쌓아두고, broker 어댑터가 붙은 뒤에 켠다.
+ * [enabled]가 false면 relay를 구성하는 빈이 아예 만들어지지 않고 이벤트는 발행 대기 상태로 쌓인다.
+ * 이 스위치는 outbox 행을 읽어 발행 포트로 넘기는 relay의 것이다. 어디로 보낼지는 발행 포트 구현 쪽 설정이 정한다.
  * 이 설정 자체는 켜기 전에도 값이 유효한지 확인해야 하므로 항상 바인딩된다.
  */
 @ConfigurationProperties(prefix = AiOutboxRelayProperties.PREFIX)
