@@ -15,6 +15,8 @@ java {
 }
 
 dependencies {
+    implementation(project(":ai-contract"))
+
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
