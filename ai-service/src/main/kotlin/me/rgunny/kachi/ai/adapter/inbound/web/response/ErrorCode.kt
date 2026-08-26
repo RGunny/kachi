@@ -1,0 +1,21 @@
+package me.rgunny.kachi.ai.adapter.inbound.web.response
+
+import org.springframework.http.HttpStatus
+
+enum class ErrorCode(
+    val status: HttpStatus,
+    val message: String
+) {
+    LLM_PROVIDER_HEALTH_CHECK_FAILED(HttpStatus.BAD_GATEWAY, "LLM provider 연결 확인에 실패했습니다"),
+    INVALID_KEYWORD_EXPANSION_REQUEST(HttpStatus.BAD_REQUEST, "키워드 확장 요청이 올바르지 않습니다"),
+    KEYWORD_EXPANSION_ALREADY_RUNNING(HttpStatus.CONFLICT, "키워드 확장이 이미 실행 중입니다"),
+    INVALID_NEWS_SUMMARY_REQUEST(HttpStatus.BAD_REQUEST, "뉴스 요약 요청이 올바르지 않습니다"),
+    NEWS_SUMMARY_ALREADY_RUNNING(HttpStatus.CONFLICT, "뉴스 요약이 이미 실행 중입니다"),
+    KEYWORD_QUARANTINE_NOT_FOUND(HttpStatus.NOT_FOUND, "키워드 격리 기록을 찾을 수 없습니다"),
+    KEYWORD_QUARANTINE_NOT_RELEASABLE(HttpStatus.CONFLICT, "격리 상태가 아닌 키워드는 해제할 수 없습니다"),
+    AI_OUTBOX_NOT_FOUND(HttpStatus.NOT_FOUND, "outbox 행을 찾을 수 없습니다"),
+    AI_OUTBOX_NOT_RECOVERABLE(HttpStatus.CONFLICT, "DEAD 상태가 아닌 outbox는 복구할 수 없습니다"),
+    LLM_PROVIDER_NOT_FOUND(HttpStatus.NOT_FOUND, "LLM provider를 찾을 수 없습니다"),
+    INVALID_INTERNAL_REQUEST(HttpStatus.BAD_REQUEST, "내부 API 요청이 올바르지 않습니다"),
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "요청을 처리하지 못했습니다")
+}

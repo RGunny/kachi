@@ -15,6 +15,8 @@ java {
 }
 
 dependencies {
+    implementation(project(":ai-contract"))
+
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
@@ -24,9 +26,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    // Messaging
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
 
     // Resilience
     implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
 
     // UUID v7
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
@@ -36,6 +43,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-data-mongodb-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
     testImplementation("io.projectreactor:reactor-test")
 
     // TestContainers

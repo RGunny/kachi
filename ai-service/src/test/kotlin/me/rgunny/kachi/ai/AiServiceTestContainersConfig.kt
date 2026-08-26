@@ -11,6 +11,7 @@ class AiServiceTestContainersConfig {
     @Bean
     @ServiceConnection
     fun mongoContainer(): MongoDBContainer {
-        return MongoDBContainer("mongo:7.0")
+        // transaction은 replica set에서만 동작한다. 기본값인 standalone으로 두면 outbox 저장 경계가 서지 않는다.
+        return MongoDBContainer("mongo:7.0").withReplicaSet()
     }
 }

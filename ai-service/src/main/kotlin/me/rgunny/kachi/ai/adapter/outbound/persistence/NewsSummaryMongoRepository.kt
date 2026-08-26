@@ -1,0 +1,14 @@
+package me.rgunny.kachi.ai.adapter.outbound.persistence
+
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository
+import reactor.core.publisher.Mono
+import java.util.UUID
+
+interface NewsSummaryMongoRepository : ReactiveMongoRepository<NewsSummaryMongoDocument, UUID> {
+
+    fun findByKeywordAndNewsHashAndPromptVersion(
+        keyword: String,
+        newsHash: String,
+        promptVersion: String
+    ): Mono<NewsSummaryMongoDocument>
+}

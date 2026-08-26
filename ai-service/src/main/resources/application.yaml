@@ -6,6 +6,17 @@ spring:
   mongodb:
     representation:
       uuid: standard
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        enable.idempotence: true
+        # relay의 publishing-visibility-timeout(60s)에서 역산한 값이다. max.block + delivery = 15s < 60s.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
 
 server:
   port: 8083
@@ -24,6 +35,34 @@ kachi:
         enabled: true
         fixed-delay: 10m
         initial-delay: 30s
+        overlap: 5m
+        max-lookback: 6h
+        max-articles-per-keyword: 20
+      keyword-expansion:
+        enabled: false
+        fixed-delay: 24h
+        initial-delay: 5m
+        max-expansions-per-keyword: 5
+    quarantine:
+      failure-threshold: 3
+    outbox:
+      relay:
+        enabled: true
+        publisher-id: ${HOSTNAME:ai-service-${random.uuid}}
+        fixed-delay: 5s
+        initial-delay: 15s
+        batch-size: 50
+        publishing-visibility-timeout: 60s
+        retry:
+          max-attempts: 5
+          base-delay: 1s
+          max-delay: 1m
+          multiplier: 2.0
+    events:
+      enabled: true
+      topics:
+        summary-created: ai.summary.created
+        keyword-quarantined: ai.keyword.quarantined
     clients:
       user-service:
         active-keywords-path: /api/v1/internal/keywords/active
@@ -98,3 +137,14 @@ kachi:
         base-url: https://generativelanguage.googleapis.com
         generate-content-path: /v1beta/models/{model}:generateContent
         model: gemini-2.0-flash
+      circuit-breaker:
+        sliding-window-size: 6
+        minimum-number-of-calls: 3
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 8s
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 2
+      failover:
+        default-cooldown: 60s
+        max-cooldown: 10m

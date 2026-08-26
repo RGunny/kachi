@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.config
 
-import me.rgunny.kachi.ai.adapter.out.keyword.UserServiceKeywordProperties
+import me.rgunny.kachi.ai.adapter.outbound.keyword.UserServiceKeywordProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.reactive.function.client.WebClient

@@ -40,6 +40,45 @@ LLM 호출은 외부 I/O가 많고 timeout, retry, rate limit 대응이 필요�
 - user-service 활성 키워드 조회 client
 - collector-service 뉴스 조회 client
 
+## Scheduler
+
+스케줄러 실행 진입점은 두 가지다.
+
+| 대상 | 설정 prefix | 기본 주기 | 기본 활성화 |
+| --- | --- | --- | --- |
+| 뉴스 요약 | `kachi.ai.scheduler.news-summary` | 10m | `true` |
+| 키워드 확장 | `kachi.ai.scheduler.keyword-expansion` | 24h | `false` |
+
+뉴스 요약 scheduler는 매 실행마다 `now - lookback ~ now` 기간의 뉴스를 요약 대상으로 삼는다.
+`lookback`은 실행 주기보다 길게 두어 tick 사이에 수집된 뉴스가 누락되지 않게 하고,
+겹침으로 생기는 중복 요약은 `newsHash` 재사용이 막는다.
+
+local에서는 자동 LLM 호출을 피하기 위해 둘 다 기본 비활성화한다.
+파이프라인 실동작을 확인할 때만 켠다. 켜는 방법은 [실행](#실행)을 따른다.
+
+실행 중인 같은 AI 작업이 있으면 이번 tick은 건너뛰고 로그만 남긴다.
+
+## 이벤트 발행
+
+요약 생성과 키워드 격리는 outbox에 기록되고, relay가 그 행을 Kafka topic으로 내보낸다(ADR 022, 023).
+outbox 행 하나가 레코드 하나다. topic은 행의 eventType이 고르고, key는 keyword, value는 기록 시점의 계약 JSON이다.
+계약 타입은 `ai-contract` 모듈에 있다.
+
+| eventType | topic | 계약 |
+| --- | --- | --- |
+| `SUMMARY_CREATED` | `ai.summary.created` | `AiSummaryCreatedEvent` |
+| `KEYWORD_QUARANTINED` | `ai.keyword.quarantined` | `AiKeywordQuarantinedEvent` |
+
+스위치는 둘이고 뜻이 다르다.
+
+| 키 | 뜻 | 기본값 |
+| --- | --- | --- |
+| `kachi.ai.outbox.relay.enabled` | outbox를 읽어 발행 포트로 넘기는 relay | `true` |
+| `kachi.ai.events.enabled` | Kafka 발행 어댑터 | `true` |
+
+relay만 켜고 어댑터가 없으면 기동에 실패한다. local·test 프로파일은 둘 다 `false`다.
+누가 어떤 채널로 받는지는 이 서비스가 모른다. 요약을 알림으로 펼치는 일은 notification-service의 routing이 한다(ADR 025).
+
 ## 제외 범위
 
 - 사용자별 개인화 프롬프트
@@ -210,7 +249,7 @@ GET {KACHI_COLLECTOR_SERVICE_BASE_URL}/api/v1/internal/news?keyword={keyword}&fr
 
 ## 실행
 
-예정 local 기본값:
+local 기본값:
 
 ```text
 server.port=8083
@@ -219,7 +258,25 @@ MONGO_PORT=27017
 MONGO_DATABASE=kachi_ai
 KACHI_USER_SERVICE_BASE_URL=http://localhost:8080
 KACHI_COLLECTOR_SERVICE_BASE_URL=http://localhost:8082
-KACHI_AI_NEWS_SUMMARY_SCHEDULER_ENABLED=false
+kachi.ai.scheduler.news-summary.enabled=false
+kachi.ai.scheduler.keyword-expansion.enabled=false
+```
+
+실행:
+
+```sh
+set -a
+source ../.env.local
+set +a
+./gradlew :ai-service:bootRun
+```
+
+`.env.local`의 `SPRING_PROFILES_ACTIVE`가 어느 프로필로 뜰지 정한다.
+
+scheduler는 local에서 꺼져 있다. 주기 실행까지 확인하려면 실행 인자로 함께 켠다.
+
+```sh
+./gradlew :ai-service:bootRun --args='--kachi.ai.scheduler.news-summary.enabled=true'
 ```
 
 테스트:
@@ -228,9 +285,17 @@ KACHI_AI_NEWS_SUMMARY_SCHEDULER_ENABLED=false
 ./gradlew :ai-service:test
 ```
 
+Testcontainers 통합 테스트는 Docker 소켓을 찾지 못하면 실패한다.
+Docker Desktop을 쓰면 소켓 경로를 함께 넘긴다.
+
+```sh
+DOCKER_HOST=unix://$HOME/.docker/run/docker.sock ./gradlew :ai-service:test
+```
+
 ## 관련 문서
 
 - [아키텍처](../docs/아키텍처.md)
 - [도메인 모델](../docs/도메인모델.md)
 - [테스트 전략](../docs/테스트전략.md)
 - [010. ai-service 초기 설계](../docs/decisions/010-ai-service-초기-설계.md)
+- [020. ai-service scheduler 실행 모델과 요약 window](../docs/decisions/020-ai-service-scheduler-실행-모델과-요약-window.md)

@@ -6,12 +6,21 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
 
 kachi:
   ai:
     scheduler:
       news-summary:
         enabled: false
+      keyword-expansion:
+        enabled: false
+    outbox:
+      relay:
+        enabled: false
+    events:
+      enabled: false
     clients:
       user-service:
         base-url: http://localhost:8080

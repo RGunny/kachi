@@ -1,12 +1,16 @@
 package me.rgunny.kachi.ai.config
 
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
-import me.rgunny.kachi.ai.adapter.out.llm.RoutingLlmProvider
-import me.rgunny.kachi.ai.adapter.out.llm.openai.OpenAiLlmProvider
-import me.rgunny.kachi.ai.adapter.out.llm.openai.OpenAiProviderType
-import me.rgunny.kachi.ai.application.port.out.llm.LlmProviderPort
+import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProviderAdmin
+import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiProviderType
+import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
+import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -15,23 +19,69 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
 import tools.jackson.databind.json.JsonMapper
+import java.time.Clock
 import java.util.concurrent.TimeUnit
 
 @Configuration
 class OpenAiLlmConfig {
 
     /**
-     * enabled provider들을 mode 정책에 따라 호출하는 application port를 등록한다.
+     * prompt version은 저장 키의 일부라 provider와 선조회가 같은 값을 봐야 한다.
+     */
+    @Bean
+    fun llmPromptVersions(properties: LlmProviderProperties): LlmPromptVersions {
+        return LlmPromptVersions(
+            keywordExpansion = PromptVersion.of(properties.keywordExpansionPromptVersion),
+            newsSummary = PromptVersion.of(properties.newsSummaryPromptVersion)
+        )
+    }
+
+    /**
+     * enabled provider마다 자기 회로를 가진 데코레이터를 씌운다.
+     *
+     * 회로를 provider 단위로 두어야 한 provider의 장애가 나머지 provider의 호출을 막지 않는다.
+     * 호출 경로와 운영 조회가 같은 차단 상태를 봐야 하므로 목록을 빈으로 두고 양쪽이 주입받는다.
+     */
+    @Bean
+    fun guardedLlmProviders(
+        properties: LlmProviderProperties,
+        openAiProviders: List<OpenAiLlmProvider>,
+        circuitBreakerRegistry: CircuitBreakerRegistry,
+        clock: Clock
+    ): List<GuardedLlmProvider> {
+        return openAiProviders.map { provider ->
+            GuardedLlmProvider(
+                delegate = provider,
+                provider = provider.providerName,
+                circuitBreaker = circuitBreakerRegistry.circuitBreaker(provider.providerName.value),
+                failover = properties.failover,
+                clock = clock
+            )
+        }
+    }
+
+    /**
+     * 차단 장치를 씌운 provider들을 mode 정책에 따라 호출하는 application port를 등록한다.
      */
     @Bean
     fun llmProviderPort(
+        guardedLlmProviders: List<GuardedLlmProvider>,
         properties: LlmProviderProperties,
-        openAiProviders: List<OpenAiLlmProvider>
+        clock: Clock
     ): LlmProviderPort {
         return RoutingLlmProvider(
-            providers = openAiProviders,
-            mode = LlmProviderMode.from(properties.mode)
+            providers = guardedLlmProviders,
+            mode = LlmProviderMode.from(properties.mode),
+            clock = clock
         )
+    }
+
+    @Bean
+    fun llmProviderAdminPort(
+        guardedLlmProviders: List<GuardedLlmProvider>,
+        clock: Clock
+    ): LlmProviderAdminPort {
+        return GuardedLlmProviderAdmin(providers = guardedLlmProviders, clock = clock)
     }
 
     @Bean
@@ -42,12 +92,13 @@ class OpenAiLlmConfig {
     )
     fun openrouterLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.OPENROUTER,
-            properties = properties,
             providerProperties = properties.openrouter,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -60,12 +111,13 @@ class OpenAiLlmConfig {
     )
     fun groqLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.GROQ,
-            properties = properties,
             providerProperties = properties.groq,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -78,12 +130,13 @@ class OpenAiLlmConfig {
     )
     fun togetherLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.TOGETHER,
-            properties = properties,
             providerProperties = properties.together,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -96,12 +149,13 @@ class OpenAiLlmConfig {
     )
     fun cerebrasLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.CEREBRAS,
-            properties = properties,
             providerProperties = properties.cerebras,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
@@ -114,20 +168,21 @@ class OpenAiLlmConfig {
     )
     fun mistralLlmProvider(
         properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         return openAiLlmProvider(
             providerType = OpenAiProviderType.MISTRAL,
-            properties = properties,
             providerProperties = properties.mistral,
+            promptVersions = promptVersions,
             jsonMapper = jsonMapper
         )
     }
 
     private fun openAiLlmProvider(
         providerType: OpenAiProviderType,
-        properties: LlmProviderProperties,
         providerProperties: OpenAiProviderProperties,
+        promptVersions: LlmPromptVersions,
         jsonMapper: JsonMapper
     ): OpenAiLlmProvider {
         validateProvider(providerType, providerProperties)
@@ -137,8 +192,8 @@ class OpenAiLlmConfig {
             jsonMapper = jsonMapper,
             providerType = providerType,
             properties = providerProperties,
-            keywordExpansionPromptVersion = PromptVersion.of(properties.keywordExpansionPromptVersion),
-            newsSummaryPromptVersion = PromptVersion.of(properties.newsSummaryPromptVersion)
+            keywordExpansionPromptVersion = promptVersions.keywordExpansion,
+            newsSummaryPromptVersion = promptVersions.newsSummary
         )
     }
 
