@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
 import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
+import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import me.rgunny.kachi.ai.config.AiOutboxRetryProperties
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
@@ -181,6 +182,23 @@ object AiTestFixture {
             batchSize = batchSize,
             publishingVisibilityTimeout = publishingVisibilityTimeout,
             retry = retry
+        )
+    }
+
+    const val EVENT_TOPIC_SUMMARY_CREATED: String = "ai.summary.created"
+    const val EVENT_TOPIC_KEYWORD_QUARANTINED: String = "ai.keyword.quarantined"
+
+    fun eventsProperties(
+        enabled: Boolean = true,
+        summaryCreatedTopic: String = EVENT_TOPIC_SUMMARY_CREATED,
+        keywordQuarantinedTopic: String = EVENT_TOPIC_KEYWORD_QUARANTINED
+    ): AiEventsProperties {
+        return AiEventsProperties(
+            enabled = enabled,
+            topics = AiEventsProperties.Topics(
+                summaryCreated = summaryCreatedTopic,
+                keywordQuarantined = keywordQuarantinedTopic
+            )
         )
     }
 

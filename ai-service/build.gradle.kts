@@ -28,6 +28,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("tools.jackson.module:jackson-module-kotlin")
 
+    // Messaging
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
+
     // Resilience
     implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")

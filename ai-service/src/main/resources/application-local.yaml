@@ -6,6 +6,8 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
 
 kachi:
   ai:
@@ -17,6 +19,8 @@ kachi:
     outbox:
       relay:
         enabled: false
+    events:
+      enabled: false
     clients:
       user-service:
         base-url: http://localhost:8080

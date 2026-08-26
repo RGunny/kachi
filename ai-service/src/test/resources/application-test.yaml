@@ -13,6 +13,11 @@ kachi:
         enabled: false
         fixed-delay: 10m
         initial-delay: 30s
+    outbox:
+      relay:
+        enabled: false
+    events:
+      enabled: false
     clients:
       user-service:
         base-url: http://user-service-test
