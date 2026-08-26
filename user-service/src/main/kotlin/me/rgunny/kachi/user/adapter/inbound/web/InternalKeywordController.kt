@@ -7,6 +7,11 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RestController
 
+/**
+ * 활성 키워드 internal API.
+ *
+ * 인증 없이 열려 있으며 수집·요약 서비스가 기동 주기마다 호출한다. 사용자 정보는 내보내지 않는다.
+ */
 @RestController
 class InternalKeywordController(
     private val listActiveKeywordsUseCase: ListActiveKeywordsUseCase
@@ -14,11 +19,11 @@ class InternalKeywordController(
 
     @GetMapping(ApiPaths.INTERNAL_ACTIVE_KEYWORDS, version = ApiVersions.V1)
     fun listActiveKeywords(): ResponseEntity<ApiResponse<List<ActiveKeywordResponse>>> {
-        // 1. user-service가 소유한 keyword 저장소에서 활성 키워드를 조회한다.
+        // 1. enabled 구독이 하나 이상인 canonical 키워드를 조회한다.
         val response = listActiveKeywordsUseCase.listActiveKeywords()
             .map(ActiveKeywordResponse::from)
 
-        // 2. collector-service가 그대로 읽을 수 있도록 keyword 이름 목록만 리턴한다.
+        // 2. 소비자가 name만 읽어도 되도록 canonicalKey를 name에 함께 싣는다.
         return ResponseEntity.ok(ApiResponse.success(response))
     }
 }

@@ -2,18 +2,21 @@ package me.rgunny.kachi.user.adapter.outbound.persistence
 
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceException
+import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordName
+import me.rgunny.kachi.user.domain.Subscription
+import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.fixture.UserTestFixture
-import org.springframework.beans.factory.annotation.Autowired
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 @DisplayName("KeywordPersistenceAdapter 통합 테스트")
 class KeywordPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -22,96 +25,88 @@ class KeywordPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTe
     private lateinit var keywordPersistenceAdapter: KeywordPersistenceAdapter
 
     @Autowired
-    private lateinit var entityManager: EntityManager
+    private lateinit var subscriptionPersistenceAdapter: SubscriptionPersistenceAdapter
 
-    private val registeredAt = UserTestFixture.NOW
+    private val now = UserTestFixture.NOW
 
     @Nested
     @DisplayName("save()")
     inner class Save {
 
         @Test
-        @DisplayName("Keyword 도메인을 MySQL에 저장하고 다시 조회한다")
-        fun saveKeywordAndFindById() {
-            val userId = UserId.newId()
-            val keyword = keyword(userId = userId, name = "Trump")
-
-            val savedKeyword = keywordPersistenceAdapter.save(keyword)
+        @DisplayName("canonical 키워드를 저장하고 canonicalKey로 다시 찾는다")
+        fun saveAndFindByCanonicalKey() {
+            val saved = keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("SPACE-X"), now))
             flushAndClear()
 
-            val foundKeyword = keywordPersistenceAdapter.findById(savedKeyword.id)
+            val found = keywordPersistenceAdapter.findByCanonicalKey(CanonicalKey.of("space-x"))
 
-            assertNotNull(foundKeyword)
-            assertEquals(savedKeyword.id, foundKeyword.id)
-            assertEquals(userId, foundKeyword.userId)
-            assertEquals(KeywordName.of("Trump"), foundKeyword.name)
-            assertTrue(foundKeyword.enabled)
+            assertNotNull(found)
+            assertEquals(saved.id, found.id)
+            assertEquals("SPACE-X", found.displayName.value)
         }
 
         @Test
-        @DisplayName("같은 사용자는 같은 이름의 Keyword를 중복 저장할 수 없다")
-        fun rejectDuplicateUserKeywordName() {
-            val userId = UserId.newId()
-
-            keywordPersistenceAdapter.save(keyword(userId = userId, name = "Trump"))
-            keywordPersistenceAdapter.save(keyword(userId = userId, name = "Trump"))
+        @DisplayName("같은 canonicalKey는 두 번 저장할 수 없다")
+        fun rejectDuplicateCanonicalKey() {
+            keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("Tesla"), now))
+            keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("TESLA"), now))
 
             assertFailsWith<PersistenceException> {
                 flushAndClear()
             }
         }
-    }
-
-    @Nested
-    @DisplayName("findAllByUserId()")
-    inner class FindAllByUserId {
 
         @Test
-        @DisplayName("사용자 ID로 Keyword 목록을 조회한다")
-        fun findAllByUserId() {
-            val userId = UserId.newId()
-            keywordPersistenceAdapter.save(keyword(userId = userId, name = "Trump"))
-            keywordPersistenceAdapter.save(keyword(userId = userId, name = "Nvidia"))
-            keywordPersistenceAdapter.save(keyword(userId = UserId.newId(), name = "Bitcoin"))
+        @DisplayName("canonicalKey 비교는 대소문자를 구분한다 — 동등성은 코드의 정규화가 정한다")
+        fun canonicalKeyIsBinaryCollated() {
+            keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("tesla"), now))
             flushAndClear()
 
-            val keywords = keywordPersistenceAdapter.findAllByUserId(userId)
+            val found = entityManager
+                .createNativeQuery("select count(*) from keywords where canonical_key = 'TESLA'")
+                .singleResult
 
-            assertEquals(2, keywords.size)
-            assertEquals(setOf("Trump", "Nvidia"), keywords.map { it.name.value }.toSet())
+            assertEquals(0L, (found as Number).toLong())
         }
     }
 
     @Nested
-    @DisplayName("existsByUserIdAndName()")
-    inner class ExistsByUserIdAndName {
+    @DisplayName("findAllWithEnabledSubscription()")
+    inner class FindAllWithEnabledSubscription {
 
         @Test
-        @DisplayName("사용자 ID와 이름으로 Keyword 존재 여부를 MySQL에서 확인한다")
-        fun existsByUserIdAndName() {
-            val userId = UserId.newId()
-            keywordPersistenceAdapter.save(keyword(userId = userId, name = "Trump"))
+        @DisplayName("enabled 구독이 하나 이상인 키워드만 조회한다")
+        fun findOnlyKeywordsWithEnabledSubscription() {
+            val subscribed = keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("Tesla"), now))
+            val disabledOnly = keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("NVIDIA"), now))
+            keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("Bitcoin"), now))
+            subscriptionPersistenceAdapter.save(subscription(subscribed))
+            subscriptionPersistenceAdapter.save(subscription(disabledOnly).disable(now))
             flushAndClear()
 
-            val exists = keywordPersistenceAdapter.existsByUserIdAndName(
-                userId = userId,
-                name = KeywordName.of("Trump")
-            )
+            val keywords = keywordPersistenceAdapter.findAllWithEnabledSubscription()
 
-            assertTrue(exists)
+            assertEquals(listOf(subscribed.id), keywords.map { it.id })
+        }
+
+        @Test
+        @DisplayName("구독이 없으면 빈 목록이다")
+        fun emptyWhenNoSubscription() {
+            keywordPersistenceAdapter.save(Keyword.create(KeywordName.of("Bitcoin"), now))
+            flushAndClear()
+
+            assertEquals(emptyList(), keywordPersistenceAdapter.findAllWithEnabledSubscription())
+            assertNull(keywordPersistenceAdapter.findByCanonicalKey(CanonicalKey.of("nothing")))
         }
     }
 
-    private fun keyword(userId: UserId, name: String): Keyword {
-        return Keyword.create(
-            userId = userId,
-            name = KeywordName.of(name),
-            registeredAt = registeredAt
+    private fun subscription(keyword: Keyword): Subscription {
+        return Subscription.create(
+            userId = UserId.newId(),
+            keywordId = keyword.id,
+            channels = setOf(SubscriptionChannel.SLACK),
+            registeredAt = now
         )
-    }
-
-    private fun flushAndClear() {
-        entityManager.flush()
-        entityManager.clear()
     }
 }

@@ -5,18 +5,19 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
-import me.rgunny.kachi.user.domain.UserId
 import java.time.Instant
 import java.util.UUID
 
+/** `keywords` 테이블. `canonical_key`는 binary collation unique라 동등성 판단이 코드의 정규화와 같다. */
 @Entity
 @Table(
     name = "keywords",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_keywords_user_id_name", columnNames = ["user_id", "name"])
+        UniqueConstraint(name = "uk_keywords_canonical_key", columnNames = ["canonical_key"])
     ]
 )
 class KeywordJpaEntity(
@@ -25,31 +26,23 @@ class KeywordJpaEntity(
     @Column(name = "id", nullable = false, columnDefinition = "BINARY(16)")
     val id: UUID,
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "BINARY(16)")
-    val userId: UUID,
+    @Column(name = "canonical_key", nullable = false, length = 100)
+    val canonicalKey: String,
 
-    @Column(name = "name", nullable = false, length = 100)
-    val name: String,
+    @Column(name = "display_name", nullable = false, length = 100)
+    val displayName: String,
 
-    @Column(name = "enabled", nullable = false)
-    val enabled: Boolean,
-
-    @Column(name = "registered_at", nullable = false)
-    val registeredAt: Instant,
-
-    @Column(name = "disabled_at")
-    val disabledAt: Instant?
+    @Column(name = "created_at", nullable = false)
+    val createdAt: Instant
 ) {
 
     companion object {
         fun from(keyword: Keyword): KeywordJpaEntity {
             return KeywordJpaEntity(
                 id = keyword.id.value,
-                userId = keyword.userId.value,
-                name = keyword.name.value,
-                enabled = keyword.enabled,
-                registeredAt = keyword.registeredAt,
-                disabledAt = keyword.disabledAt
+                canonicalKey = keyword.canonicalKey.value,
+                displayName = keyword.displayName.value,
+                createdAt = keyword.createdAt
             )
         }
     }
@@ -57,12 +50,9 @@ class KeywordJpaEntity(
     fun toDomain(): Keyword {
         return Keyword.restore(
             id = KeywordId.of(id),
-            userId = UserId.of(userId),
-            name = KeywordName.of(name),
-            enabled = enabled,
-            registeredAt = registeredAt,
-            disabledAt = disabledAt
+            canonicalKey = CanonicalKey.of(canonicalKey),
+            displayName = KeywordName.of(displayName),
+            createdAt = createdAt
         )
     }
-
 }

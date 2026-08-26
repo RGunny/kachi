@@ -1,20 +1,20 @@
 # user-service
 
-사용자 인증, 사용자 상태, 관심 키워드를 관리하는 서비스다.
+사용자 인증, 사용자 상태, 키워드 구독을 관리하는 서비스다.
 
 `collector-service`는 수집 대상 키워드를 직접 소유하지 않고, `user-service`의 internal API에서 활성 키워드를 조회한다.
 
 ## 현재 구현 상태
 
-- `User`, `Keyword` 도메인 모델
+- `User`, `Keyword`(canonical), `Subscription` 도메인 모델
 - OAuth2 provider 기반 사용자 식별
 - Google, Kakao, Naver OAuth2 사용자 정보 정규화
 - JWT access token / refresh token 발급
 - Redis 기반 refresh token 저장, 회전, 로그아웃
-- MySQL 기반 사용자/키워드 persistence adapter
+- MySQL 기반 사용자/키워드/구독 persistence adapter
 - 사용자 등록, 내 정보 조회, 탈퇴 API
-- 내 관심 키워드 등록, 조회, 수정 API
-- collector-service용 활성 키워드 internal API
+- 내 키워드 구독 등록, 조회, 수정 API
+- collector-service·ai-service용 활성 키워드 internal API
 - Spring Security 기반 JWT 인증 필터
 - Actuator health endpoint
 
@@ -81,16 +81,19 @@ DELETE /api/v1/me
 Authorization: Bearer {accessToken}
 ```
 
-### Keyword
+### Keyword 구독
 
-내 키워드 목록 조회:
+키워드는 정규화 값(`canonicalKey`) 하나에 행 하나인 canonical 키워드이고, 사용자별 관심은 구독(`Subscription`)이 가진다.
+`Tesla`, `tesla`, ` TESLA `는 같은 키워드다. 이름 변경은 없다 — 이름이 다르면 다른 키워드다.
+
+내 구독 목록 조회:
 
 ```http
 GET /api/v1/me/keywords
 Authorization: Bearer {accessToken}
 ```
 
-내 키워드 등록:
+구독 등록:
 
 ```http
 POST /api/v1/me/keywords
@@ -99,25 +102,29 @@ Authorization: Bearer {accessToken}
 
 ```json
 {
-  "name": "NVIDIA"
+  "name": "NVIDIA",
+  "channels": ["SLACK", "TELEGRAM"]
 }
 ```
 
-키워드 수정:
+응답에는 `id`(구독), `keywordId`, `name`(최초 등록 원문), `canonicalKey`, `channels`, `enabled`가 온다.
+같은 사용자가 같은 canonical 키워드를 다시 등록하면 `409 DUPLICATE_SUBSCRIPTION`이다.
+
+구독 수정(채널·활성 여부):
 
 ```http
-PATCH /api/v1/keywords/{keywordId}
+PATCH /api/v1/me/keywords/{subscriptionId}
 Authorization: Bearer {accessToken}
 ```
 
 ```json
 {
-  "name": "NVDA",
+  "channels": ["DISCORD"],
   "enabled": true
 }
 ```
 
-`enabled=false`인 키워드는 collector-service의 수집 대상에서 제외된다.
+`enabled=false`인 구독은 수집·요약·알림 대상에서 제외된다.
 
 ### Internal
 
@@ -127,7 +134,12 @@ Authorization: Bearer {accessToken}
 GET /api/v1/internal/keywords/active
 ```
 
-이 API는 collector-service가 수집 대상 키워드를 읽기 위한 내부 계약이다.
+```json
+[{ "keywordId": "…", "canonicalKey": "space-x", "displayName": "SPACE-X", "name": "space-x" }]
+```
+
+enabled 구독이 하나 이상인 canonical 키워드를 `canonicalKey` 순으로 돌려준다. `name`은 `canonicalKey`와 같은 값이다 —
+collector-service·ai-service는 `name`만 읽고 그 문자열로 수집·요약·라우팅을 이어가므로 정규화는 이 서비스 한 곳에서만 한다.
 현재는 서비스 간 인증을 붙이지 않았고, public 사용자 API와 구분하기 위해 `/internal` 경로로 분리한다.
 
 ## OAuth2 로그인
@@ -169,7 +181,8 @@ Refresh token은 Redis에 저장되며, 재발급 시 기존 token을 폐기하�
 MySQL:
 
 - `users`
-- `keywords`
+- `keywords` (canonical)
+- `subscriptions`, `subscription_channels`
 
 Redis:
 

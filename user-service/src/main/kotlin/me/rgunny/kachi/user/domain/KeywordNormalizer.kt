@@ -13,6 +13,7 @@ object KeywordNormalizer {
 
     private val WHITESPACES = Regex("\\s+")
 
+    /** 결과가 빈 문자열일 수 있다(구두점만 있는 입력). 거부는 [CanonicalKey]가 한다. */
     fun normalize(raw: String): String {
         val folded = Normalizer.normalize(raw, Normalizer.Form.NFKC)
             .trim()

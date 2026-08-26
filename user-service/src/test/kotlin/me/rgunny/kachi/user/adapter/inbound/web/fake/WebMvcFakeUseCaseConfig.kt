@@ -22,11 +22,11 @@ class WebMvcFakeUseCaseConfig {
     fun logoutUseCase(): FakeLogoutUseCase = FakeLogoutUseCase()
 
     @Bean
-    fun registerKeywordUseCase(): FakeRegisterKeywordUseCase = FakeRegisterKeywordUseCase()
+    fun registerSubscriptionUseCase(): FakeRegisterSubscriptionUseCase = FakeRegisterSubscriptionUseCase()
 
     @Bean
-    fun updateKeywordUseCase(): FakeUpdateKeywordUseCase = FakeUpdateKeywordUseCase()
+    fun updateSubscriptionUseCase(): FakeUpdateSubscriptionUseCase = FakeUpdateSubscriptionUseCase()
 
     @Bean
-    fun listKeywordsUseCase(): FakeListKeywordsUseCase = FakeListKeywordsUseCase()
+    fun listSubscriptionsUseCase(): FakeListSubscriptionsUseCase = FakeListSubscriptionsUseCase()
 }

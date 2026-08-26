@@ -2,82 +2,45 @@ package me.rgunny.kachi.user.domain
 
 import java.time.Instant
 
+/**
+ * canonical 키워드.
+ *
+ * 정규화 값 [canonicalKey] 하나에 행 하나이며 사용자와 무관하다.
+ * 사용자별 관심은 [Subscription]이 가진다.
+ * [displayName]은 최초 등록 원문이다. 이름이 다르면 다른 키워드이므로 변경 행위가 없다.
+ */
 class Keyword private constructor(
     val id: KeywordId,
-    val userId: UserId,
-    val name: KeywordName,
-    val enabled: Boolean,
-    val registeredAt: Instant,
-    val disabledAt: Instant?
+    val canonicalKey: CanonicalKey,
+    val displayName: KeywordName,
+    val createdAt: Instant
 ) {
     companion object {
 
         fun create(
-            userId: UserId,
-            name: KeywordName,
-            registeredAt: Instant
+            displayName: KeywordName,
+            createdAt: Instant
         ): Keyword {
             return Keyword(
                 id = KeywordId.newId(),
-                userId = userId,
-                name = name,
-                enabled = true,
-                registeredAt = registeredAt,
-                disabledAt = null
+                canonicalKey = CanonicalKey.of(displayName.value),
+                displayName = displayName,
+                createdAt = createdAt
             )
         }
 
         fun restore(
             id: KeywordId,
-            userId: UserId,
-            name: KeywordName,
-            enabled: Boolean,
-            registeredAt: Instant,
-            disabledAt: Instant?
+            canonicalKey: CanonicalKey,
+            displayName: KeywordName,
+            createdAt: Instant
         ): Keyword {
             return Keyword(
                 id = id,
-                userId = userId,
-                name = name,
-                enabled = enabled,
-                registeredAt = registeredAt,
-                disabledAt = disabledAt
+                canonicalKey = canonicalKey,
+                displayName = displayName,
+                createdAt = createdAt
             )
         }
-    }
-
-    fun rename(name: KeywordName): Keyword {
-        return Keyword(
-            id = id,
-            userId = userId,
-            name = name,
-            enabled = enabled,
-            registeredAt = registeredAt,
-            disabledAt = disabledAt
-        )
-    }
-
-    fun enable(): Keyword {
-        return Keyword(
-            id = id,
-            userId = userId,
-            name = name,
-            enabled = true,
-            registeredAt = registeredAt,
-            disabledAt = null
-        )
-    }
-
-    fun disable(disabledAt: Instant): Keyword {
-        require(enabled) { "이미 비활성화된 키워드입니다" }
-
-        return Keyword(
-            id = id,
-            userId = userId,
-            name = name,
-            enabled = false,
-            registeredAt = registeredAt,
-            disabledAt = disabledAt
-        )
     }
 }

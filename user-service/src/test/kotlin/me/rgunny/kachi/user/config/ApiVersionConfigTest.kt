@@ -1,7 +1,7 @@
 package me.rgunny.kachi.user.config
 
 import me.rgunny.kachi.user.adapter.inbound.web.AuthController
-import me.rgunny.kachi.user.adapter.inbound.web.KeywordController
+import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import org.junit.jupiter.api.DisplayName
@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 
 @WebMvcTest(
-    controllers = [AuthController::class, UserController::class, KeywordController::class],
+    controllers = [AuthController::class, UserController::class, SubscriptionController::class],
     excludeAutoConfiguration = [
         OAuth2ClientAutoConfiguration::class,
         OAuth2ClientWebSecurityAutoConfiguration::class

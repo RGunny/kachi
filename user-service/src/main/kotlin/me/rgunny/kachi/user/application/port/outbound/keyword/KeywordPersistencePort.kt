@@ -1,19 +1,23 @@
 package me.rgunny.kachi.user.application.port.outbound.keyword
 
+import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
-import me.rgunny.kachi.user.domain.KeywordName
-import me.rgunny.kachi.user.domain.UserId
 
-/** 관심 키워드 저장소 접근을 application 계층에 제공하는 출력 포트 */
+/**
+ * canonical 키워드 저장소 출력 포트.
+ *
+ * canonicalKey로 찾기(find-or-create의 find)와 enabled 구독이 걸린 키워드 조회(활성 키워드 API)를 제공한다.
+ */
 interface KeywordPersistencePort {
     fun findById(keywordId: KeywordId): Keyword?
 
-    fun findAllByUserId(userId: UserId): List<Keyword>
+    fun findAllByIds(keywordIds: Set<KeywordId>): List<Keyword>
 
-    fun findAllEnabled(): List<Keyword>
+    fun findByCanonicalKey(canonicalKey: CanonicalKey): Keyword?
 
-    fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean
+    /** enabled 구독이 하나 이상 있는 키워드 */
+    fun findAllWithEnabledSubscription(): List<Keyword>
 
     fun save(keyword: Keyword): Keyword
 }

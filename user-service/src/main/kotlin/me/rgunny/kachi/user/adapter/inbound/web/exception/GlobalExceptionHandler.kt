@@ -5,10 +5,10 @@ import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorResponse
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
-import me.rgunny.kachi.user.application.exception.DuplicateKeywordException
+import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
 import me.rgunny.kachi.user.application.exception.InvalidTokenException
-import me.rgunny.kachi.user.application.exception.KeywordAccessDeniedException
-import me.rgunny.kachi.user.application.exception.KeywordNotFoundException
+import me.rgunny.kachi.user.application.exception.SubscriptionAccessDeniedException
+import me.rgunny.kachi.user.application.exception.SubscriptionNotFoundException
 import me.rgunny.kachi.user.application.exception.UserNotFoundException
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -38,19 +38,19 @@ class GlobalExceptionHandler {
         return error(ErrorCode.INVALID_TOKEN, exception.message)
     }
 
-    @ExceptionHandler(DuplicateKeywordException::class)
-    fun handleDuplicateKeyword(exception: DuplicateKeywordException): ResponseEntity<ApiResponse<Unit>> {
-        return error(ErrorCode.DUPLICATE_KEYWORD, exception.message)
+    @ExceptionHandler(DuplicateSubscriptionException::class)
+    fun handleDuplicateSubscription(exception: DuplicateSubscriptionException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.DUPLICATE_SUBSCRIPTION, exception.message)
     }
 
-    @ExceptionHandler(KeywordNotFoundException::class)
-    fun handleKeywordNotFound(exception: KeywordNotFoundException): ResponseEntity<ApiResponse<Unit>> {
-        return error(ErrorCode.KEYWORD_NOT_FOUND, exception.message)
+    @ExceptionHandler(SubscriptionNotFoundException::class)
+    fun handleSubscriptionNotFound(exception: SubscriptionNotFoundException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.SUBSCRIPTION_NOT_FOUND, exception.message)
     }
 
-    @ExceptionHandler(KeywordAccessDeniedException::class)
-    fun handleKeywordAccessDenied(exception: KeywordAccessDeniedException): ResponseEntity<ApiResponse<Unit>> {
-        return error(ErrorCode.KEYWORD_ACCESS_DENIED, exception.message)
+    @ExceptionHandler(SubscriptionAccessDeniedException::class)
+    fun handleSubscriptionAccessDenied(exception: SubscriptionAccessDeniedException): ResponseEntity<ApiResponse<Unit>> {
+        return error(ErrorCode.SUBSCRIPTION_ACCESS_DENIED, exception.message)
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)

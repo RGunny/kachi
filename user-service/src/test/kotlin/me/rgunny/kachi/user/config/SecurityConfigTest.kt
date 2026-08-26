@@ -1,12 +1,12 @@
 package me.rgunny.kachi.user.config
 
 import me.rgunny.kachi.user.adapter.inbound.web.AuthController
-import me.rgunny.kachi.user.adapter.inbound.web.KeywordController
+import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeOAuth2Config
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.inbound.web.security.JwtTokenProvider
-import me.rgunny.kachi.user.domain.KeywordId
+import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import org.junit.jupiter.api.DisplayName
@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.post
 import java.time.Clock
 import java.time.Duration
 
-@WebMvcTest(controllers = [AuthController::class, UserController::class, KeywordController::class])
+@WebMvcTest(controllers = [AuthController::class, UserController::class, SubscriptionController::class])
 @AutoConfigureMockMvc
 @ImportAutoConfiguration(
     SecurityAutoConfiguration::class,
@@ -157,7 +157,7 @@ class SecurityConfigTest @Autowired constructor(
         fun requireAuthenticationForRegisterMyKeywordApi() {
             mockMvc.post("/api/v1/me/keywords") {
                 contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody()
+                content = registerSubscriptionBody()
             }.andExpect {
                 status { isForbidden() }
             }
@@ -171,7 +171,7 @@ class SecurityConfigTest @Autowired constructor(
             mockMvc.post("/api/v1/me/keywords") {
                 header("Authorization", "Bearer ${token.value}")
                 contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody()
+                content = registerSubscriptionBody()
             }.andExpect {
                 status { isCreated() }
             }
@@ -203,9 +203,9 @@ class SecurityConfigTest @Autowired constructor(
         @Test
         @DisplayName("관심 키워드 수정 API는 인증을 요구한다")
         fun requireAuthenticationForUpdateKeywordApi() {
-            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+            mockMvc.patch("/api/v1/me/keywords/${SubscriptionId.newId().value}") {
                 contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody()
+                content = updateSubscriptionBody()
             }.andExpect {
                 status { isForbidden() }
             }
@@ -216,10 +216,10 @@ class SecurityConfigTest @Autowired constructor(
         fun permitUpdateKeywordApiWithAccessToken() {
             val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
 
-            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+            mockMvc.patch("/api/v1/me/keywords/${SubscriptionId.newId().value}") {
                 header("Authorization", "Bearer ${token.value}")
                 contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody()
+                content = updateSubscriptionBody()
             }.andExpect {
                 status { isOk() }
             }
@@ -246,18 +246,18 @@ class SecurityConfigTest @Autowired constructor(
         """.trimIndent()
     }
 
-    private fun registerKeywordBody(): String {
+    private fun registerSubscriptionBody(): String {
         return """
             {
-              "name": "Trump"
+              "name": "Trump",
+              "channels": ["SLACK"]
             }
         """.trimIndent()
     }
 
-    private fun updateKeywordBody(): String {
+    private fun updateSubscriptionBody(): String {
         return """
             {
-              "name": "Trump",
               "enabled": true
             }
         """.trimIndent()
