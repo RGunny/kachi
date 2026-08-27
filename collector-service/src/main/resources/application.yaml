@@ -26,6 +26,7 @@ kachi:
         initial-delay: 30s
     clients:
       user-service:
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:}
         active-keywords-path: /api/v1/internal/keywords/active
         timeout: 3s
         max-in-memory-size: 262144
@@ -45,8 +46,8 @@ kachi:
         enabled: false
         base-url: https://openapi.naver.com
         news-search-path: /v1/search/news.json
-        client-id: ""
-        client-secret: ""
+        client-id: ${NAVER_CLIENT_ID:}
+        client-secret: ${NAVER_CLIENT_SECRET:}
         display: 100
         start: 1
         sort: date
@@ -59,7 +60,7 @@ kachi:
         enabled: false
         base-url: https://finnhub.io
         company-news-path: /api/v1/company-news
-        api-key: ""
+        api-key: ${FINNHUB_API_KEY:}
         lookback-days: 7
         connect-timeout: 2s
         response-timeout: 5s

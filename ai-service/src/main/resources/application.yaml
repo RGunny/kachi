@@ -65,10 +65,12 @@ kachi:
         keyword-quarantined: ai.keyword.quarantined
     clients:
       user-service:
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:}
         active-keywords-path: /api/v1/internal/keywords/active
         timeout: 3s
         max-in-memory-size: 262144
       collector-service:
+        base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL:}
         news-path: /api/v1/internal/news
         timeout: 3s
         max-in-memory-size: 262144
@@ -78,7 +80,7 @@ kachi:
       news-summary-prompt-version: news-summary-v1
       openrouter:
         enabled: false
-        api-key: ""
+        api-key: ${OPENROUTER_API_KEY:}
         base-url: https://openrouter.ai/api/v1
         chat-completions-path: /chat/completions
         model: openai/gpt-4o-mini
@@ -89,7 +91,7 @@ kachi:
         max-in-memory-size: 524288
       groq:
         enabled: false
-        api-key: ""
+        api-key: ${GROQ_API_KEY:}
         base-url: https://api.groq.com/openai/v1
         chat-completions-path: /chat/completions
         model: llama-3.3-70b-versatile
@@ -100,7 +102,7 @@ kachi:
         max-in-memory-size: 524288
       together:
         enabled: false
-        api-key: ""
+        api-key: ${TOGETHER_API_KEY:}
         base-url: https://api.together.xyz/v1
         chat-completions-path: /chat/completions
         model: meta-llama/Llama-3.3-70B-Instruct-Turbo
@@ -111,7 +113,7 @@ kachi:
         max-in-memory-size: 524288
       cerebras:
         enabled: false
-        api-key: ""
+        api-key: ${CEREBRAS_API_KEY:}
         base-url: https://api.cerebras.ai/v1
         chat-completions-path: /chat/completions
         model: gpt-oss-120b
@@ -122,7 +124,7 @@ kachi:
         max-in-memory-size: 524288
       mistral:
         enabled: false
-        api-key: ""
+        api-key: ${MISTRAL_API_KEY:}
         base-url: https://api.mistral.ai/v1
         chat-completions-path: /chat/completions
         model: mistral-small-latest
@@ -133,7 +135,7 @@ kachi:
         max-in-memory-size: 524288
       gemini:
         enabled: false
-        api-key: ""
+        api-key: ${GEMINI_API_KEY:}
         base-url: https://generativelanguage.googleapis.com
         generate-content-path: /v1beta/models/{model}:generateContent
         model: gemini-2.0-flash

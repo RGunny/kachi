@@ -23,25 +23,20 @@ kachi:
       enabled: false
     clients:
       user-service:
-        base-url: http://localhost:8080
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8080}
       collector-service:
-        base-url: http://localhost:8082
+        base-url: ${KACHI_COLLECTOR_SERVICE_BASE_URL:http://localhost:8082}
     providers:
       mode: single-random
       openrouter:
         enabled: true
-        api-key: ${OPENROUTER_API_KEY}
       groq:
         enabled: true
-        api-key: ${GROQ_API_KEY}
       together:
         enabled: true
-        api-key: ${TOGETHER_API_KEY}
       cerebras:
         enabled: true
-        api-key: ${CEREBRAS_API_KEY}
       mistral:
         enabled: true
-        api-key: ${MISTRAL_API_KEY}
       gemini:
         enabled: false

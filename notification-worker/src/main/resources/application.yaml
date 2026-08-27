@@ -32,7 +32,7 @@ management:
 kachi:
   notification:
     worker:
-      worker-id: notification-worker-local
+      worker-id: ${HOSTNAME:notification-worker-${random.uuid}}
     dispatch:
       topic: notification.dispatch
       group-id: notification-worker
@@ -56,6 +56,7 @@ kachi:
         mode: SUCCESS
       slack:
         enabled: true
+        webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL:}
         connect-timeout: PT2S
         response-timeout: PT5S
         read-timeout: PT5S
@@ -63,6 +64,7 @@ kachi:
         max-in-memory-size: 262144
       discord:
         enabled: true
+        webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
         connect-timeout: PT2S
         response-timeout: PT5S
         read-timeout: PT5S
@@ -70,6 +72,7 @@ kachi:
         max-in-memory-size: 262144
       telegram:
         enabled: true
+        bot-token: ${KACHI_NOTIFICATION_TELEGRAM_BOT_TOKEN:}
         base-url: https://api.telegram.org
         send-message-path: /sendMessage
         connect-timeout: PT2S

@@ -103,18 +103,31 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 Grafana는 `http://localhost:3000`, Prometheus는 `http://localhost:9094`에서 확인한다.
 notification metric은 `notification-routing`, `notification-service`, `notification-worker`의 `/actuator/prometheus`를 Prometheus가 scrape한다.
 
-로컬 환경변수는 `.env.example`을 기준으로 `.env.local`에 둔다.
-실행 전에 shell에 로드하면 각 서비스가 같은 값을 사용한다.
+설정은 두 층으로 나뉜다. `application.yaml`은 환경과 무관한 동작 정의와 함께
+secret·서비스 간 URL·인스턴스 식별자를 `${ENV}` 형태로 요구하고, `application-local.yaml`은
+인프라 접속 주소와 로컬 더미 값을 덮어쓴다. 그래서 `local`은 환경변수 없이도 뜨고,
+다른 프로파일은 값이 빠지면 기동 시점에 실패한다. API 키·웹훅 URL 같은 secret만 env 파일에 둔다.
+
+```
+.env.example    필요한 키 목록. 값은 비어 있고 스크립트가 읽지 않는다.
+.env            모든 프로파일 공통 secret (git 제외, 선택)
+.env.<profile>  프로파일별 secret (git 제외). local 프로파일은 .env.local
+```
 
 ```sh
-set -a
-source .env.local
-set +a
+cp .env.example .env.local
+```
+
+실행 스크립트는 `SPRING_PROFILES_ACTIVE`(기본 `local`)에 맞는 `.env.<profile>`과 `.env`를 읽는다.
+우선순위는 shell에 export한 값, `.env.<profile>`, `.env` 순이다.
+
+```sh
+./scripts/app.sh user-service start                        # local, .env.local
+SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 ```
 
 애플리케이션을 백그라운드에서 실행할 때는 루트의 실행 스크립트를 사용한다.
-스크립트는 `.env.example`을 로컬 기본값으로 읽은 뒤 `.env.local` 값으로 덮어쓰고,
-실행 JAR 빌드, PID·로그 기록, health check를 처리한다.
+스크립트는 env 파일을 읽은 뒤 Gradle `bootRun`을 백그라운드에서 실행한다.
 
 ```sh
 ./scripts/infra.sh core start
@@ -136,7 +149,6 @@ set +a
 인프라는 컴포넌트 하나 또는 애플리케이션별 그룹으로 관리한다.
 
 ```sh
-./scripts/infra.sh list
 ./scripts/infra.sh mysql start
 ./scripts/infra.sh user start
 ./scripts/infra.sh notification status
@@ -149,8 +161,9 @@ set +a
 `all`은 core에 Prometheus·Grafana까지 포함한다. 여러 애플리케이션이 같은 인프라를
 공유하므로 그룹 `stop`은 해당 그룹에 속한 다른 애플리케이션에도 영향을 줄 수 있다.
 
-PID는 `.run/`, 로그는 `logs/`에 저장되며 두 디렉터리는 Git에서 제외된다.
-`stop`은 Spring의 graceful shutdown을 위해 `SIGTERM`을 보내고 최대 30초 기다린다.
+프로세스 ID는 `.run/`, 출력은 `logs/`에 저장하며 두 디렉터리는 Git에서 제외한다.
+`stop`은 Spring의 graceful shutdown을 위해 `SIGTERM`을 보내고 최대 30초 기다린 뒤 강제 종료한다.
+`infra.sh start`는 healthcheck가 정의된 컨테이너가 준비될 때까지 기다린다.
 
 테스트:
 

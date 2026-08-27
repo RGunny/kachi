@@ -47,7 +47,7 @@ kachi:
           discord: admin
           telegram: admin
       user-service:
-        base-url: ""
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:}
         subscriptions-path: /api/v1/internal/subscriptions
         timeout: 3s
         max-in-memory-size: 262144
