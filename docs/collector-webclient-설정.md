@@ -210,7 +210,7 @@ Finnhub 응답 변환 기준:
 | 연결 timeout 발생 빈도 | `connect-timeout` |
 | body read timeout 발생 빈도 | `read-timeout` |
 | HTTP 429 발생 빈도 | rate limit, scheduler interval |
-| 5xx 발생 빈도 | retry, circuit breaker |
+| 5xx 발생 빈도 | retry, 서킷 브레이커 |
 | RSS XML 평균/최대 크기 | `max-in-memory-size` |
 | 수집 실행 1회 전체 소요 시간 | provider timeout, 병렬도 |
 

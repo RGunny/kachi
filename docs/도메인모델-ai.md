@@ -5,7 +5,7 @@ window/watermark 기반 실행 모델과 키워드 격리로 운영을 지탱한
 공통 관례는 [도메인모델.md](도메인모델.md)를 따른다.
 
 관련 결정: ADR 010(초기 설계), 011(newsHash 중복 방지), 020(scheduler 실행 모델과 요약 window), 
-  021(LLM 실패 분류와 provider circuit breaker).
+  021(LLM 실패 분류와 provider 서킷 브레이커).
 
 ## 요약 애그리거트
 
@@ -264,7 +264,7 @@ _Value Object_
 
 LLM provider 호출 실패를 원천/성격과 함께 보존하는 값이다. 이 값 하나로 세 가지 판단이 갈린다: 
 실행 기록에 남길 실패 원인, 키워드 격리 카운트를 올릴 것인가(`keywordBound`),
-provider circuit breaker에 실패로 기록할 것인가(`retryable`). (ADR 021)
+provider 서킷 브레이커에 실패로 기록할 것인가(`retryable`). (ADR 021)
 
 #### 속성(Attributes)
 

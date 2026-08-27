@@ -167,7 +167,7 @@ AI 작업은 provider 실패 하나로 애플리케이션 전체를 중단하지
 - `EMPTY_INPUT`
 - `UNKNOWN`
 
-retry, backoff, circuit breaker, token budget 최적화는 전체 파이프라인 구성 이후 고도화한다.
+retry, backoff, 서킷 브레이커, token budget 최적화는 전체 파이프라인 구성 이후 고도화한다.
 
 ## 결과
 

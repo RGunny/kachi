@@ -6,7 +6,7 @@ package me.rgunny.kachi.ai.domain.llm
  * 이 값 하나로 세 가지 판단이 갈린다.
  * - 실행 기록에 남길 실패 원인
  * - 키워드 격리 카운트를 올릴 것인가([keywordBound])
- * - provider circuit breaker에 실패로 기록할 것인가([fromActualCall]이면서 [retryable])
+ * - provider 서킷 브레이커에 실패로 기록할 것인가([fromActualCall]이면서 [retryable])
  *
  * 자세한 결정 배경은 docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md 를 참고한다.
  */

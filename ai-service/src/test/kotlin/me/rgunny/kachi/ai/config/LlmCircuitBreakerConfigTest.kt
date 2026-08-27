@@ -23,7 +23,7 @@ class LlmCircuitBreakerConfigTest {
     private val config = LlmCircuitBreakerConfig()
 
     @Test
-    @DisplayName("프로퍼티 값이 circuit breaker 설정에 그대로 반영된다")
+    @DisplayName("프로퍼티 값이 서킷 브레이커 설정에 그대로 반영된다")
     fun bindPropertiesToCircuitBreakerConfig() {
         val circuitBreakerConfig = config.circuitBreakerConfig(properties())
 

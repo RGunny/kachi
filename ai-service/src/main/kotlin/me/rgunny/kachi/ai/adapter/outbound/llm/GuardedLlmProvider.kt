@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * provider 하나의 호출 가능 여부를 관리하는 데코레이터.
  *
- * 차단 장치는 둘이다. 연속 실패로 열리는 circuit breaker와, rate limit 응답이 지시한 cooldown이다.
+ * 차단 장치는 둘이다. 연속 실패로 열리는 서킷 브레이커와, rate limit 응답이 지시한 cooldown이다.
  * 하나라도 걸리면 위임 대상을 호출하지 않고 [LlmFailureCode.LLM_PROVIDER_UNAVAILABLE]로 실패한다.
  *
  * 실패 분류는 위임 대상이 끝냈으므로 여기서 다시 하지 않고 [LlmFailure]를 그대로 소비한다.
@@ -131,7 +131,7 @@ class GuardedLlmProvider(
     override fun blockedReason(now: Instant): String = exclusionReason(now) ?: NOT_PERMITTED
 
     /**
-     * 호출을 circuit breaker 집계와 cooldown 판정으로 감싼다.
+     * 호출을 서킷 브레이커 집계와 cooldown 판정으로 감싼다.
      *
      * 취소는 성공도 실패도 아니라서 permission을 돌려주고 집계에서 뺀다. 라이브러리 wrapper는 취소를
      * 성공으로 세고 그 동작에 끼어들 지점이 없어, 상태 전이 API를 직접 호출한다.

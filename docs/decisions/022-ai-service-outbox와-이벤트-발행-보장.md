@@ -92,7 +92,7 @@ MongoDB는 시각을 밀리초로 잘라 저장하고 CAS는 동등 비교이므
 | backoff | 1s x 2^(n-1), 상한 1m, jitter ±20% |
 | Retry-After | 해당 없음 (broker) |
 | retry budget | 두지 않음. batchSize 50 x relay 5s가 상한 |
-| circuit breaker | 두지 않음. broker 장기 장애는 DEAD 운영 큐로 (ADR 015와 같은 입장) |
+| 서킷 브레이커 | 두지 않음. broker 장기 장애는 DEAD 운영 큐로 (ADR 015와 같은 입장) |
 | DEAD 조회·복구 | 운영 internal API. `GET /internal/ai/outboxes`(상태 필터, 기본 DEAD)와 `POST /internal/ai/outboxes/{outboxId}/recover`. 복구는 DEAD 행에만 쓰는 조건부 갱신이라 동시 복구는 하나만 성공한다 |
 | 관측 | 로그(상태 전이 전부). metric은 후속 |
 | 멱등 | 같은 outbox 재발행은 같은 eventKey·같은 payload다. 발행 쪽은 중복을 막지 않고 소비자가 `summaryId` 기준으로 거른다(ADR 025 RoutingJob) — ADR 023 운영 규칙 |
