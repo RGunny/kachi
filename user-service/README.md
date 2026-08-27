@@ -1,20 +1,22 @@
 # user-service
 
-사용자 인증, 사용자 상태, 키워드 구독을 관리하는 서비스다.
+사용자 인증, 사용자 상태, 키워드 구독, 채널 바인딩을 관리하는 서비스다.
 
-`collector-service`는 수집 대상 키워드를 직접 소유하지 않고, `user-service`의 internal API에서 활성 키워드를 조회한다.
+`collector-service`·`ai-service`는 수집 대상 키워드를 직접 소유하지 않고 이 서비스의 internal API에서 활성 키워드를 조회한다.
+notification-service의 routing과 notification-worker는 같은 internal API로 키워드의 수신자와 수신처 주소를 조회한다.
 
 ## 현재 구현 상태
 
-- `User`, `Keyword`(canonical), `Subscription` 도메인 모델
+- `User`, `Keyword`(canonical), `Subscription`, `ChannelBinding` 도메인 모델
 - OAuth2 provider 기반 사용자 식별
 - Google, Kakao, Naver OAuth2 사용자 정보 정규화
 - JWT access token / refresh token 발급
 - Redis 기반 refresh token 저장, 회전, 로그아웃
-- MySQL 기반 사용자/키워드/구독 persistence adapter
+- MySQL 기반 사용자/키워드/구독/채널 바인딩 persistence adapter (바인딩 주소는 AES-256-GCM 암호문)
 - 사용자 등록, 내 정보 조회, 탈퇴 API
 - 내 키워드 구독 등록, 조회, 수정 API
-- collector-service·ai-service용 활성 키워드 internal API
+- 내 채널 바인딩 등록(Slack·Discord webhook, Telegram 연결 링크), 조회, 해지 API
+- 활성 키워드, 키워드 수신자, 수신처 주소, Telegram 연결 internal API
 - Spring Security 기반 JWT 인증 필터
 - Actuator health endpoint
 
@@ -109,6 +111,8 @@ Authorization: Bearer {accessToken}
 
 응답에는 `id`(구독), `keywordId`, `name`(최초 등록 원문), `canonicalKey`, `channels`, `enabled`가 온다.
 같은 사용자가 같은 canonical 키워드를 다시 등록하면 `409 DUPLICATE_SUBSCRIPTION`이다.
+채널마다 그 사용자의 바인딩이 `ACTIVE`여야 한다. 아니면 `409 CHANNEL_BINDING_NOT_ACTIVE`다. 
+먼저 아래 [채널 바인딩]으로 채널을 연결한다.
 
 구독 수정(채널·활성 여부):
 
@@ -126,21 +130,132 @@ Authorization: Bearer {accessToken}
 
 `enabled=false`인 구독은 수집·요약·알림 대상에서 제외된다.
 
+### 채널 바인딩
+
+채널 바인딩은 사용자가 그 채널로 알림을 받을 주소다. 사용자·채널당 하나이며, 재등록·해지·재연결은 같은 행의 상태 전이다.
+주소는 암호화해 저장하고 응답에는 마스킹한 값만 나간다.
+
+| 상태 | 뜻 |
+| --- | --- |
+| `PENDING` | Telegram 연결 링크를 발급했고 chat id가 아직 없다 |
+| `ACTIVE` | 주소가 있고 발송할 수 있다 |
+| `REVOKED` | 사용자가 해지했다. 주소는 지워져 있다 |
+
+내 바인딩 목록:
+
+```http
+GET /api/v1/me/channel-bindings
+Authorization: Bearer {accessToken}
+```
+
+```json
+[{ "channel": "SLACK", "status": "ACTIVE", "addressMasked": "https://hooks.slack.com/****", "boundAt": "…", "revokedAt": null }]
+```
+
+Slack·Discord 연결 — 자기 incoming webhook URL을 등록한다. 즉시 `ACTIVE`가 된다:
+
+```http
+PUT /api/v1/me/channel-bindings/SLACK
+Authorization: Bearer {accessToken}
+```
+
+```json
+{ "webhookUrl": "https://hooks.slack.com/services/…" }
+```
+
+Slack은 `https://hooks.slack.com/`, Discord는 `https://discord.com/api/webhooks/`로 시작해야 한다. 아니면 `400 INVALID_CHANNEL_ADDRESS`다.
+
+Telegram 연결 — 본문 없이 호출하면 연결 링크를 돌려주고 바인딩은 `PENDING`이 된다:
+
+```http
+PUT /api/v1/me/channel-bindings/TELEGRAM
+Authorization: Bearer {accessToken}
+```
+
+```json
+{ "linkUrl": "https://t.me/kachi_local_bot?start=…", "expiresAt": "…" }
+```
+
+사용자가 링크를 열어 봇에 `/start <token>`을 보내면 봇 수신기가 아래 internal API로 chat id를 넘겨 `ACTIVE`가 된다. 링크는 10분 뒤 만료되며 다시 PUT하면 새 링크가 나온다.
+
+해지:
+
+```http
+DELETE /api/v1/me/channel-bindings/{channel}
+Authorization: Bearer {accessToken}
+```
+
+204를 돌려주고 주소를 지운다. 해지해도 그 채널을 쓰는 구독은 그대로이며 수신자 조회에서만 빠진다. 다시 연결하면 구독이 그대로 살아난다.
+
 ### Internal
 
-활성 키워드 조회:
+internal API는 `/api/v1/internal/**`이며 인증 없이 열려 있다. 같은 호스트의 서비스끼리만 호출한다는 전제이고,
+외부 ingress를 붙이는 시점이 공유 토큰 인증을 넣는 조건이다(ADR 026).
+응답은 모두 `{ "success", "data", "error" }`로 감싼다.
+
+활성 키워드 조회 — collector-service·ai-service가 호출한다:
 
 ```http
 GET /api/v1/internal/keywords/active
 ```
 
 ```json
-[{ "keywordId": "…", "canonicalKey": "space-x", "displayName": "SPACE-X", "name": "space-x" }]
+{
+  "success": true,
+  "data": [{ "keywordId": "…", "canonicalKey": "space-x", "displayName": "SPACE-X", "name": "space-x" }],
+  "error": null
+}
 ```
 
 enabled 구독이 하나 이상인 canonical 키워드를 `canonicalKey` 순으로 돌려준다. `name`은 `canonicalKey`와 같은 값이다 —
-collector-service·ai-service는 `name`만 읽고 그 문자열로 수집·요약·라우팅을 이어가므로 정규화는 이 서비스 한 곳에서만 한다.
-현재는 서비스 간 인증을 붙이지 않았고, public 사용자 API와 구분하기 위해 `/internal` 경로로 분리한다.
+소비자는 `name`만 읽고 그 문자열로 수집·요약·라우팅을 이어가므로 정규화는 이 서비스 한 곳에서만 한다.
+
+키워드 수신자 조회 — notification-service routing이 요약 이벤트의 키워드로 호출한다:
+
+```http
+GET /api/v1/internal/subscriptions?keyword=space-x
+```
+
+```json
+{
+  "success": true,
+  "data": [{ "userId": "…", "channel": "SLACK", "recipientRef": "…" }],
+  "error": null
+}
+```
+
+`keyword`는 다시 정규화해 찾으므로 활성 키워드 API의 `name`을 그대로 보내면 되고 원문이 와도 같은 결과다.
+enabled 구독의 채널 중 바인딩이 `ACTIVE`인 것만 `userId`, `channel` 순으로 돌려주고, 없는 키워드는 빈 배열이다.
+`recipientRef`는 바인딩 id이며 주소는 싣지 않는다.
+
+수신처 주소 조회 — notification-worker가 발송 직전에 호출한다:
+
+```http
+GET /api/v1/internal/channel-bindings/{recipientRef}
+```
+
+```json
+{
+  "success": true,
+  "data": { "channel": "SLACK", "status": "ACTIVE", "address": "https://hooks.slack.com/services/…" },
+  "error": null
+}
+```
+
+`ACTIVE`면 복호화한 평문 주소가 오고, `PENDING`·`REVOKED`면 `address`가 `null`이다(worker는 그 알림을 SUPPRESSED로 끝낸다).
+없는 ref는 `404 CHANNEL_BINDING_NOT_FOUND`, UUID 형식이 아니면 400이다.
+
+Telegram 연결 완료 — 봇 수신기가 `/start <token>`을 받았을 때 호출한다:
+
+```http
+POST /api/v1/internal/channel-bindings/telegram/link
+```
+
+```json
+{ "token": "…", "chatId": "123456789" }
+```
+
+204를 돌려주고 바인딩이 `ACTIVE`가 된다. 토큰이 없거나 만료됐으면 `400 LINK_TOKEN_INVALID`다.
 
 ## OAuth2 로그인
 
@@ -183,12 +298,23 @@ MySQL:
 - `users`
 - `keywords` (canonical)
 - `subscriptions`, `subscription_channels`
+- `channel_bindings` (주소는 AES-256-GCM 암호문, `key_version`으로 키 교체 대비)
 
 Redis:
 
 - `refresh_token:{userId}:{jti}`
 
 Schema 변경은 Flyway migration으로 관리하고, JPA `ddl-auto`는 `validate`로 둔다.
+
+## 설정
+
+| 키 | 환경변수 | 뜻 |
+| --- | --- | --- |
+| `kachi.user.binding.encryption-key` | `KACHI_USER_BINDING_KEY` | 바인딩 주소 암호화 키. base64로 표기한 32바이트 |
+| `kachi.user.binding.link-token-ttl` | - | Telegram 연결 링크 만료. 기본 `10m` |
+| `kachi.user.telegram.bot-username` | `KACHI_USER_TELEGRAM_BOT_USERNAME` | 연결 링크 `https://t.me/{bot}?start=`의 봇 계정명 |
+
+로컬 값은 `.env.example`에 있다. 암호화 키는 운영 비밀이며 바꾸면 기존 암호문을 복호화할 수 없다.
 
 ## 실행
 
@@ -232,3 +358,5 @@ curl "http://localhost:8080/actuator/health"
 - [JWT Access/Refresh Token 정책](../docs/decisions/004-jwt-access-refresh-token-정책.md)
 - [user-service에 Keyword 포함](../docs/decisions/001-user-service에-keyword-포함.md)
 - [user-service 운영 기본 설정](../docs/decisions/007-user-service-운영성-기본설정.md)
+- [키워드 구독과 알림 라우팅](../docs/decisions/025-키워드-구독과-알림-라우팅.md)
+- [키워드 identity와 구독, 채널 바인딩](../docs/decisions/026-키워드-identity와-구독-채널-바인딩.md)
