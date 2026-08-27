@@ -13,6 +13,7 @@ data class NotificationServiceProperties(
     data class Request(
         val topic: String,
         val groupId: String,
+        val autoOffsetReset: String,
         val dedupeTtl: Duration,
         val dlt: Dlt,
         val retry: Retry,

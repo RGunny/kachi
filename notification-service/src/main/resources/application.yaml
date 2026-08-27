@@ -32,6 +32,7 @@ kachi:
     request:
       topic: notification.requested
       group-id: notification-service
+      auto-offset-reset: earliest
       dedupe-ttl: PT24H
       dlt:
         topic: notification.requested.dlt
