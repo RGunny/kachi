@@ -19,6 +19,7 @@ import org.springframework.data.mongodb.core.query.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("NotificationMongoAdminPersistenceAdapter 통합 테스트")
 class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -125,6 +126,7 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = "hello",
+            origin = NotificationOrigin.NONE,
             now = NOW,
         )
     }

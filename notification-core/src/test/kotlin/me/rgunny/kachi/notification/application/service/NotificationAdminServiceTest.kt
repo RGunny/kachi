@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("NotificationAdminService")
 class NotificationAdminServiceTest {
@@ -145,6 +146,7 @@ class NotificationAdminServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = NOW,
         )
     }

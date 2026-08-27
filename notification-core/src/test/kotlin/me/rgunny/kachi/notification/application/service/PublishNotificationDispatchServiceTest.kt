@@ -24,6 +24,7 @@ import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("PublishNotificationDispatchService")
 class PublishNotificationDispatchServiceTest {
@@ -215,6 +216,7 @@ class PublishNotificationDispatchServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = RECIPIENT,
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
         )
     }

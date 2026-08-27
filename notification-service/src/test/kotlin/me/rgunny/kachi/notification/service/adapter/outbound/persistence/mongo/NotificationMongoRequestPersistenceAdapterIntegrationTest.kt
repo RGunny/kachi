@@ -18,6 +18,7 @@ import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("NotificationMongoRequestPersistenceAdapter 통합 테스트")
 class NotificationMongoRequestPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -94,6 +95,7 @@ class NotificationMongoRequestPersistenceAdapterIntegrationTest : PersistenceAda
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = "hello",
+            origin = NotificationOrigin.NONE,
             now = requestedAt,
         )
     }

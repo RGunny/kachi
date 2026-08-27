@@ -10,6 +10,7 @@ package me.rgunny.kachi.notification.domain
  *
  * 발송 처리 측 (worker) 흐름:
  *   PUBLISHED ─▶ PROCESSING ─▶ SENT
+ *                          ├─▶ SUPPRESSED (수신처 해지, 발송하지 않고 종료)
  *                          └─▶ FAILED ─┬─ 재시도 가능 → RETRY_WAIT ─▶ PROCESSING ...
  *                                      └─ 한도 도달   → DEAD ─▶ DLT 토픽 진입 (운영자 수동 재처리 큐)
  *
@@ -23,5 +24,6 @@ enum class NotificationStatus {
     RETRY_WAIT,     // Kafka 다음 attempt backoff 대기. 직전 단계는 FAILED
     SENT,           // 외부 채널 발송 성공
     FAILED,         // 외부 채널 발송 실패. 다음은 RETRY_WAIT 또는 DEAD
+    SUPPRESSED,     // 수신처가 유효하지 않아 발송하지 않고 종료. terminal
     DEAD            // 자동 재시도 종료. 운영자 수동 재처리만 가능 (DLT 토픽 진입과 함께)
 }

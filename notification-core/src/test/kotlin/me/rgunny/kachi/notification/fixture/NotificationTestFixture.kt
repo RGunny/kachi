@@ -1,5 +1,6 @@
 package me.rgunny.kachi.notification.fixture
 
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -16,4 +17,5 @@ object NotificationTestFixture {
     const val RECIPIENT = "recipient-1"
     const val MESSAGE = "hello"
     const val DISPATCH_TOPIC = "notification.dispatch"
+    val ORIGIN = NotificationOrigin(summaryId = "summary-1", keyword = "tesla", userId = "user-1")
 }

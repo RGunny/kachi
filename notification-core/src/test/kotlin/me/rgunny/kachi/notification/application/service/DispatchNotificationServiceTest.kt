@@ -33,6 +33,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("DispatchNotificationService")
 class DispatchNotificationServiceTest {
@@ -322,6 +323,7 @@ class DispatchNotificationServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = RECIPIENT,
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
         )
     }
