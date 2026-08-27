@@ -22,11 +22,32 @@ class WebMvcFakeUseCaseConfig {
     fun logoutUseCase(): FakeLogoutUseCase = FakeLogoutUseCase()
 
     @Bean
-    fun registerKeywordUseCase(): FakeRegisterKeywordUseCase = FakeRegisterKeywordUseCase()
+    fun registerSubscriptionUseCase(): FakeRegisterSubscriptionUseCase = FakeRegisterSubscriptionUseCase()
 
     @Bean
-    fun updateKeywordUseCase(): FakeUpdateKeywordUseCase = FakeUpdateKeywordUseCase()
+    fun updateSubscriptionUseCase(): FakeUpdateSubscriptionUseCase = FakeUpdateSubscriptionUseCase()
 
     @Bean
-    fun listKeywordsUseCase(): FakeListKeywordsUseCase = FakeListKeywordsUseCase()
+    fun listSubscriptionsUseCase(): FakeListSubscriptionsUseCase = FakeListSubscriptionsUseCase()
+
+    @Bean
+    fun registerWebhookBindingUseCase(): FakeRegisterWebhookBindingUseCase = FakeRegisterWebhookBindingUseCase()
+
+    @Bean
+    fun issueTelegramLinkUseCase(): FakeIssueTelegramLinkUseCase = FakeIssueTelegramLinkUseCase()
+
+    @Bean
+    fun completeTelegramLinkUseCase(): FakeCompleteTelegramLinkUseCase = FakeCompleteTelegramLinkUseCase()
+
+    @Bean
+    fun revokeChannelBindingUseCase(): FakeRevokeChannelBindingUseCase = FakeRevokeChannelBindingUseCase()
+
+    @Bean
+    fun listChannelBindingsUseCase(): FakeListChannelBindingsUseCase = FakeListChannelBindingsUseCase()
+
+    @Bean
+    fun findSubscribersUseCase(): FakeFindSubscribersUseCase = FakeFindSubscribersUseCase()
+
+    @Bean
+    fun resolveChannelBindingUseCase(): FakeResolveChannelBindingUseCase = FakeResolveChannelBindingUseCase()
 }

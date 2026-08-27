@@ -49,6 +49,7 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
 
     // TestContainers (Spring Boot 관리 버전)
     testImplementation("org.springframework.boot:spring-boot-testcontainers")

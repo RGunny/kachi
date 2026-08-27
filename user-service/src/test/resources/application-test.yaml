@@ -3,6 +3,11 @@ kachi:
     secret: dGVzdC1qd3Qtc2VjcmV0LXRlc3Qtand0LXNlY3JldC10ZXN0LWp3dC1zZWNyZXQ=
   oauth2:
     success-redirect-uri: http://localhost:5173/oauth2/callback
+  user:
+    binding:
+      encryption-key: dGVzdC1iaW5kaW5nLWtleS10ZXN0LWJpbmRpbmctMzI=
+    telegram:
+      bot-username: kachi_test_bot
 
 spring:
   jpa:

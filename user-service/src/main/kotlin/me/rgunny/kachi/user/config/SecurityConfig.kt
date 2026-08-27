@@ -49,7 +49,8 @@ class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_AUTH_TOKEN_REFRESH).permitAll()
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_AUTH_LOGOUT).permitAll()
                     .requestMatchers(HttpMethod.POST, ApiPaths.V1_USERS).permitAll()
-                    .requestMatchers(HttpMethod.GET, ApiPaths.V1_INTERNAL_ACTIVE_KEYWORDS).permitAll()
+                    // internal API는 같은 호스트의 서비스끼리만 호출하므로 인증 없이 연다 (ADR 026).
+                    .requestMatchers(ApiPaths.V1_INTERNAL_ANY).permitAll()
                     // 그 외 API는 access token 인증을 요구한다.
                     .anyRequest().authenticated()
             }

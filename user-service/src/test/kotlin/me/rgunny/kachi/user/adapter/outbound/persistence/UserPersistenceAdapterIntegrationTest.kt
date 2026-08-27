@@ -1,6 +1,5 @@
 package me.rgunny.kachi.user.adapter.outbound.persistence
 
-import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceException
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
@@ -21,9 +20,6 @@ import kotlin.test.assertTrue
 class UserPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
     @Autowired
     private lateinit var userPersistenceAdapter: UserPersistenceAdapter
-
-    @Autowired
-    private lateinit var entityManager: EntityManager
 
     private val registeredAt = UserTestFixture.NOW
 
@@ -126,10 +122,5 @@ class UserPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
             providerUserId = ProviderUserId.of(providerUserId),
             registeredAt = registeredAt
         )
-    }
-
-    private fun flushAndClear() {
-        entityManager.flush()
-        entityManager.clear()
     }
 }

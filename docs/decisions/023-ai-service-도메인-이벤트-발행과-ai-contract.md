@@ -83,7 +83,7 @@ timeout 세 개는 relay의 `publishingVisibilityTimeout`(60s)에서 역산한 �
   - `delivery.timeout.ms`보다 작아야 client가 한 번은 재시도한다.
 
 한 행의 발행이 걸릴 수 있는 최대 시간은 `max.block.ms + delivery.timeout.ms` = 15s이고, 60s보다 작으므로 발행 중에 stale로 회수되는 일은 없다.
-ADR 022 후속에 적어 둔 "`visibilityTimeout > batchSize × publish timeout`" 검토는 이 조건으로 대신한다. 
+ADR 022 후속에 적어 둔 "`visibilityTimeout > batchSize x publish timeout`" 검토는 이 조건으로 대신한다. 
 relay는 행마다 claim 직전에 소유권을 잡고 발행이 끝나면 확정하므로, visibilityTimeout이 재는 것은 행 하나의 발행 시간이다.
 
 어댑터 자체의 timeout은 두지 않는다. 

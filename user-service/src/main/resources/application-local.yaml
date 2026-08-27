@@ -3,6 +3,11 @@ kachi:
     secret: ${KACHI_JWT_SECRET}
   oauth2:
     success-redirect-uri: http://localhost:5173/oauth2/callback
+  user:
+    binding:
+      encryption-key: ${KACHI_USER_BINDING_KEY}
+    telegram:
+      bot-username: ${KACHI_USER_TELEGRAM_BOT_USERNAME}
 
 spring:
   data:

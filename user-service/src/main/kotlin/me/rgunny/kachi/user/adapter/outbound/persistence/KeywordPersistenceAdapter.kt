@@ -1,12 +1,14 @@
 package me.rgunny.kachi.user.adapter.outbound.persistence
 
 import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
+import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
-import me.rgunny.kachi.user.domain.KeywordName
-import me.rgunny.kachi.user.domain.UserId
 import org.springframework.stereotype.Repository
 
+/**
+ * canonical 키워드 저장소. 도메인과 JPA 엔티티 사이 변환만 담당한다.
+ */
 @Repository
 class KeywordPersistenceAdapter(
     private val keywordJpaRepository: KeywordJpaRepository
@@ -18,21 +20,22 @@ class KeywordPersistenceAdapter(
             .orElse(null)
     }
 
-    override fun findAllByUserId(userId: UserId): List<Keyword> {
-        return keywordJpaRepository.findAllByUserId(userId.value)
+    override fun findAllByIds(keywordIds: Set<KeywordId>): List<Keyword> {
+        if (keywordIds.isEmpty()) {
+            return emptyList()
+        }
+
+        return keywordJpaRepository.findAllById(keywordIds.map { it.value })
             .map { it.toDomain() }
     }
 
-    override fun findAllEnabled(): List<Keyword> {
-        return keywordJpaRepository.findAllByEnabledTrue()
-            .map { it.toDomain() }
+    override fun findByCanonicalKey(canonicalKey: CanonicalKey): Keyword? {
+        return keywordJpaRepository.findByCanonicalKey(canonicalKey.value)?.toDomain()
     }
 
-    override fun existsByUserIdAndName(userId: UserId, name: KeywordName): Boolean {
-        return keywordJpaRepository.existsByUserIdAndName(
-            userId = userId.value,
-            name = name.value
-        )
+    override fun findAllWithEnabledSubscription(): List<Keyword> {
+        return keywordJpaRepository.findAllWithEnabledSubscription()
+            .map { it.toDomain() }
     }
 
     override fun save(keyword: Keyword): Keyword {

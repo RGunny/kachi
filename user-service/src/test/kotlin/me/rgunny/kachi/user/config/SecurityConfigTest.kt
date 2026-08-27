@@ -1,12 +1,15 @@
 package me.rgunny.kachi.user.config
 
 import me.rgunny.kachi.user.adapter.inbound.web.AuthController
-import me.rgunny.kachi.user.adapter.inbound.web.KeywordController
+import me.rgunny.kachi.user.adapter.inbound.web.ChannelBindingController
+import me.rgunny.kachi.user.adapter.inbound.web.InternalChannelBindingController
+import me.rgunny.kachi.user.adapter.inbound.web.InternalSubscriptionController
+import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeOAuth2Config
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.inbound.web.security.JwtTokenProvider
-import me.rgunny.kachi.user.domain.KeywordId
+import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.domain.UserRole
 import org.junit.jupiter.api.DisplayName
@@ -28,10 +31,21 @@ import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
 import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 import java.time.Clock
 import java.time.Duration
+import java.util.UUID
 
-@WebMvcTest(controllers = [AuthController::class, UserController::class, KeywordController::class])
+@WebMvcTest(
+    controllers = [
+        AuthController::class,
+        UserController::class,
+        SubscriptionController::class,
+        ChannelBindingController::class,
+        InternalChannelBindingController::class,
+        InternalSubscriptionController::class
+    ]
+)
 @AutoConfigureMockMvc
 @ImportAutoConfiguration(
     SecurityAutoConfiguration::class,
@@ -83,6 +97,38 @@ class SecurityConfigTest @Autowired constructor(
             mockMvc.post("/api/v1/auth/logout") {
                 contentType = MediaType.APPLICATION_JSON
                 content = refreshTokenBody()
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("Telegram 연결 internal API는 인증 없이 접근할 수 있다")
+        fun permitTelegramLinkInternalApi() {
+            mockMvc.post("/api/v1/internal/channel-bindings/telegram/link") {
+                contentType = MediaType.APPLICATION_JSON
+                content = telegramLinkBody()
+            }.andExpect {
+                status { isNoContent() }
+            }
+        }
+
+        @Test
+        @DisplayName("구독 조회 internal API는 인증 없이 접근할 수 있다")
+        fun permitSubscriptionsInternalApi() {
+            mockMvc.get("/api/v1/internal/subscriptions") {
+                param("keyword", "tesla")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 조회 internal API는 인증 없이 접근할 수 있다")
+        fun permitChannelBindingInternalApi() {
+            mockMvc.get("/api/v1/internal/channel-bindings/${UUID.randomUUID()}") {
+                accept = MediaType.APPLICATION_JSON
             }.andExpect {
                 status { isOk() }
             }
@@ -157,7 +203,7 @@ class SecurityConfigTest @Autowired constructor(
         fun requireAuthenticationForRegisterMyKeywordApi() {
             mockMvc.post("/api/v1/me/keywords") {
                 contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody()
+                content = registerSubscriptionBody()
             }.andExpect {
                 status { isForbidden() }
             }
@@ -171,7 +217,7 @@ class SecurityConfigTest @Autowired constructor(
             mockMvc.post("/api/v1/me/keywords") {
                 header("Authorization", "Bearer ${token.value}")
                 contentType = MediaType.APPLICATION_JSON
-                content = registerKeywordBody()
+                content = registerSubscriptionBody()
             }.andExpect {
                 status { isCreated() }
             }
@@ -203,9 +249,9 @@ class SecurityConfigTest @Autowired constructor(
         @Test
         @DisplayName("관심 키워드 수정 API는 인증을 요구한다")
         fun requireAuthenticationForUpdateKeywordApi() {
-            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+            mockMvc.patch("/api/v1/me/keywords/${SubscriptionId.newId().value}") {
                 contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody()
+                content = updateSubscriptionBody()
             }.andExpect {
                 status { isForbidden() }
             }
@@ -216,19 +262,74 @@ class SecurityConfigTest @Autowired constructor(
         fun permitUpdateKeywordApiWithAccessToken() {
             val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
 
-            mockMvc.patch("/api/v1/keywords/${KeywordId.newId().value}") {
+            mockMvc.patch("/api/v1/me/keywords/${SubscriptionId.newId().value}") {
                 header("Authorization", "Bearer ${token.value}")
                 contentType = MediaType.APPLICATION_JSON
-                content = updateKeywordBody()
+                content = updateSubscriptionBody()
             }.andExpect {
                 status { isOk() }
             }
         }
 
         @Test
+        @DisplayName("채널 바인딩 목록 API는 인증을 요구한다")
+        fun requireAuthenticationForListChannelBindingsApi() {
+            mockMvc.get("/api/v1/me/channel-bindings") {
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 등록 API는 인증을 요구한다")
+        fun requireAuthenticationForBindChannelApi() {
+            mockMvc.put("/api/v1/me/channel-bindings/SLACK") {
+                contentType = MediaType.APPLICATION_JSON
+                content = webhookBindingBody()
+            }.andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 등록 API는 access token으로 접근할 수 있다")
+        fun permitBindChannelApiWithAccessToken() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.put("/api/v1/me/channel-bindings/SLACK") {
+                header("Authorization", "Bearer ${token.value}")
+                contentType = MediaType.APPLICATION_JSON
+                content = webhookBindingBody()
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("Telegram 바인딩은 본문 없이 access token으로 접근할 수 있다")
+        fun permitTelegramBindWithoutBody() {
+            val token = jwtTokenProvider.createAccessToken(UserId.newId(), UserRole.USER)
+
+            mockMvc.put("/api/v1/me/channel-bindings/TELEGRAM") {
+                header("Authorization", "Bearer ${token.value}")
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
+        @DisplayName("채널 바인딩 해지 API는 인증을 요구한다")
+        fun requireAuthenticationForRevokeChannelBindingApi() {
+            mockMvc.delete("/api/v1/me/channel-bindings/SLACK").andExpect {
+                status { isForbidden() }
+            }
+        }
+
+        @Test
         @DisplayName("허용하지 않은 API는 인증을 요구한다")
         fun requireAuthenticationForOtherApis() {
-            mockMvc.get("/api/v1/internal") {
+            mockMvc.get("/api/v1/unknown") {
                 accept = MediaType.APPLICATION_JSON
             }.andExpect {
                 status { isForbidden() }
@@ -246,19 +347,36 @@ class SecurityConfigTest @Autowired constructor(
         """.trimIndent()
     }
 
-    private fun registerKeywordBody(): String {
+    private fun registerSubscriptionBody(): String {
         return """
             {
-              "name": "Trump"
+              "name": "Trump",
+              "channels": ["SLACK"]
             }
         """.trimIndent()
     }
 
-    private fun updateKeywordBody(): String {
+    private fun updateSubscriptionBody(): String {
         return """
             {
-              "name": "Trump",
               "enabled": true
+            }
+        """.trimIndent()
+    }
+
+    private fun webhookBindingBody(): String {
+        return """
+            {
+              "webhookUrl": "https://hooks.slack.com/services/T000/B000/XXXX"
+            }
+        """.trimIndent()
+    }
+
+    private fun telegramLinkBody(): String {
+        return """
+            {
+              "token": "token",
+              "chatId": "123456789"
             }
         """.trimIndent()
     }

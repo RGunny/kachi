@@ -89,9 +89,9 @@ MongoDB는 시각을 밀리초로 잘라 저장하고 CAS는 동등 비교이므
 | retryable | broker 일시 장애, timeout, network (ADR 023의 매핑표). 분류되지 않은 예외도 retryable |
 | 즉시 give up | payload 직렬화·크기·토픽 계약 오류 → `AiOutboxPublishException(retryable=false)` → DEAD |
 | 최대 자동 재시도 | 5회 (실패 5회 누적 시 DEAD) |
-| backoff | 1s × 2^(n-1), 상한 1m, jitter ±20% |
+| backoff | 1s x 2^(n-1), 상한 1m, jitter ±20% |
 | Retry-After | 해당 없음 (broker) |
-| retry budget | 두지 않음. batchSize 50 × relay 5s가 상한 |
+| retry budget | 두지 않음. batchSize 50 x relay 5s가 상한 |
 | circuit breaker | 두지 않음. broker 장기 장애는 DEAD 운영 큐로 (ADR 015와 같은 입장) |
 | DEAD 조회·복구 | 운영 internal API. `GET /internal/ai/outboxes`(상태 필터, 기본 DEAD)와 `POST /internal/ai/outboxes/{outboxId}/recover`. 복구는 DEAD 행에만 쓰는 조건부 갱신이라 동시 복구는 하나만 성공한다 |
 | 관측 | 로그(상태 전이 전부). metric은 후속 |
@@ -122,7 +122,7 @@ polling relay scheduler가 기본이자 복구 경로다.
   상태 전이 규칙은 개념이 같아도 도메인 모델은 각자 갖는다. 재시도 정책은 `exhausted`·`backoff` 두 함수라 복제 비용이
   거의 없다.
 - **채널당 outbox 1행**: 3채널이 같은 topic·broker라 행을 나눠도 실패가 격리되지 않고, ai 도메인이 알림 채널을
-  알게 된다. fan-out의 부분 실패는 `requestId` 멱등으로 충분하다. DEAD를 24h 뒤 복구할 때의 하류 DLT 노이즈는
+  알게 된다. fan-out의 부분 실패는 `requestId` 멱등으로 충분하다. DEAD를 24h 뒤 복구할 때의 뒷단 DLT 노이즈는
   채널당 1행이어도 같은 행을 복구하면 생기므로 이 안이 푸는 문제가 아니다.
 - **relay를 켜 두고 임시 publisher**: 로그만 남기면 PUBLISHED로 유실, 예외를 던지면 전량 DEAD. outbox의 존재 이유를 깬다.
 - **immediate publish(저장 직후 발행)**: latency 요구가 없다. ADR 015처럼 polling을 기본으로 둔다.
@@ -133,12 +133,12 @@ polling relay scheduler가 기본이자 복구 경로다.
 장점: Mongo 저장과 Kafka 발행 사이 유실이 없다. 발행 실패와 LLM 실패가 다른 상태로 추적된다. 
 늦은 결과가 상태를 덮어쓰지 못한다.
 
-단점: replica set 전제, collection과 scheduler 1개씩 추가, DEAD 운영 API 필요, at-least-once라 하류 멱등 필수.
+단점: replica set 전제, collection과 scheduler 1개씩 추가, DEAD 운영 API 필요, at-least-once라 뒷단 멱등 필수.
 
 ## 후속
 
 - PUBLISHED 행 보존 기간·정리(TTL index)
 - backlog size/age metric
-- ~~visibilityTimeout과 batchSize × publish timeout 관계 재검토~~ — ADR 023에서 정리했다. visibilityTimeout이 재는 것은 행 하나의 발행 시간이라 batch 크기는 들어오지 않고, `max.block.ms + delivery.timeout.ms`(15s) < 60s로 확정했다.
+- ~~visibilityTimeout과 batchSize x publish timeout 관계 재검토~~ — ADR 023에서 정리했다. visibilityTimeout이 재는 것은 행 하나의 발행 시간이라 batch 크기는 들어오지 않고, `max.block.ms + delivery.timeout.ms`(15s) < 60s로 확정했다.
 - 스케줄러 tick 분산 lock
 - 격리 전이 저장 실패로 중단된 실행의 `AiRun`이 RUNNING으로 남는다. 실행 기록을 실패로 닫을지 정한다

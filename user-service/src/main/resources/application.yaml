@@ -26,3 +26,6 @@ kachi:
   jwt:
     access-token-ttl: 15m
     refresh-token-ttl: 14d
+  user:
+    binding:
+      link-token-ttl: 10m
