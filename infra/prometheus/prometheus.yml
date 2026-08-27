@@ -23,3 +23,10 @@ scrape_configs:
       - targets: ["host.docker.internal:8085"]
         labels:
           application: notification-worker
+
+  - job_name: notification-routing
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8086"]
+        labels:
+          application: notification-routing

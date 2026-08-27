@@ -77,8 +77,8 @@ user-service
 | --- | --- | --- |
 | `user-service` | 사용자, canonical 키워드·구독, 채널 바인딩(암호화 주소, Telegram 연결 링크), 활성 키워드·구독·바인딩 internal API, OAuth2/JWT, refresh token, MySQL/Redis 저장소 구현 | [user-service README](./user-service/README.md) |
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
-| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동과 circuit breaker/failover, LLM 실패 분류와 키워드 격리, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox·LLM provider 운영 internal API | [ai-service README](./ai-service/README.md) |
-| `notification-service` | notification-core/service/worker/contract 모듈 구성, 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
+| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동과 서킷 브레이커/failover, LLM 실패 분류와 키워드 격리, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox·LLM provider 운영 internal API | [ai-service README](./ai-service/README.md) |
+| `notification-service` | notification-routing/core/service/worker/contract 모듈 구성, `ai.summary.created`·`ai.keyword.quarantined` 소비와 구독자 x 채널 fan-out(`notification.requested` 발행, RoutingJob 멱등), 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
 | `history-service` | 미구현 | - |
 
 ---
@@ -101,7 +101,7 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.mysql.yml -f 
 `docker compose -p kachi ps`로 전체 상태를 한 번에 확인하고, 조합한 파일에 `down`을 주면 함께 정리된다.
 
 Grafana는 `http://localhost:3000`, Prometheus는 `http://localhost:9094`에서 확인한다.
-notification metric은 `notification-service`와 `notification-worker`의 `/actuator/prometheus`를 Prometheus가 scrape한다.
+notification metric은 `notification-routing`, `notification-service`, `notification-worker`의 `/actuator/prometheus`를 Prometheus가 scrape한다.
 
 로컬 환경변수는 `.env.example`을 기준으로 `.env.local`에 둔다.
 실행 전에 shell에 로드하면 각 서비스가 같은 값을 사용한다.
@@ -112,12 +112,53 @@ source .env.local
 set +a
 ```
 
+애플리케이션을 백그라운드에서 실행할 때는 루트의 실행 스크립트를 사용한다.
+스크립트는 `.env.example`을 로컬 기본값으로 읽은 뒤 `.env.local` 값으로 덮어쓰고,
+실행 JAR 빌드, PID·로그 기록, health check를 처리한다.
+
+```sh
+./scripts/infra.sh core start
+
+./scripts/app.sh user-service start
+./scripts/app.sh user-service status
+./scripts/app.sh user-service logs
+./scripts/app.sh user-service stop
+```
+
+전체 애플리케이션도 한 번에 관리할 수 있다.
+
+```sh
+./scripts/app.sh all start
+./scripts/app.sh all status
+./scripts/app.sh all stop
+```
+
+인프라는 컴포넌트 하나 또는 애플리케이션별 그룹으로 관리한다.
+
+```sh
+./scripts/infra.sh list
+./scripts/infra.sh mysql start
+./scripts/infra.sh user start
+./scripts/infra.sh notification status
+./scripts/infra.sh all start
+./scripts/infra.sh all stop
+```
+
+`user`는 MySQL·Redis, `collector`는 MongoDB, `ai`는 MongoDB·Kafka,
+`notification`은 MongoDB·Redis·Kafka를 선택한다. `core`는 네 가지 공통 인프라,
+`all`은 core에 Prometheus·Grafana까지 포함한다. 여러 애플리케이션이 같은 인프라를
+공유하므로 그룹 `stop`은 해당 그룹에 속한 다른 애플리케이션에도 영향을 줄 수 있다.
+
+PID는 `.run/`, 로그는 `logs/`에 저장되며 두 디렉터리는 Git에서 제외된다.
+`stop`은 Spring의 graceful shutdown을 위해 `SIGTERM`을 보내고 최대 30초 기다린다.
+
 테스트:
 
 ```sh
 ./gradlew :user-service:test
 ./gradlew :collector-service:test
 ./gradlew :notification-core:test
+./gradlew :notification-routing:test
 ./gradlew :notification-service:test
 ./gradlew :notification-worker:test
 ```
@@ -155,10 +196,10 @@ set +a
 | [015. notification outbox 발행 보장과 recovery 정책](./docs/decisions/015-notification-outbox-publish-runtime.md) | outbox publish claim, stale PUBLISHING 회수, DEAD 복구 정책 |
 | [016. notification-worker vendor sender 구조와 설정 구성](./docs/decisions/016-notification-worker-vendor-sender-구조.md) | Slack/Discord/Telegram sender 구조와 non-secret/secret 설정 분리 |
 | [017. MongoDB replica set 전환과 트랜잭션 전제](./docs/decisions/017-mongodb-replica-set-전환과-트랜잭션-전제.md) | MongoDB multi-document transaction을 위한 로컬 replica set 전환과 transaction boundary 원칙 |
-| [018. 재시도 폭주 방지와 복구 트래픽 제어](./docs/decisions/018-재시도-폭주-방지와-복구-트래픽-제어.md) | retry storm, retry budget, circuit breaker, slow start, bulkhead 공통 설계 원칙 |
+| [018. 재시도 폭주 방지와 복구 트래픽 제어](./docs/decisions/018-재시도-폭주-방지와-복구-트래픽-제어.md) | retry storm, retry budget, 서킷 브레이커, slow start, bulkhead 공통 설계 원칙 |
 | [019. notification 운영 모니터링 및 관측성 설계](./docs/decisions/019-notification-운영-모니터링-및-observability-설계.md) | notification metric contract, Prometheus/Grafana, 후속 trace/log 설계 |
 | [020. ai-service scheduler 실행 모델과 요약 window](./docs/decisions/020-ai-service-scheduler-실행-모델과-요약-window.md) | scheduler/internal API 실행 모델, 중복 실행 방지, watermark 기반 요약 window, 실패 키워드 격리와 해제 |
-| [021. ai-service LLM 실패 분류와 provider circuit breaker](./docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md) | LLM 실패 모델, 격리 카운트 규칙, provider circuit breaker와 failover |
+| [021. ai-service LLM 실패 분류와 provider 서킷 브레이커](./docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md) | LLM 실패 모델, 격리 카운트 규칙, provider 서킷 브레이커와 failover |
 | [022. ai-service outbox와 이벤트 발행 보장](./docs/decisions/022-ai-service-outbox와-이벤트-발행-보장.md) | 요약/격리 이벤트 outbox, claim/finalize CAS, publish 실패 분류와 재시도 |
 | [023. ai-service 도메인 이벤트 발행과 ai-contract](./docs/decisions/023-ai-service-도메인-이벤트-발행과-ai-contract.md) | `ai.*` topic과 계약 모듈, Kafka 발행 실패 분류, producer timeout, relay와 발행 어댑터 스위치 분리 |
 | [024. 상태 전이 aggregate 불변화와 finalize CAS](./docs/decisions/024-상태-전이-aggregate-불변화와-finalize-cas.md) | notification aggregate 불변 전환, outbox finalize의 claim CAS, ai-service와 남기는 차이 |
