@@ -353,6 +353,9 @@ class TokenServiceTest {
             return false
         }
 
+        override fun findAllByRole(role: UserRole): List<User> = emptyList()
+
+
         override fun save(user: User): User {
             savedUser = user
 

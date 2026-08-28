@@ -34,16 +34,15 @@ class SubscriberQueryService(
         val activeBindings = channelBindingPersistencePort
             .findAllByUserIds(subscriptions.map { it.userId }.toSet())
             .filter { it.isActive }
-            .associateBy { it.userId to it.channel }
+            .map { it.userId to it.channel }
+            .toSet()
 
         // 3. 구독 x 채널을 펼치되 ACTIVE 바인딩이 있는 채널만 남긴다.
         return subscriptions
             .flatMap { subscription ->
-                subscription.channels.mapNotNull { channel ->
-                    activeBindings[subscription.userId to channel]?.let { binding ->
-                        SubscriberResult(userId = subscription.userId, channel = channel, recipientRef = binding.id)
-                    }
-                }
+                subscription.channels
+                    .filter { channel -> (subscription.userId to channel) in activeBindings }
+                    .map { channel -> SubscriberResult(userId = subscription.userId, channel = channel) }
             }
             .sortedWith(compareBy({ it.userId.value }, { it.channel }))
     }

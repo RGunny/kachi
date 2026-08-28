@@ -5,6 +5,7 @@ import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
 
 /** 사용자 저장소 접근을 application 계층에 제공하는 출력 포트 */
 interface UserPersistencePort {
@@ -14,6 +15,8 @@ interface UserPersistencePort {
     fun findByAuthProviderAndProviderUserId(authProvider: AuthProvider, providerUserId: ProviderUserId): User?
 
     fun existsByEmail(email: Email): Boolean
+
+    fun findAllByRole(role: UserRole): List<User>
 
     fun save(user: User): User
 }

@@ -42,7 +42,6 @@ class SubscriberQueryServiceTest {
 
         val expected = listOf(aliceSlack, aliceTelegram, bobSlack)
             .sortedWith(compareBy({ it.userId.value }, { it.channel }))
-        assertEquals(expected.map { it.id }, results.map { it.recipientRef })
         assertEquals(expected.map { it.userId to it.channel }, results.map { it.userId to it.channel })
     }
 
@@ -60,7 +59,7 @@ class SubscriberQueryServiceTest {
         val results = service.findSubscribers(FindSubscribersQuery("tesla"))
 
         assertEquals(listOf(SubscriptionChannel.SLACK), results.map { it.channel })
-        assertEquals(slack.id, results.single().recipientRef)
+        assertEquals(userId, results.single().userId)
     }
 
     @Test

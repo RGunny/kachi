@@ -17,7 +17,6 @@ import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeUseCaseConfig
 import me.rgunny.kachi.user.adapter.inbound.web.security.AuthenticatedUser
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
-import me.rgunny.kachi.user.application.exception.ChannelBindingRefNotFoundException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
 import me.rgunny.kachi.user.application.exception.InvalidChannelAddressException
@@ -251,19 +250,19 @@ class GlobalExceptionHandlerTest @Autowired constructor(
         }
 
         @Test
-        @DisplayName("채널 바인딩 참조 없음 예외는 404 응답으로 변환한다")
-        fun handleChannelBindingRefNotFound() {
-            val ref = ChannelBindingId.newId()
-            resolveChannelBindingUseCase.exception = ChannelBindingRefNotFoundException(ref)
+        @DisplayName("internal 바인딩 조회의 바인딩 없음 예외는 404 응답으로 변환한다")
+        fun handleInternalChannelBindingNotFound() {
+            val userId = UserId.newId()
+            resolveChannelBindingUseCase.exception = ChannelBindingNotFoundException(userId, SubscriptionChannel.SLACK)
 
-            val response = mockMvc.get("/api/v1/internal/channel-bindings/${ref.value}").andExpect {
+            val response = mockMvc.get("/api/v1/internal/users/${userId.value}/channel-bindings/SLACK").andExpect {
                 status { isNotFound() }
             }.andReturn().response
 
             assertErrorResponse(
                 actual = response.contentAsString,
                 code = "CHANNEL_BINDING_NOT_FOUND",
-                message = "채널 바인딩을 찾을 수 없습니다: ref=${ref.value}"
+                message = "채널 바인딩을 찾을 수 없습니다: channel=SLACK"
             )
         }
 

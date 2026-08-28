@@ -20,6 +20,9 @@ import me.rgunny.kachi.user.domain.Nickname
 import me.rgunny.kachi.user.domain.Subscription
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.User
+import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
+import me.rgunny.kachi.user.domain.UserStatus
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationRunner
 import org.springframework.context.annotation.Bean
@@ -31,10 +34,11 @@ import java.time.Instant
 /**
  * 로컬 개발용 시드 데이터.
  *
- * `local` 프로파일에서만 기동 시 한 번 실행되어 시드 사용자와 SLACK 바인딩, 키워드 구독을 심는다.
- * 사용자 등록·로그인·구독을 손으로 하지 않아도 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있다.
+ * `local` 프로파일에서만 기동 시 한 번 실행되어 시드 사용자와 SLACK 바인딩, 키워드 구독, 그리고 세 채널 바인딩을 가진 관리자 사용자를 심는다.
+ * 사용자 등록·로그인·구독을 손으로 하지 않아도 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있고,
+ * 역할별 수신자 API가 관리자를 돌려주어 격리 알림 라우팅을 바로 확인할 수 있다.
  * 모든 단계가 find-or-create라 재기동해도 중복이 생기지 않는다.
- * 바인딩 주소는 형식만 맞추고, 실제 발송 주소는 알림 쪽 설정이 갖는다.
+ * 바인딩 주소는 형식만 맞춘 값이다.
  *
  * 유스케이스가 아니라 JPA repository를 직접 쓴다. 유스케이스를 거치면 활성 사용자·채널 바인딩 검증을 시드가 만족시켜야 하고,
  * repository를 직접 만지는 코드는 레이어 규칙상 config에만 둘 수 있다.
@@ -43,7 +47,7 @@ import java.time.Instant
 @Profile("local")
 class LocalSeedDataConfig {
 
-    /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 순으로 심고 결과를 한 줄 남긴다. */
+    /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 → 관리자 사용자 → 관리자 바인딩 순으로 심고 결과를 한 줄 남긴다. */
     @Bean
     fun localSeedDataInitializer(
         userJpaRepository: UserJpaRepository,
@@ -56,15 +60,20 @@ class LocalSeedDataConfig {
         return ApplicationRunner {
             val now = Instant.now(clock)
             val seedUser = findOrCreateSeedUser(userJpaRepository, now)
-            findOrCreateSlackBinding(channelBindingJpaRepository, addressCipherPort, seedUser, now)
+            findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, seedUser, SubscriptionChannel.SLACK, now)
             val keywords = SEED_KEYWORD_NAMES.map { findOrCreateKeyword(keywordJpaRepository, it, now) }
             val subscriptions = keywords.map { findOrCreateSubscription(subscriptionJpaRepository, seedUser, it, now) }
+            val adminUser = findOrCreateAdminUser(userJpaRepository, now)
+            SubscriptionChannel.entries.forEach { channel ->
+                findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, adminUser, channel, now)
+            }
 
             log.info(
-                "Local seed data initialized userId={} subscriptionCount={} keywords={}",
+                "Local seed data initialized userId={} subscriptionCount={} keywords={} adminUserId={}",
                 seedUser.id,
                 subscriptions.size,
-                keywords.map { it.canonicalKey.value }
+                keywords.map { it.canonicalKey.value },
+                adminUser.id
             )
         }
     }
@@ -87,15 +96,42 @@ class LocalSeedDataConfig {
         return userJpaRepository.save(UserJpaEntity.from(seedUser)).toDomain()
     }
 
-    /** 시드 구독이 쓰는 SLACK 바인딩을 찾고, 없으면 만들고, 해지돼 있으면 되살린다. */
-    private fun findOrCreateSlackBinding(
+    /**
+     * 관리자 사용자를 이메일로 찾고 없으면 ADMIN 역할로 만든다.
+     * 가입 경로는 역할을 USER로 고정하므로 `restore`로 직접 조립한다.
+     */
+    private fun findOrCreateAdminUser(userJpaRepository: UserJpaRepository, registeredAt: Instant): User {
+        val existingUser = userJpaRepository.findByEmail(SEED_ADMIN_EMAIL)
+        if (existingUser != null) {
+            return existingUser.toDomain()
+        }
+
+        val adminUser = User.restore(
+            id = UserId.newId(),
+            email = Email.of(SEED_ADMIN_EMAIL),
+            nickname = Nickname.of(SEED_ADMIN_NICKNAME),
+            status = UserStatus.ACTIVE,
+            role = UserRole.ADMIN,
+            authProvider = AuthProvider.LOCAL,
+            providerUserId = null,
+            registeredAt = registeredAt,
+            lastLoginAt = null,
+            deactivatedAt = null
+        )
+
+        return userJpaRepository.save(UserJpaEntity.from(adminUser)).toDomain()
+    }
+
+    /** 사용자의 채널 바인딩을 찾고, 없으면 만들고, 해지돼 있으면 되살린다. */
+    private fun findOrCreateBinding(
         channelBindingJpaRepository: ChannelBindingJpaRepository,
         addressCipherPort: AddressCipherPort,
-        seedUser: User,
+        user: User,
+        channel: SubscriptionChannel,
         createdAt: Instant
     ): ChannelBinding {
-        val address = ChannelAddress.of(SubscriptionChannel.SLACK, SEED_SLACK_WEBHOOK_URL)
-        val existing = channelBindingJpaRepository.findByUserIdAndChannel(seedUser.id.value, SubscriptionChannel.SLACK)
+        val address = ChannelAddress.of(channel, SEED_ADDRESSES.getValue(channel))
+        val existing = channelBindingJpaRepository.findByUserIdAndChannel(user.id.value, channel)
         if (existing != null) {
             val binding = existing.toDomain(addressCipherPort)
             return if (binding.isActive) {
@@ -106,7 +142,7 @@ class LocalSeedDataConfig {
             }
         }
 
-        val binding = ChannelBinding.createWithAddress(userId = seedUser.id, address = address, createdAt = createdAt)
+        val binding = ChannelBinding.createWithAddress(userId = user.id, address = address, createdAt = createdAt)
 
         return channelBindingJpaRepository.save(ChannelBindingJpaEntity.from(binding, addressCipherPort)).toDomain(addressCipherPort)
     }
@@ -162,6 +198,12 @@ class LocalSeedDataConfig {
         private const val SEED_USER_NICKNAME = "collector-admin"
         private val SEED_KEYWORD_NAMES = listOf("TRUMP", "NVIDIA", "SPACE-X", "TESLA", "이란")
         private val SEED_CHANNELS = setOf(SubscriptionChannel.SLACK)
-        private const val SEED_SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/LOCAL/SEED/WEBHOOK"
+        private const val SEED_ADMIN_EMAIL = "admin@kachi.local"
+        private const val SEED_ADMIN_NICKNAME = "admin"
+        private val SEED_ADDRESSES = mapOf(
+            SubscriptionChannel.SLACK to "https://hooks.slack.com/services/LOCAL/SEED/WEBHOOK",
+            SubscriptionChannel.DISCORD to "https://discord.com/api/webhooks/000000/LOCAL-SEED",
+            SubscriptionChannel.TELEGRAM to "000000000"
+        )
     }
 }

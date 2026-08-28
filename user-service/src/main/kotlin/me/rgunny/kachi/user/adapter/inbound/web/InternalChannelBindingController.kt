@@ -8,7 +8,8 @@ import me.rgunny.kachi.user.application.port.inbound.binding.CompleteTelegramLin
 import me.rgunny.kachi.user.application.port.inbound.binding.model.CompleteTelegramLinkCommand
 import me.rgunny.kachi.user.application.port.inbound.internal.ResolveChannelBindingUseCase
 import me.rgunny.kachi.user.application.port.inbound.internal.model.ResolveChannelBindingQuery
-import me.rgunny.kachi.user.domain.ChannelBindingId
+import me.rgunny.kachi.user.domain.SubscriptionChannel
+import me.rgunny.kachi.user.domain.UserId
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -21,7 +22,7 @@ import java.util.UUID
  * 채널 바인딩 internal API.
  *
  * 인증 없이 열려 있다.
- * 발송자가 수신처 참조를 주소로 풀 때, 봇 수신기가 `/start <token>`을 받았을 때 호출한다.
+ * 발송자가 수신자와 채널로 주소를 풀 때, 봇 수신기가 `/start <token>`을 받았을 때 호출한다.
  */
 @RestController
 class InternalChannelBindingController(
@@ -31,9 +32,12 @@ class InternalChannelBindingController(
 
     @GetMapping(ApiPaths.INTERNAL_CHANNEL_BINDING, version = ApiVersions.V1)
     fun resolveChannelBinding(
-        @PathVariable ref: UUID
+        @PathVariable userId: UUID,
+        @PathVariable channel: SubscriptionChannel
     ): ResponseEntity<ApiResponse<ResolvedChannelBindingResponse>> {
-        val result = resolveChannelBindingUseCase.resolve(ResolveChannelBindingQuery(ChannelBindingId.of(ref)))
+        val result = resolveChannelBindingUseCase.resolve(
+            ResolveChannelBindingQuery(userId = UserId.of(userId), channel = channel)
+        )
 
         return ResponseEntity.ok(ApiResponse.success(ResolvedChannelBindingResponse.from(result)))
     }

@@ -5,7 +5,6 @@ import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.user.adapter.inbound.web.response.ErrorResponse
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotActiveException
 import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
-import me.rgunny.kachi.user.application.exception.ChannelBindingRefNotFoundException
 import me.rgunny.kachi.user.application.exception.InactiveUserException
 import me.rgunny.kachi.user.application.exception.DuplicateEmailException
 import me.rgunny.kachi.user.application.exception.DuplicateSubscriptionException
@@ -60,11 +59,6 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(ChannelBindingNotFoundException::class)
     fun handleChannelBindingNotFound(exception: ChannelBindingNotFoundException): ResponseEntity<ApiResponse<Unit>> {
-        return error(ErrorCode.CHANNEL_BINDING_NOT_FOUND, exception.message)
-    }
-
-    @ExceptionHandler(ChannelBindingRefNotFoundException::class)
-    fun handleChannelBindingRefNotFound(exception: ChannelBindingRefNotFoundException): ResponseEntity<ApiResponse<Unit>> {
         return error(ErrorCode.CHANNEL_BINDING_NOT_FOUND, exception.message)
     }
 

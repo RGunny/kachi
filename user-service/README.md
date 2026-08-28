@@ -3,7 +3,7 @@
 사용자 인증, 사용자 상태, 키워드 구독, 채널 바인딩을 관리하는 서비스다.
 
 `collector-service`·`ai-service`는 수집 대상 키워드를 직접 소유하지 않고 이 서비스의 internal API에서 활성 키워드를 조회한다.
-notification-service의 routing과 notification-worker는 같은 internal API로 키워드의 수신자와 수신처 주소를 조회한다.
+notification-routing과 notification-worker는 같은 internal API로 키워드·역할의 수신자와 수신 주소를 조회한다.
 
 ## 현재 구현 상태
 
@@ -16,7 +16,7 @@ notification-service의 routing과 notification-worker는 같은 internal API로
 - 사용자 등록, 내 정보 조회, 탈퇴 API
 - 내 키워드 구독 등록, 조회, 수정 API
 - 내 채널 바인딩 등록(Slack·Discord webhook, Telegram 연결 링크), 조회, 해지 API
-- 활성 키워드, 키워드 수신자, 수신처 주소, Telegram 연결 internal API
+- 활성 키워드, 키워드·역할별 수신자, 수신 주소, Telegram 연결 internal API
 - Spring Security 기반 JWT 인증 필터
 - Actuator health endpoint
 
@@ -210,7 +210,7 @@ GET /api/v1/internal/keywords/active
 enabled 구독이 하나 이상인 canonical 키워드를 `canonicalKey` 순으로 돌려준다. `name`은 `canonicalKey`와 같은 값이다 —
 소비자는 `name`만 읽고 그 문자열로 수집·요약·라우팅을 이어가므로 정규화는 이 서비스 한 곳에서만 한다.
 
-키워드 수신자 조회 — notification-service routing이 요약 이벤트의 키워드로 호출한다:
+키워드 수신자 조회 — notification-routing이 요약 이벤트의 키워드로 호출한다:
 
 ```http
 GET /api/v1/internal/subscriptions?keyword=space-x
@@ -219,19 +219,36 @@ GET /api/v1/internal/subscriptions?keyword=space-x
 ```json
 {
   "success": true,
-  "data": [{ "userId": "…", "channel": "SLACK", "recipientRef": "…" }],
+  "data": [{ "userId": "…", "channel": "SLACK" }],
   "error": null
 }
 ```
 
 `keyword`는 다시 정규화해 찾으므로 활성 키워드 API의 `name`을 그대로 보내면 되고 원문이 와도 같은 결과다.
 enabled 구독의 채널 중 바인딩이 `ACTIVE`인 것만 `userId`, `channel` 순으로 돌려주고, 없는 키워드는 빈 배열이다.
-`recipientRef`는 바인딩 id이며 주소는 싣지 않는다.
+`userId`가 수신자 식별자(recipientId)이며 주소는 싣지 않는다. `(userId, channel)`이 바인딩 하나를 확정한다.
 
-수신처 주소 조회 — notification-worker가 발송 직전에 호출한다:
+역할별 수신자 조회 — notification-routing이 키워드 격리 이벤트의 수신자를 물을 때 호출한다:
 
 ```http
-GET /api/v1/internal/channel-bindings/{recipientRef}
+GET /api/v1/internal/users?role=ADMIN
+```
+
+```json
+{
+  "success": true,
+  "data": [{ "userId": "…", "channels": ["SLACK", "TELEGRAM"] }],
+  "error": null
+}
+```
+
+그 역할의 `ACTIVE` 사용자 중 `ACTIVE` 바인딩이 하나 이상인 사용자를 `userId` 순으로 돌려주고, `channels`는 그 바인딩의 채널이다.
+바인딩이 없는 사용자는 빠진다. `role`이 없거나 모르는 값이면 400이다.
+
+수신 주소 조회 — notification-worker가 발송 직전에 호출한다:
+
+```http
+GET /api/v1/internal/users/{userId}/channel-bindings/{channel}
 ```
 
 ```json
@@ -243,7 +260,7 @@ GET /api/v1/internal/channel-bindings/{recipientRef}
 ```
 
 `ACTIVE`면 복호화한 평문 주소가 오고, `PENDING`·`REVOKED`면 `address`가 `null`이다(worker는 그 알림을 SUPPRESSED로 끝낸다).
-없는 ref는 `404 CHANNEL_BINDING_NOT_FOUND`, UUID 형식이 아니면 400이다.
+그 사용자에게 그 채널의 바인딩이 없으면 `404 CHANNEL_BINDING_NOT_FOUND`, `userId`가 UUID 형식이 아니거나 `channel`이 모르는 값이면 400이다.
 
 Telegram 연결 완료 — 봇 수신기가 `/start <token>`을 받았을 때 호출한다:
 

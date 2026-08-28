@@ -50,4 +50,7 @@ class WebMvcFakeUseCaseConfig {
 
     @Bean
     fun resolveChannelBindingUseCase(): FakeResolveChannelBindingUseCase = FakeResolveChannelBindingUseCase()
+
+    @Bean
+    fun findUsersByRoleUseCase(): FakeFindUsersByRoleUseCase = FakeFindUsersByRoleUseCase()
 }

@@ -1,6 +1,7 @@
 package me.rgunny.kachi.user.adapter.outbound.persistence
 
 import me.rgunny.kachi.user.domain.AuthProvider
+import me.rgunny.kachi.user.domain.UserRole
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
 
@@ -10,4 +11,6 @@ interface UserJpaRepository : JpaRepository<UserJpaEntity, UUID> {
     fun findByEmail(email: String): UserJpaEntity?
 
     fun existsByEmail(email: String): Boolean
+
+    fun findAllByRole(role: UserRole): List<UserJpaEntity>
 }

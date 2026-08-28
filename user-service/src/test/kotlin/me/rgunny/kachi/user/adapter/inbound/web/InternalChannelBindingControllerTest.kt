@@ -18,14 +18,15 @@ class InternalChannelBindingControllerTest {
     private val controller = InternalChannelBindingController(resolveUseCase, completeUseCase)
 
     @Test
-    @DisplayName("참조를 질의로 옮기고 평문 주소를 그대로 돌려준다")
+    @DisplayName("사용자 id와 채널을 질의로 옮기고 평문 주소를 그대로 돌려준다")
     fun resolveChannelBinding() {
-        val ref = UUID.randomUUID()
+        val userId = UUID.randomUUID()
 
-        val response = controller.resolveChannelBinding(ref)
+        val response = controller.resolveChannelBinding(userId, SubscriptionChannel.SLACK)
 
         assertEquals(HttpStatus.OK, response.statusCode)
-        assertEquals(ref, resolveUseCase.query.ref.value)
+        assertEquals(userId, resolveUseCase.query.userId.value)
+        assertEquals(SubscriptionChannel.SLACK, resolveUseCase.query.channel)
         val body = response.body?.data
         assertEquals(SubscriptionChannel.SLACK, body?.channel)
         assertEquals(ChannelBindingStatus.ACTIVE, body?.status)

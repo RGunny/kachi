@@ -3,7 +3,6 @@ package me.rgunny.kachi.user.adapter.inbound.web.fake
 import me.rgunny.kachi.user.application.port.inbound.internal.FindSubscribersUseCase
 import me.rgunny.kachi.user.application.port.inbound.internal.model.FindSubscribersQuery
 import me.rgunny.kachi.user.application.port.inbound.internal.model.SubscriberResult
-import me.rgunny.kachi.user.domain.ChannelBindingId
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.UserId
 
@@ -23,8 +22,7 @@ class FakeFindSubscribersUseCase : FindSubscribersUseCase {
         return listOf(
             SubscriberResult(
                 userId = UserId.newId(),
-                channel = SubscriptionChannel.SLACK,
-                recipientRef = ChannelBindingId.newId()
+                channel = SubscriptionChannel.SLACK
             )
         )
     }

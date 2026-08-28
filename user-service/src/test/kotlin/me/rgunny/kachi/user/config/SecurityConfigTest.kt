@@ -4,6 +4,7 @@ import me.rgunny.kachi.user.adapter.inbound.web.AuthController
 import me.rgunny.kachi.user.adapter.inbound.web.ChannelBindingController
 import me.rgunny.kachi.user.adapter.inbound.web.InternalChannelBindingController
 import me.rgunny.kachi.user.adapter.inbound.web.InternalSubscriptionController
+import me.rgunny.kachi.user.adapter.inbound.web.InternalUserController
 import me.rgunny.kachi.user.adapter.inbound.web.SubscriptionController
 import me.rgunny.kachi.user.adapter.inbound.web.UserController
 import me.rgunny.kachi.user.adapter.inbound.web.fake.WebMvcFakeOAuth2Config
@@ -43,7 +44,8 @@ import java.util.UUID
         SubscriptionController::class,
         ChannelBindingController::class,
         InternalChannelBindingController::class,
-        InternalSubscriptionController::class
+        InternalSubscriptionController::class,
+        InternalUserController::class
     ]
 )
 @AutoConfigureMockMvc
@@ -125,9 +127,20 @@ class SecurityConfigTest @Autowired constructor(
         }
 
         @Test
+        @DisplayName("역할별 수신자 조회 internal API는 인증 없이 접근할 수 있다")
+        fun permitUsersByRoleInternalApi() {
+            mockMvc.get("/api/v1/internal/users") {
+                param("role", "ADMIN")
+                accept = MediaType.APPLICATION_JSON
+            }.andExpect {
+                status { isOk() }
+            }
+        }
+
+        @Test
         @DisplayName("채널 바인딩 조회 internal API는 인증 없이 접근할 수 있다")
         fun permitChannelBindingInternalApi() {
-            mockMvc.get("/api/v1/internal/channel-bindings/${UUID.randomUUID()}") {
+            mockMvc.get("/api/v1/internal/users/${UUID.randomUUID()}/channel-bindings/SLACK") {
                 accept = MediaType.APPLICATION_JSON
             }.andExpect {
                 status { isOk() }
