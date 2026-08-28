@@ -21,13 +21,13 @@ class NotificationRoutingMetricsTest {
     fun recordRoutingResults() {
         metrics.recordRouting(RoutingJobKind.SUMMARY, result(RouteNotificationOutcome.ROUTED), ELAPSED)
         metrics.recordRouting(RoutingJobKind.SUMMARY, result(RouteNotificationOutcome.SKIPPED), ELAPSED)
-        metrics.recordInvalidRoutingMessage(RoutingJobKind.ADMIN, ELAPSED)
-        metrics.recordRoutingFailure(RoutingJobKind.ADMIN, ELAPSED)
+        metrics.recordInvalidRoutingMessage(RoutingJobKind.QUARANTINE, ELAPSED)
+        metrics.recordRoutingFailure(RoutingJobKind.QUARANTINE, ELAPSED)
 
         assertCounter("SUMMARY", "routed")
         assertCounter("SUMMARY", "skipped")
-        assertCounter("ADMIN", "invalid")
-        assertCounter("ADMIN", "failed")
+        assertCounter("QUARANTINE", "invalid")
+        assertCounter("QUARANTINE", "failed")
         assertEquals(
             1L,
             registry.get(NotificationRoutingMetricContract.Names.ROUTING_DURATION)

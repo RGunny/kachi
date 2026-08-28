@@ -39,7 +39,7 @@ class KafkaNotificationRequestPublisherTest {
         assertEquals("sum:summary-1:u:user-1:c:SLACK", event.requestId)
         assertEquals("notification-routing", event.requester)
         assertEquals(NotificationChannel.SLACK, event.channel)
-        assertEquals("ref-1", event.recipient)
+        assertEquals("user-1", event.recipientId)
         assertEquals("summary body", event.message)
         assertEquals("summary-1", event.origin?.summaryId)
         assertEquals("tesla", event.origin?.keyword)
@@ -68,7 +68,7 @@ class KafkaNotificationRequestPublisherTest {
             requestId = "sum:summary-1:u:user-1:c:SLACK",
             requester = "notification-routing",
             channel = NotificationChannel.SLACK,
-            recipientRef = "ref-1",
+            recipientId = "user-1",
             message = "summary body",
             origin = NotificationRequestOrigin("summary-1", "tesla", "user-1"),
         )

@@ -1,16 +1,17 @@
 package me.rgunny.kachi.notification.routing.application.service
 
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteAdminNotificationUseCase
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteQuarantineNotificationUseCase
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteSummaryNotificationUseCase
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteAdminCommand
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationOutcome
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationResult
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteQuarantineCommand
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteSummaryCommand
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.NotificationRequestPublisherPort
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.model.NotificationRequest
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.model.NotificationRequestOrigin
 import me.rgunny.kachi.notification.routing.application.port.outbound.persistence.RoutingJobPersistencePort
-import me.rgunny.kachi.notification.routing.application.port.outbound.subscriber.SubscriberReaderPort
+import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.RecipientReaderPort
+import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.model.Recipient
 import me.rgunny.kachi.notification.routing.domain.RoutingJob
 import me.rgunny.kachi.notification.routing.domain.RoutingJobKind
 import me.rgunny.kachi.notification.routing.domain.RoutingJobStatus
@@ -25,44 +26,60 @@ import java.time.Clock
  */
 class RouteNotificationService(
     private val routingJobPersistencePort: RoutingJobPersistencePort,
-    private val subscriberReaderPort: SubscriberReaderPort,
+    private val recipientReaderPort: RecipientReaderPort,
     private val notificationRequestPublisherPort: NotificationRequestPublisherPort,
     private val policy: RoutingPolicy,
     private val clock: Clock,
-) : RouteSummaryNotificationUseCase, RouteAdminNotificationUseCase {
+) : RouteSummaryNotificationUseCase, RouteQuarantineNotificationUseCase {
 
     override suspend fun routeSummary(command: RouteSummaryCommand): RouteNotificationResult {
         return route(command.summaryId, RoutingJobKind.SUMMARY, command.keyword) { job ->
-            subscriberReaderPort.findSubscribers(command.keyword).map { subscriber ->
-                NotificationRequest(
-                    requestId = RoutingRequestId.forSummary(command.summaryId, subscriber.userId, subscriber.channel),
-                    requester = policy.requester,
-                    channel = subscriber.channel,
-                    recipientRef = subscriber.recipientRef,
+            recipientReaderPort.findSubscribers(command.keyword).map { recipient ->
+                request(
+                    requestId = RoutingRequestId.forSummary(command.summaryId, recipient.recipientId, recipient.channel),
+                    recipient = recipient,
                     message = command.message,
                     origin = NotificationRequestOrigin(
                         summaryId = command.summaryId,
                         keyword = job.keyword,
-                        userId = subscriber.userId,
+                        userId = recipient.recipientId,
                     ),
                 )
             }
         }
     }
 
-    override suspend fun routeAdmin(command: RouteAdminCommand): RouteNotificationResult {
-        return route(command.eventKey, RoutingJobKind.ADMIN, command.keyword) { job ->
-            policy.adminRecipientRefs.map { (channel, recipientRef) ->
-                NotificationRequest(
-                    requestId = RoutingRequestId.forAdmin(command.eventKey, channel),
-                    requester = policy.requester,
-                    channel = channel,
-                    recipientRef = recipientRef,
+    override suspend fun routeQuarantine(command: RouteQuarantineCommand): RouteNotificationResult {
+        return route(command.eventKey, RoutingJobKind.QUARANTINE, command.keyword) { job ->
+            recipientReaderPort.findAdmins().map { recipient ->
+                request(
+                    requestId = RoutingRequestId.forQuarantine(command.eventKey, recipient.recipientId, recipient.channel),
+                    recipient = recipient,
                     message = command.message,
-                    origin = NotificationRequestOrigin(summaryId = null, keyword = job.keyword, userId = null),
+                    origin = NotificationRequestOrigin(
+                        summaryId = null,
+                        keyword = job.keyword,
+                        userId = recipient.recipientId,
+                    ),
                 )
             }
         }
+    }
+
+    private fun request(
+        requestId: String,
+        recipient: Recipient,
+        message: String,
+        origin: NotificationRequestOrigin,
+    ): NotificationRequest {
+        return NotificationRequest(
+            requestId = requestId,
+            requester = policy.requester,
+            channel = recipient.channel,
+            recipientId = recipient.recipientId,
+            message = message,
+            origin = origin,
+        )
     }
 
     private suspend fun route(

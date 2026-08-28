@@ -18,11 +18,11 @@ class RoutingRequestIdTest {
     }
 
     @Test
-    @DisplayName("관리자 requestId는 adm:{eventKey}:c:{CHANNEL}이다")
-    fun forAdmin() {
+    @DisplayName("격리 requestId는 qrt:{eventKey}:u:{recipientId}:c:{CHANNEL}이다")
+    fun forQuarantine() {
         assertEquals(
-            "adm:quarantine-1:1700000000000:c:TELEGRAM",
-            RoutingRequestId.forAdmin("quarantine-1:1700000000000", NotificationChannel.TELEGRAM),
+            "qrt:quarantine-1:1700000000000:u:admin-1:c:TELEGRAM",
+            RoutingRequestId.forQuarantine("quarantine-1:1700000000000", "admin-1", NotificationChannel.TELEGRAM),
         )
     }
 

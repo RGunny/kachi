@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.routing.adapter.inbound.messaging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteAdminNotificationUseCase
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteQuarantineNotificationUseCase
 import me.rgunny.kachi.notification.routing.domain.RoutingJobKind
 import me.rgunny.kachi.notification.routing.adapter.outbound.monitoring.NotificationRoutingMetrics
 import org.slf4j.LoggerFactory
@@ -15,11 +15,11 @@ import java.time.Duration
 
 /**
  * ai.keyword.quarantined Kafka 인입 adapter.
- * 관리자 수신처로 라우팅한다.
+ * 관리자 x 채널로 라우팅한다.
  */
 @Component
 class AiKeywordQuarantinedKafkaListener(
-    private val routeAdminNotificationUseCase: RouteAdminNotificationUseCase,
+    private val routeQuarantineNotificationUseCase: RouteQuarantineNotificationUseCase,
     private val jsonMapper: JsonMapper,
     private val metrics: NotificationRoutingMetrics,
 ) {
@@ -35,22 +35,22 @@ class AiKeywordQuarantinedKafkaListener(
         val command = try {
             AiKeywordQuarantinedEventMapper.toCommand(readEvent(payload))
         } catch (exception: IllegalArgumentException) {
-            metrics.recordInvalidRoutingMessage(RoutingJobKind.ADMIN, elapsed(startedAt))
+            metrics.recordInvalidRoutingMessage(RoutingJobKind.QUARANTINE, elapsed(startedAt))
             throw InvalidAiEventMessageException("invalid ai keyword quarantined event", exception)
         } catch (exception: InvalidAiEventMessageException) {
-            metrics.recordInvalidRoutingMessage(RoutingJobKind.ADMIN, elapsed(startedAt))
+            metrics.recordInvalidRoutingMessage(RoutingJobKind.QUARANTINE, elapsed(startedAt))
             throw exception
         }
 
         val result = try {
-            routeAdminNotificationUseCase.routeAdmin(command)
+            routeQuarantineNotificationUseCase.routeQuarantine(command)
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: Exception) {
-            metrics.recordRoutingFailure(RoutingJobKind.ADMIN, elapsed(startedAt))
+            metrics.recordRoutingFailure(RoutingJobKind.QUARANTINE, elapsed(startedAt))
             throw exception
         }
-        metrics.recordRouting(RoutingJobKind.ADMIN, result, elapsed(startedAt))
+        metrics.recordRouting(RoutingJobKind.QUARANTINE, result, elapsed(startedAt))
 
         log.info(
             "ai keyword quarantine routed eventKey={} outcome={} targets={} published={}",

@@ -28,7 +28,7 @@ object AiNotificationMessageRenderer {
 
     fun render(event: AiKeywordQuarantinedEvent): String {
         val message = buildString {
-            append("[관리자] 키워드 '").append(event.keyword).append("' 격리 — ")
+            append("[키워드 격리] '").append(event.keyword).append("' — ")
             append(event.targetType.name)
             append(", 연속 실패 ").append(event.consecutiveFailures).append("회")
             append(", 사유 ").append(event.lastFailureReason.name)

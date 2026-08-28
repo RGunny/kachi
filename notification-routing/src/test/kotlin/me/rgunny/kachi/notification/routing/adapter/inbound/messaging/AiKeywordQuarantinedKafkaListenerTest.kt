@@ -1,8 +1,8 @@
 package me.rgunny.kachi.notification.routing.adapter.inbound.messaging
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteAdminNotificationUseCase
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteAdminCommand
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteQuarantineNotificationUseCase
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteQuarantineCommand
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationOutcome
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationResult
 import me.rgunny.kachi.notification.routing.domain.RoutingJobId
@@ -19,16 +19,16 @@ import kotlin.test.assertNull
 @DisplayName("AiKeywordQuarantinedKafkaListener")
 class AiKeywordQuarantinedKafkaListenerTest {
 
-    private val useCase = CapturingRouteAdminUseCase()
+    private val useCase = CapturingRouteQuarantineUseCase()
     private val registry = SimpleMeterRegistry()
     private val listener = AiKeywordQuarantinedKafkaListener(
-        routeAdminNotificationUseCase = useCase,
+        routeQuarantineNotificationUseCase = useCase,
         jsonMapper = JsonMapper.builder().findAndAddModules().build(),
         metrics = NotificationRoutingMetrics(registry),
     )
 
     @Test
-    @DisplayName("정상 payload는 관리자 routing use case로 전달하고 계측한다")
+    @DisplayName("정상 payload는 격리 routing use case로 전달하고 계측한다")
     fun consume() {
         listener.consume(RoutingTestFixture.KEYWORD_QUARANTINED_JSON.trimIndent())
 
@@ -36,7 +36,7 @@ class AiKeywordQuarantinedKafkaListenerTest {
         requireNotNull(command)
         assertEquals("quarantine-1:${RoutingTestFixture.NOW.toEpochMilli()}", command.eventKey)
         assertEquals("tesla", command.keyword)
-        assertCounter("ADMIN", "skipped")
+        assertCounter("QUARANTINE", "skipped")
     }
 
     @Test
@@ -45,7 +45,7 @@ class AiKeywordQuarantinedKafkaListenerTest {
         assertFailsWith<InvalidAiEventMessageException> { listener.consume("not json") }
 
         assertNull(useCase.lastCommand)
-        assertCounter("ADMIN", "invalid")
+        assertCounter("QUARANTINE", "invalid")
     }
 
     @Test
@@ -55,7 +55,7 @@ class AiKeywordQuarantinedKafkaListenerTest {
 
         assertFailsWith<IllegalStateException> { listener.consume(RoutingTestFixture.KEYWORD_QUARANTINED_JSON) }
 
-        assertCounter("ADMIN", "failed")
+        assertCounter("QUARANTINE", "failed")
     }
 
     private fun assertCounter(kind: String, result: String) {
@@ -68,12 +68,12 @@ class AiKeywordQuarantinedKafkaListenerTest {
         )
     }
 
-    private class CapturingRouteAdminUseCase : RouteAdminNotificationUseCase {
-        var lastCommand: RouteAdminCommand? = null
+    private class CapturingRouteQuarantineUseCase : RouteQuarantineNotificationUseCase {
+        var lastCommand: RouteQuarantineCommand? = null
             private set
         var failure: RuntimeException? = null
 
-        override suspend fun routeAdmin(command: RouteAdminCommand): RouteNotificationResult {
+        override suspend fun routeQuarantine(command: RouteQuarantineCommand): RouteNotificationResult {
             lastCommand = command
             failure?.let { throw it }
             return RouteNotificationResult(RoutingJobId.newId(), RouteNotificationOutcome.SKIPPED, 3, 3)

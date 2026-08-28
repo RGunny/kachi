@@ -17,7 +17,7 @@ class AiKeywordQuarantinedEventMapperTest {
 
         assertEquals("quarantine-1:${RoutingTestFixture.NOW.toEpochMilli()}", command.eventKey)
         assertEquals("tesla", command.keyword)
-        assertTrue(command.message.startsWith("[관리자] 키워드 'tesla' 격리"))
+        assertTrue(command.message.startsWith("[키워드 격리] 'tesla'"))
     }
 
     @Test

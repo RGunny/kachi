@@ -21,12 +21,12 @@ class AiNotificationMessageRendererTest {
     }
 
     @Test
-    @DisplayName("격리 본문은 관리자 표시와 키워드·종류·실패 횟수·사유·시각을 담는다")
+    @DisplayName("격리 본문은 격리 표시와 키워드·종류·실패 횟수·사유·시각을 담는다")
     fun renderQuarantine() {
         val message = AiNotificationMessageRenderer.render(RoutingTestFixture.keywordQuarantinedEvent())
 
         assertEquals(
-            "[관리자] 키워드 'tesla' 격리 — NEWS_SUMMARY, 연속 실패 3회, 사유 INVALID_RESPONSE, 2026-06-13T00:00:00Z",
+            "[키워드 격리] 'tesla' — NEWS_SUMMARY, 연속 실패 3회, 사유 INVALID_RESPONSE, 2026-06-13T00:00:00Z",
             message,
         )
     }
