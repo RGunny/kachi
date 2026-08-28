@@ -36,7 +36,10 @@ class TestVendorServer(
             response.status(HttpResponseStatus.valueOf(vendorResponse.statusCode))
             vendorResponse.headers.forEach { (name, value) -> response.header(name, value) }
             response.header(HttpHeaderNames.CONTENT_TYPE, "application/json")
-            response.sendString(Mono.just(vendorResponse.body))
+            // 요청 본문은 sender가 무엇을 보냈는지(chat id 등) 단언할 수 있도록 path별로 기록한다.
+            request.receive().aggregate().asString().defaultIfEmpty("")
+                .doOnNext { body -> bodies.getOrPut(path) { Collections.synchronizedList(mutableListOf()) } += body }
+                .then(response.sendString(Mono.just(vendorResponse.body)).then())
         }
         // bindNow()가 호출되는 시점에 실제 localhost 서버 소켓이 열린다.
         // 이 객체가 생성된 뒤에는 baseUrl로 WebClient 요청을 받을 수 있다.
@@ -44,6 +47,12 @@ class TestVendorServer(
 
     val baseUrl: String = "http://localhost:${server.port()}"
     val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    val bodies: MutableMap<String, MutableList<String>> = ConcurrentHashMap()
+
+    /** 생성 뒤에 path별 응답을 더한다. */
+    fun respond(path: String, response: TestVendorResponse) {
+        configuredResponses[path] = response
+    }
 
     override fun close() {
         // use 블록 종료 시 테스트용 서버를 즉시 내려 포트와 Netty 리소스를 반환한다.

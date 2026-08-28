@@ -23,11 +23,12 @@ class MockNotificationSender(
     }
 
     override suspend fun send(command: SendNotificationCommand): SendNotificationResult {
+        // ADDRESS-EXPOSURE: 수신 주소를 로그에 남긴다. 로컬 검증용 sender라 두지만 운영에서는 쓰지 않는다.
         log.info(
-            "mock notification send notificationId={} channel={} recipientId={} mode={}",
+            "mock notification send notificationId={} channel={} address={} mode={}",
             command.notificationId.id,
             command.channel,
-            command.recipientId,
+            command.address,
             mode,
         )
 

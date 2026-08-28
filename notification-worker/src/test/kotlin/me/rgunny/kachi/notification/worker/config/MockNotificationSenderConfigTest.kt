@@ -132,7 +132,6 @@ class MockNotificationSenderConfigTest {
     private fun slack(enabled: Boolean): NotificationSenderProperties.Slack {
         return NotificationSenderProperties.Slack(
             enabled = enabled,
-            webhookUrl = "https://hooks.slack.test/services/test",
             connectTimeout = Duration.ofSeconds(2),
             responseTimeout = Duration.ofSeconds(5),
             readTimeout = Duration.ofSeconds(5),
@@ -144,7 +143,6 @@ class MockNotificationSenderConfigTest {
     private fun discord(enabled: Boolean): NotificationSenderProperties.Discord {
         return NotificationSenderProperties.Discord(
             enabled = enabled,
-            webhookUrl = "https://discord.test/api/webhooks/test",
             connectTimeout = Duration.ofSeconds(2),
             responseTimeout = Duration.ofSeconds(5),
             readTimeout = Duration.ofSeconds(5),

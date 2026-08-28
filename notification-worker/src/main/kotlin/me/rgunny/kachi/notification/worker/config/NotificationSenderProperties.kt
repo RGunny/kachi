@@ -39,7 +39,6 @@ data class NotificationSenderProperties(
          * true이면 mock sender가 SLACK을 지원하도록 설정되어 있어도 worker config가 mock SLACK 지원을 자동 제외한다.
          */
         val enabled: Boolean,
-        val webhookUrl: String?,
         val connectTimeout: Duration,
         val responseTimeout: Duration,
         val readTimeout: Duration,
@@ -53,7 +52,6 @@ data class NotificationSenderProperties(
          * true이면 mock sender가 DISCORD를 지원하도록 설정되어 있어도 worker config가 mock DISCORD 지원을 자동 제외한다.
          */
         val enabled: Boolean,
-        val webhookUrl: String?,
         val connectTimeout: Duration,
         val responseTimeout: Duration,
         val readTimeout: Duration,

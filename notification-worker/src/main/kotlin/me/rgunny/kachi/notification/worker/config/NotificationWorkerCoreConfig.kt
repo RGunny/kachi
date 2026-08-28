@@ -8,6 +8,7 @@ import me.rgunny.kachi.notification.application.port.outbound.persistence.Notifi
 import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDltMessagePersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
 import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.application.service.DispatchNotificationPolicy
 import me.rgunny.kachi.notification.application.service.DispatchNotificationService
@@ -108,6 +109,7 @@ class NotificationWorkerCoreConfig {
         notificationPersistencePort: NotificationPersistencePort,
         dispatchPersistencePort: NotificationDispatchPersistencePort,
         deduplicationPort: NotificationDeduplicationPort,
+        recipientResolverPort: RecipientResolverPort,
         idempotencyKeyPort: NotificationIdempotencyKeyPort,
         senderRouter: NotificationSenderRouter,
         dispatchNotificationPolicy: DispatchNotificationPolicy,
@@ -117,6 +119,7 @@ class NotificationWorkerCoreConfig {
             notificationPersistencePort = notificationPersistencePort,
             dispatchPersistencePort = dispatchPersistencePort,
             deduplicationPort = deduplicationPort,
+            recipientResolverPort = recipientResolverPort,
             idempotencyKeyPort = idempotencyKeyPort,
             senderRouter = senderRouter,
             policy = dispatchNotificationPolicy,

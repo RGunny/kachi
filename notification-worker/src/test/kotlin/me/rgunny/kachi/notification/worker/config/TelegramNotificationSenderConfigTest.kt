@@ -164,7 +164,6 @@ class TelegramNotificationSenderConfigTest {
             ),
             slack = NotificationSenderProperties.Slack(
                 enabled = false,
-                webhookUrl = "https://hooks.slack.test/services/test",
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),
@@ -173,7 +172,6 @@ class TelegramNotificationSenderConfigTest {
             ),
             discord = NotificationSenderProperties.Discord(
                 enabled = false,
-                webhookUrl = "https://discord.test/api/webhooks/test",
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),

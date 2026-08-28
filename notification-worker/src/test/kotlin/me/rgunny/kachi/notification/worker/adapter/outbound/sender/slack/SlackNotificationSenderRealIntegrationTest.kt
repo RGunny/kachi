@@ -33,17 +33,16 @@ class SlackNotificationSenderRealIntegrationTest {
 
         runBlocking {
             val config = SlackNotificationSenderConfig()
-            val properties = properties(configuredWebhookUrl)
+            val properties = properties()
             val sender = config.slackNotificationSender(
                 webClient = config.slackWebClient(properties),
-                properties = properties,
             )
 
             val result = sender.send(
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.SLACK,
-                recipientId = "user-1",
+                address = configuredWebhookUrl,
                 message = "[${currentTimestamp()}] [notification-worker] [slack-webhook-test] SlackNotificationSender real integration test",
                 idempotencyKey = "slack-real-integration-test",
                 )
@@ -58,7 +57,7 @@ class SlackNotificationSenderRealIntegrationTest {
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val MESSAGE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        fun properties(webhookUrl: String): NotificationSenderProperties {
+        fun properties(): NotificationSenderProperties {
             return NotificationSenderProperties(
                 mock = Mock(
                     enabled = true,
@@ -67,7 +66,6 @@ class SlackNotificationSenderRealIntegrationTest {
                 ),
                 slack = Slack(
                     enabled = true,
-                    webhookUrl = webhookUrl,
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),
@@ -76,7 +74,6 @@ class SlackNotificationSenderRealIntegrationTest {
                 ),
                 discord = Discord(
                     enabled = false,
-                    webhookUrl = null,
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),

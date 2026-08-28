@@ -49,6 +49,13 @@ kachi:
       dlt:
         topic: notification.dispatch.dlt
         group-id: notification-worker-dlt
+    recipient:
+      cache-ttl: 5m
+      user-service:
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:}
+        channel-binding-path: /api/v1/internal/users/{userId}/channel-bindings/{channel}
+        timeout: 3s
+        max-in-memory-size: 262144
     sender:
       mock:
         enabled: true
@@ -56,7 +63,6 @@ kachi:
         mode: SUCCESS
       slack:
         enabled: true
-        webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL:}
         connect-timeout: PT2S
         response-timeout: PT5S
         read-timeout: PT5S
@@ -64,7 +70,6 @@ kachi:
         max-in-memory-size: 262144
       discord:
         enabled: true
-        webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
         connect-timeout: PT2S
         response-timeout: PT5S
         read-timeout: PT5S

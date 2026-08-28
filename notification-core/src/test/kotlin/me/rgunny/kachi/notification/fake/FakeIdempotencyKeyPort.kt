@@ -7,8 +7,10 @@ import java.time.Duration
 class FakeIdempotencyKeyPort(
     private val key: String = "vendor-key",
 ) : NotificationIdempotencyKeyPort {
+    var callCount = 0
 
     override suspend fun getOrCreate(notificationId: NotificationId, ttl: Duration): String {
+        callCount += 1
         return key
     }
 }

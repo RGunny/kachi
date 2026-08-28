@@ -49,25 +49,10 @@ class DiscordNotificationSenderConfig {
     )
     fun discordNotificationSender(
         @Qualifier(DISCORD_WEB_CLIENT) webClient: WebClient,
-        properties: NotificationSenderProperties,
     ): DiscordNotificationSender {
-        val discord = properties.discord
-        val webhookUrl = validateDiscordSenderProperties(discord)
-
         return DiscordNotificationSender(
-            client = DiscordWebhookClient(
-                webClient = webClient,
-                webhookUrl = webhookUrl,
-            ),
+            client = DiscordWebhookClient(webClient = webClient),
         )
-    }
-
-    private fun validateDiscordSenderProperties(discord: NotificationSenderProperties.Discord): String {
-        val webhookUrl = discord.webhookUrl
-        require(!webhookUrl.isNullOrBlank()) {
-            "discord webhookUrl must not be blank when discord sender is enabled"
-        }
-        return webhookUrl
     }
 
     private fun validateDiscordHttpProperties(discord: NotificationSenderProperties.Discord) {

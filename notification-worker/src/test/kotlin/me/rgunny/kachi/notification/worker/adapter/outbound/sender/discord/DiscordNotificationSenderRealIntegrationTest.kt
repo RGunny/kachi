@@ -29,17 +29,16 @@ class DiscordNotificationSenderRealIntegrationTest {
 
         runBlocking {
             val config = DiscordNotificationSenderConfig()
-            val properties = properties(configuredWebhookUrl)
+            val properties = properties()
             val sender = config.discordNotificationSender(
                 webClient = config.discordWebClient(properties),
-                properties = properties,
             )
 
             val result = sender.send(
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.DISCORD,
-                recipientId = "user-1",
+                address = configuredWebhookUrl,
                 message = "[${currentTimestamp()}] [notification-worker] [discord-webhook-test] DiscordNotificationSender real integration test",
                 idempotencyKey = "discord-real-integration-test",
                 )
@@ -54,7 +53,7 @@ class DiscordNotificationSenderRealIntegrationTest {
         val SEOUL_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
         val MESSAGE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        fun properties(webhookUrl: String): NotificationSenderProperties {
+        fun properties(): NotificationSenderProperties {
             return NotificationSenderProperties(
                 mock = NotificationSenderProperties.Mock(
                     enabled = true,
@@ -63,7 +62,6 @@ class DiscordNotificationSenderRealIntegrationTest {
                 ),
                 slack = NotificationSenderProperties.Slack(
                     enabled = false,
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),
@@ -72,7 +70,6 @@ class DiscordNotificationSenderRealIntegrationTest {
                 ),
                 discord = NotificationSenderProperties.Discord(
                     enabled = true,
-                    webhookUrl = webhookUrl,
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),

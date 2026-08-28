@@ -16,32 +16,20 @@ class SlackNotificationSenderConfigTest {
     @DisplayName("Slack webhook 전용 WebClient를 생성한다")
     fun slackWebClient() {
         val webClient = config.slackWebClient(
-            properties = properties(webhookUrl = "https://hooks.slack.test/services/test"),
+            properties = properties(),
         )
 
         assertNotNull(webClient)
     }
 
     @Test
-    @DisplayName("enabled 상태에서 webhookUrl과 timeout이 유효하면 sender를 생성한다")
+    @DisplayName("enabled 상태면 sender를 생성한다")
     fun slackNotificationSender() {
         val sender = config.slackNotificationSender(
             webClient = WebClient.builder().build(),
-            properties = properties(webhookUrl = "https://hooks.slack.test/services/test"),
         )
 
         assertNotNull(sender)
-    }
-
-    @Test
-    @DisplayName("enabled 상태에서 webhookUrl이 비어 있으면 거부한다")
-    fun rejectBlankWebhookUrl() {
-        assertFailsWith<IllegalArgumentException> {
-            config.slackNotificationSender(
-                webClient = WebClient.builder().build(),
-                properties = properties(webhookUrl = ""),
-            )
-        }
     }
 
     @Test
@@ -50,7 +38,6 @@ class SlackNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.slackWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     connectTimeout = Duration.ZERO,
                 ),
             )
@@ -63,7 +50,6 @@ class SlackNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.slackWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     responseTimeout = Duration.ZERO,
                 ),
             )
@@ -76,7 +62,6 @@ class SlackNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.slackWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     readTimeout = Duration.ZERO,
                 ),
             )
@@ -89,7 +74,6 @@ class SlackNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.slackWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     writeTimeout = Duration.ZERO,
                 ),
             )
@@ -102,7 +86,6 @@ class SlackNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.slackWebClient(
                 properties = properties(
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     maxInMemorySize = 0,
                 ),
             )
@@ -110,7 +93,6 @@ class SlackNotificationSenderConfigTest {
     }
 
     private fun properties(
-        webhookUrl: String,
         connectTimeout: Duration = Duration.ofSeconds(2),
         responseTimeout: Duration = Duration.ofSeconds(5),
         readTimeout: Duration = Duration.ofSeconds(5),
@@ -125,7 +107,6 @@ class SlackNotificationSenderConfigTest {
             ),
             slack = NotificationSenderProperties.Slack(
                 enabled = true,
-                webhookUrl = webhookUrl,
                 connectTimeout = connectTimeout,
                 responseTimeout = responseTimeout,
                 readTimeout = readTimeout,
@@ -134,7 +115,6 @@ class SlackNotificationSenderConfigTest {
             ),
             discord = NotificationSenderProperties.Discord(
                 enabled = false,
-                webhookUrl = null,
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),

@@ -16,43 +16,20 @@ class DiscordNotificationSenderConfigTest {
     @DisplayName("Discord webhook 전용 WebClient를 생성한다")
     fun discordWebClient() {
         val webClient = config.discordWebClient(
-            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
+            properties = properties(),
         )
 
         assertNotNull(webClient)
     }
 
     @Test
-    @DisplayName("enabled 상태에서 webhookUrl과 timeout이 유효하면 sender를 생성한다")
+    @DisplayName("enabled 상태면 sender를 생성한다")
     fun discordNotificationSender() {
         val sender = config.discordNotificationSender(
             webClient = WebClient.builder().build(),
-            properties = properties(webhookUrl = "https://discord.test/api/webhooks/test"),
         )
 
         assertNotNull(sender)
-    }
-
-    @Test
-    @DisplayName("enabled 상태에서 webhookUrl이 null이면 거부한다")
-    fun rejectNullWebhookUrl() {
-        assertFailsWith<IllegalArgumentException> {
-            config.discordNotificationSender(
-                webClient = WebClient.builder().build(),
-                properties = properties(webhookUrl = null),
-            )
-        }
-    }
-
-    @Test
-    @DisplayName("enabled 상태에서 webhookUrl이 비어 있으면 거부한다")
-    fun rejectBlankWebhookUrl() {
-        assertFailsWith<IllegalArgumentException> {
-            config.discordNotificationSender(
-                webClient = WebClient.builder().build(),
-                properties = properties(webhookUrl = ""),
-            )
-        }
     }
 
     @Test
@@ -61,7 +38,6 @@ class DiscordNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     connectTimeout = Duration.ZERO,
                 ),
             )
@@ -74,7 +50,6 @@ class DiscordNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     responseTimeout = Duration.ZERO,
                 ),
             )
@@ -87,7 +62,6 @@ class DiscordNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     readTimeout = Duration.ZERO,
                 ),
             )
@@ -100,7 +74,6 @@ class DiscordNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     writeTimeout = Duration.ZERO,
                 ),
             )
@@ -113,7 +86,6 @@ class DiscordNotificationSenderConfigTest {
         assertFailsWith<IllegalArgumentException> {
             config.discordWebClient(
                 properties = properties(
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     maxInMemorySize = 0,
                 ),
             )
@@ -121,7 +93,6 @@ class DiscordNotificationSenderConfigTest {
     }
 
     private fun properties(
-        webhookUrl: String?,
         connectTimeout: Duration = Duration.ofSeconds(2),
         responseTimeout: Duration = Duration.ofSeconds(5),
         readTimeout: Duration = Duration.ofSeconds(5),
@@ -136,7 +107,6 @@ class DiscordNotificationSenderConfigTest {
             ),
             slack = NotificationSenderProperties.Slack(
                 enabled = true,
-                webhookUrl = "https://hooks.slack.test/services/test",
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),
@@ -145,7 +115,6 @@ class DiscordNotificationSenderConfigTest {
             ),
             discord = NotificationSenderProperties.Discord(
                 enabled = true,
-                webhookUrl = webhookUrl,
                 connectTimeout = connectTimeout,
                 responseTimeout = responseTimeout,
                 readTimeout = readTimeout,

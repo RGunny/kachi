@@ -92,7 +92,7 @@ class MeteredNotificationSenderTest {
         val COMMAND = SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.SLACK,
-            recipientId = "user-1",
+            address = "https://hooks.slack.test/services/test",
             message = "hello",
             idempotencyKey = "idempotency-1",
         )

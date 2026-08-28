@@ -88,7 +88,7 @@ class MockNotificationSenderTest {
         return SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.SLACK,
-            recipientId = "user-1",
+            address = "https://hooks.slack.test/services/test",
             message = "hello",
             idempotencyKey = "idempotency-key",
         )
