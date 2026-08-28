@@ -55,25 +55,10 @@ class SlackNotificationSenderConfig {
     )
     fun slackNotificationSender(
         @Qualifier(SLACK_WEB_CLIENT) webClient: WebClient,
-        properties: NotificationSenderProperties,
     ): SlackNotificationSender {
-        val slack = properties.slack
-        val webhookUrl = validateSlackSenderProperties(slack)
-
         return SlackNotificationSender(
-            client = SlackWebhookClient(
-                webClient = webClient,
-                webhookUrl = webhookUrl,
-            ),
+            client = SlackWebhookClient(webClient = webClient),
         )
-    }
-
-    private fun validateSlackSenderProperties(slack: NotificationSenderProperties.Slack): String {
-        val webhookUrl = slack.webhookUrl
-        require(!webhookUrl.isNullOrBlank()) {
-            "slack webhookUrl must not be blank when slack sender is enabled"
-        }
-        return webhookUrl
     }
 
     private fun validateSlackHttpProperties(slack: NotificationSenderProperties.Slack) {

@@ -148,7 +148,6 @@ class DiscordNotificationSenderTest {
                 webClient = WebClient.builder()
                     .exchangeFunction(exchangeFunction)
                     .build(),
-                webhookUrl = "https://discord.test/api/webhooks/test",
             ),
         )
     }
@@ -157,7 +156,7 @@ class DiscordNotificationSenderTest {
         return SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.DISCORD,
-            recipientId = "user-1",
+            address = "https://discord.test/api/webhooks/test",
             message = "hello",
             idempotencyKey = "idempotency-key",
         )

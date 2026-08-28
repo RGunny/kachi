@@ -32,7 +32,8 @@ request
 | --- | --- | --- |
 | request | 요청이 접수됐는가, 중복·잘못된 요청·실패가 있었는가 | `kachi_notification_request_total` |
 | outbox publish | DB에 저장된 dispatch가 Kafka로 발행됐는가 | `kachi_notification_outbox_publish_total` |
-| dispatch | worker가 발송을 `SENT`, `RETRY_WAIT`, `DEAD` 중 어디로 처리했는가 | `kachi_notification_dispatch_total` |
+| dispatch | worker가 발송을 `SENT`, `RETRY_WAIT`, `DEAD`, `SUPPRESSED` 중 어디로 처리했는가 | `kachi_notification_dispatch_total` |
+| recipient resolve | 발송 직전 주소 조회가 캐시와 user-service 중 어디서, 어떤 결과로 끝났는가 | `kachi_notification_recipient_resolve_total` |
 | sender | 채널 sender가 성공·일시 실패·영구 실패·rate limit 중 무엇을 반환했는가 | `kachi_notification_sender_total` |
 | DLT persist | 재시도 종료 메시지가 운영 저장소에 보관됐는가 | `kachi_notification_dlt_persist_total` |
 | stale processing recovery | 처리 중 멈춘 notification을 회수했는가 | `kachi_notification_processing_recovery_total` |
@@ -62,7 +63,8 @@ Prometheus에서는 Micrometer 이름의 점(`.`)이 underscore(`_`)로 변환�
 | --- | --- | --- | --- |
 | `kachi_notification_request_total` | Counter | `source`, `channel`, `result` | source: `http`, `kafka`; result: `accepted`, `duplicated`, `invalid`, `failed` |
 | `kachi_notification_outbox_publish_total` | Counter | `result` | `published`, `failed` |
-| `kachi_notification_dispatch_total` | Counter | `channel`, `status`, `classification`, `result` | result: `sent`, `retry_wait`, `dead`, `duplicated`, `unexpected_status`, `invalid_payload`, `not_ready`, `failed` |
+| `kachi_notification_dispatch_total` | Counter | `channel`, `status`, `classification`, `result` | result: `sent`, `retry_wait`, `dead`, `suppressed`, `duplicated`, `unexpected_status`, `invalid_payload`, `not_ready`, `failed` |
+| `kachi_notification_recipient_resolve_total` | Counter | `channel`, `result`, `source` | result: `available`, `unavailable`, `failed`; source: `cache`, `user_service` (ADR 028) |
 | `kachi_notification_sender_total` | Counter | `channel`, `result`, `failure_category` | result: `success`, `rate_limited`, `transient_failure`, `permanent_failure`, `unexpected` |
 | `kachi_notification_dlt_persist_total` | Counter | `result` | `persisted`, `persist_failed` |
 | `kachi_notification_processing_recovery_total` | Counter | `result` | `retry_wait`, `dead`, `skipped` |

@@ -42,7 +42,7 @@ class TelegramNotificationSenderRealIntegrationTest {
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.TELEGRAM,
-                recipientId = configuredChatId,
+                address = configuredChatId,
                 message = "[${currentTimestamp()}] [notification-worker] [telegram-sendMessage-test] TelegramNotificationSender real integration test",
                 idempotencyKey = "telegram-real-integration-test",
                 )
@@ -67,7 +67,6 @@ class TelegramNotificationSenderRealIntegrationTest {
                 ),
                 slack = NotificationSenderProperties.Slack(
                     enabled = false,
-                    webhookUrl = "https://hooks.slack.test/services/test",
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),
@@ -76,7 +75,6 @@ class TelegramNotificationSenderRealIntegrationTest {
                 ),
                 discord = NotificationSenderProperties.Discord(
                     enabled = false,
-                    webhookUrl = "https://discord.test/api/webhooks/test",
                     connectTimeout = Duration.ofSeconds(2),
                     responseTimeout = Duration.ofSeconds(5),
                     readTimeout = Duration.ofSeconds(5),

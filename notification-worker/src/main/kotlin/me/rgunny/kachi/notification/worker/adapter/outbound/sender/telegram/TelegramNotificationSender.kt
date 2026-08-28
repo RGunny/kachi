@@ -20,8 +20,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
  *
  * Telegram Bot API 응답은 HTTP status와 별개로 JSON body의 ok/error_code/parameters.retry_after를 같이 확인해야 한다.
  * coroutine 취소는 외부 채널 장애가 아니므로 failure 결과로 변환하지 않는다.
- *
- * chat id는 아직 `recipientId`를 그대로 쓴다. `(recipientId, channel)`로 주소를 조회하는 단계(W1) 전까지의 운영 제약이다(ADR 027).
+ * 수신 주소가 chat id다.
  */
 class TelegramNotificationSender internal constructor(
     private val client: TelegramSendMessageClient,
@@ -37,7 +36,7 @@ class TelegramNotificationSender internal constructor(
         }
         require(command.message.isNotBlank()) { "message must not be blank" }
 
-        if (command.recipientId.isBlank()) {
+        if (command.address.isBlank()) {
             return SendNotificationResult.PermanentFailure(
                 RetryFailure.external(
                     code = "TELEGRAM_INVALID_RECIPIENT",
@@ -61,7 +60,7 @@ class TelegramNotificationSender internal constructor(
 
         return try {
             val response = client.sendMessage(
-                chatId = command.recipientId,
+                chatId = command.address,
                 text = command.message,
             )
 

@@ -10,12 +10,16 @@ import me.rgunny.kachi.notification.application.port.outbound.idempotency.Notifi
 import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.AvailableRecipient
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.UnavailableRecipient
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
 import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
+import me.rgunny.kachi.notification.exception.recipient.RecipientResolveException
 import me.rgunny.kachi.notification.exception.sender.RetryableSendException
 import me.rgunny.kachi.notification.retry.FailureCategory
 import me.rgunny.kachi.notification.retry.RetryDecision
@@ -25,11 +29,19 @@ import java.time.Instant
 
 /**
  * notification.dispatch 발송 실행 application service.
+ *
+ * claim한 알림의 `(recipientId, channel)`을 수신 주소로 바꾼 뒤 sender에 넘긴다.
+ * 주소가 없으면 발송하지 않고 SUPPRESSED로 끝내고, 조회가 실패하면 발송 실패와 같은 재시도 분류를 탄다.
+ *
+ * 발송 직전에 `notification:sent:{requestId}` 마커를 선점한다.
+ * vendor 호출 뒤 결과를 저장하기 전에 worker가 죽어 stale 회수로 RETRY_WAIT가 된 알림이 다시 나가는 것을 막는 마지막 층이다.
+ * 선점에 실패하면 SUPPRESSED로 끝낸다.
  */
 class DispatchNotificationService(
     private val notificationPersistencePort: NotificationPersistencePort,
     private val dispatchPersistencePort: NotificationDispatchPersistencePort,
     private val deduplicationPort: NotificationDeduplicationPort,
+    private val recipientResolverPort: RecipientResolverPort,
     private val idempotencyKeyPort: NotificationIdempotencyKeyPort,
     private val senderRouter: NotificationSenderRouter,
     private val policy: DispatchNotificationPolicy,
@@ -89,23 +101,60 @@ class DispatchNotificationService(
             )
         }
 
+        // sent 마커를 잡은 뒤 RETRY_WAIT나 예상 밖 예외로 빠져나가면 풀어야 다음 시도가 막히지 않는다.
+        var sentGuardKey: String? = null
+
         val sendResult = try {
-            // 6. claim에 성공한 알림에 대해 vendor idempotency key를 조회하거나 새로 만든다.
+            // 6. claim한 알림의 (recipientId, channel)을 수신 주소로 바꾼다.
+            // 주소가 없으면 sender와 idempotency key를 건드리지 않고 SUPPRESSED로 끝낸다.
+            val address = when (val resolved = recipientResolverPort.resolve(
+                recipientId = claimedNotification.recipientId,
+                channel = claimedNotification.channel,
+            )) {
+                is AvailableRecipient -> resolved.address
+                is UnavailableRecipient -> return completeAsSuppressed(
+                    claimed = claimedNotification,
+                    reason = "recipient unavailable: ${resolved.reason}",
+                    now = now,
+                )
+            }
+
+            // 7. claim에 성공한 알림에 대해 vendor idempotency key를 조회하거나 새로 만든다.
             val idempotencyKey = idempotencyKeyPort.getOrCreate(
                 notificationId = claimedNotification.id,
                 ttl = policy.idempotencyKeyTtl,
             )
 
-            // 7. channel에 맞는 sender를 선택하고 외부 채널로 발송한다.
+            // 8. 발송 직전에 requestId 단위 sent 마커를 선점한다. 이미 있으면 vendor 호출까지 간 시도가 있었던 것이다.
+            val guardKey = sentGuardKey(command.requestId)
+            if (!deduplicationPort.acquire(guardKey, policy.idempotencyKeyTtl)) {
+                return completeAsSuppressed(
+                    claimed = claimedNotification,
+                    reason = ALREADY_SENT_REASON,
+                    now = now,
+                )
+            }
+            sentGuardKey = guardKey
+
+            // 9. channel에 맞는 sender를 선택하고 조회한 주소로 발송한다.
             val sender = senderRouter.route(claimedNotification.channel)
             sender.send(
                 SendNotificationCommand(
                     notificationId = claimedNotification.id,
                     channel = claimedNotification.channel,
-                    recipientId = claimedNotification.recipientId,
+                    address = address,
                     message = command.message,
                     idempotencyKey = idempotencyKey,
                 )
+            )
+        } catch (e: RecipientResolveException) {
+            // 주소 조회 실패는 발송 실패와 같은 재시도 분류를 탄다. sender는 부르지 않았다.
+            return completeAsRetryableFailure(
+                claimed = claimedNotification,
+                failure = e.failure,
+                dedupeKey = dedupeKey,
+                now = now,
+                dispatchAttempted = false,
             )
         } catch (e: RetryableSendException) {
             toRetryableResult(e)
@@ -113,11 +162,12 @@ class DispatchNotificationService(
             SendNotificationResult.PermanentFailure(e.failure)
         } catch (e: Exception) {
             // TODO: PROCESSING 상태가 이미 확정된 뒤의 장애까지 내부 회수하려면 stale PROCESSING recovery use case를 별도로 둔다.
+            sentGuardKey?.let { deduplicationPort.release(it) }
             deduplicationPort.release(dedupeKey)
             throw e
         }
 
-        // 8. sender가 명시적인 결과를 반환하면 그 결과를 기준으로 알림 상태를 확정한다.
+        // 10. sender가 명시적인 결과를 반환하면 그 결과를 기준으로 알림 상태를 확정한다.
         // vendor HTTP/Redis는 Mongo rollback 대상이 아니므로, 외부 호출 이후 DB finalize는 별도 저장 경계로 분리한다.
         return when (sendResult) {
             is SendNotificationResult.Success -> completeAsSent(
@@ -128,12 +178,14 @@ class DispatchNotificationService(
                 claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
+                sentGuardKey = sentGuardKey,
                 now = now,
             )
             is SendNotificationResult.TransientFailure -> completeAsRetryableFailure(
                 claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
+                sentGuardKey = sentGuardKey,
                 now = now,
             )
             is SendNotificationResult.PermanentFailure -> completeAsDead(
@@ -153,6 +205,10 @@ class DispatchNotificationService(
 
     private fun dispatchDedupeKey(notificationId: NotificationId): String {
         return "notification:dispatch:${notificationId.id}"
+    }
+
+    private fun sentGuardKey(requestId: String): String {
+        return "notification:sent:$requestId"
     }
 
     private suspend fun completeAsSent(
@@ -177,11 +233,35 @@ class DispatchNotificationService(
         )
     }
 
+    private suspend fun completeAsSuppressed(
+        claimed: Notification,
+        reason: String,
+        now: Instant,
+    ): DispatchNotificationResult {
+        // 1. 보낼 곳이 없으므로 발송 시도 없이 SUPPRESSED로 종착시킨다. attempts는 올리지 않는다.
+        val suppressed = claimed.markSuppressed(now, reason)
+
+        // 2. 다른 종착과 같은 claim fencing 저장 경계를 탄다.
+        val savedNotification = saveFinalizedIfClaimMatches(claimed, suppressed)
+            ?: return staleFinalizeResult(claimed, now, dispatchAttempted = false)
+
+        // 3. terminal이므로 listener는 ack한다. dispatch dedupe 마커는 TTL로 사라진다.
+        return DispatchNotificationResult(
+            notificationId = savedNotification.id,
+            status = savedNotification.status,
+            duplicated = false,
+            dispatchAttempted = false,
+            dispatchCompletedAt = now,
+        )
+    }
+
     private suspend fun completeAsRetryableFailure(
         claimed: Notification,
         failure: RetryFailure,
         dedupeKey: String,
         now: Instant,
+        sentGuardKey: String? = null,
+        dispatchAttempted: Boolean = true,
     ): DispatchNotificationResult {
         // 1. 이번 발송 시도를 포함한 attempts로 retry/give-up 결정을 계산한다.
         val nextAttempts = claimed.dispatchAttempts + 1
@@ -197,9 +277,10 @@ class DispatchNotificationService(
 
         // 3. 계산된 최종 상태를 DB에 먼저 저장한다. 저장 전 dedupe를 풀면 다음 메시지가 낡은 상태를 볼 수 있다.
         val savedNotification = saveFinalizedIfClaimMatches(claimed, finalized)
-            ?: return staleFinalizeResult(claimed, now)
+            ?: return staleFinalizeResult(claimed, now, dispatchAttempted)
         if (failureClassification == DispatchFailureClassification.RETRYABLE) {
-            // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
+            // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 sent 마커와 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
+            sentGuardKey?.let { deduplicationPort.release(it) }
             deduplicationPort.release(dedupeKey)
         }
 
@@ -208,7 +289,7 @@ class DispatchNotificationService(
             notificationId = savedNotification.id,
             status = savedNotification.status,
             duplicated = false,
-            dispatchAttempted = true,
+            dispatchAttempted = dispatchAttempted,
             dispatchCompletedAt = now,
             failureClassification = failureClassification,
             failure = failure,
@@ -244,6 +325,7 @@ class DispatchNotificationService(
     private suspend fun staleFinalizeResult(
         notification: Notification,
         now: Instant,
+        dispatchAttempted: Boolean = true,
     ): DispatchNotificationResult {
         val current = notificationPersistencePort.findById(notification.id)
             ?: throw NotificationNotFoundException(notification.id)
@@ -252,10 +334,14 @@ class DispatchNotificationService(
             notificationId = current.id,
             status = current.status,
             duplicated = true,
-            dispatchAttempted = true,
+            dispatchAttempted = dispatchAttempted,
             dispatchCompletedAt = now,
             failureClassification = DispatchFailureClassification.NONE,
         )
+    }
+
+    private companion object {
+        const val ALREADY_SENT_REASON = "already sent"
     }
 
     /**

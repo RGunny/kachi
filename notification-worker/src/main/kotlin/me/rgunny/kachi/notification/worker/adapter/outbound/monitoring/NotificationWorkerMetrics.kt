@@ -5,9 +5,13 @@ import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.Disp
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.AvailableRecipient
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.ResolvedRecipient
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.UnavailableRecipient
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
+import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientResolveSource
 import org.springframework.stereotype.Component
 import java.time.Duration
 
@@ -147,6 +151,39 @@ class NotificationWorkerMetrics(
         ).record(elapsed)
     }
 
+    fun recordRecipientResolved(
+        channel: NotificationChannel,
+        resolved: ResolvedRecipient,
+        source: RecipientResolveSource,
+    ) {
+        // 수신자 id·주소·사유는 시계열을 늘리거나 주소를 노출하므로 tag로 쓰지 않는다.
+        val metricResult = when (resolved) {
+            is AvailableRecipient -> NotificationWorkerMetricContract.Results.RecipientResolve.AVAILABLE
+            is UnavailableRecipient -> NotificationWorkerMetricContract.Results.RecipientResolve.UNAVAILABLE
+        }
+        recordRecipientResolve(channel, metricResult, source)
+    }
+
+    fun recordRecipientResolveFailed(
+        channel: NotificationChannel,
+        source: RecipientResolveSource,
+    ) {
+        recordRecipientResolve(channel, NotificationWorkerMetricContract.Results.RecipientResolve.FAILED, source)
+    }
+
+    private fun recordRecipientResolve(
+        channel: NotificationChannel,
+        result: String,
+        source: RecipientResolveSource,
+    ) {
+        registry.counter(
+            NotificationWorkerMetricContract.Names.RECIPIENT_RESOLVE,
+            NotificationWorkerMetricContract.Tags.CHANNEL, channel.name,
+            NotificationWorkerMetricContract.Tags.RESULT, result,
+            NotificationWorkerMetricContract.Tags.SOURCE, recipientResolveSource(source),
+        ).increment()
+    }
+
     fun recordProcessingRecovery(result: RecoverStaleProcessingDispatchResult, elapsed: Duration) {
         // Timer count로 tick 횟수를 표현하고 Counter는 실제 회수 결과의 단건 수량만 누적한다.
         registry.timer(
@@ -199,8 +236,18 @@ class NotificationWorkerMetrics(
             NotificationStatus.SENT -> NotificationWorkerMetricContract.Results.Dispatch.SENT
             NotificationStatus.RETRY_WAIT -> NotificationWorkerMetricContract.Results.Dispatch.RETRY_WAIT
             NotificationStatus.DEAD -> NotificationWorkerMetricContract.Results.Dispatch.DEAD
+            NotificationStatus.SUPPRESSED -> NotificationWorkerMetricContract.Results.Dispatch.SUPPRESSED
             // 현재 core 불변식 밖의 상태를 숨기지 않고 운영 이상 신호로 남긴다.
             else -> NotificationWorkerMetricContract.Results.Dispatch.UNEXPECTED_STATUS
+        }
+    }
+
+    private fun recipientResolveSource(source: RecipientResolveSource): String {
+        return when (source) {
+            RecipientResolveSource.CACHE -> NotificationWorkerMetricContract.Sources.RecipientResolve.CACHE
+            RecipientResolveSource.USER_SERVICE -> {
+                NotificationWorkerMetricContract.Sources.RecipientResolve.USER_SERVICE
+            }
         }
     }
 

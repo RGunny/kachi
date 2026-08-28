@@ -7,11 +7,14 @@ import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.contract.NotificationChannel as ContractNotificationChannel
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.NotificationDispatchKafkaListener
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.config.DiscordNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.MockNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.NotificationDispatchProperties
+import me.rgunny.kachi.notification.worker.config.NotificationRecipientConfig
+import me.rgunny.kachi.notification.worker.config.NotificationRecipientProperties
 import me.rgunny.kachi.notification.worker.config.NotificationSenderProperties
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerCoreConfig
 import me.rgunny.kachi.notification.worker.config.NotificationWorkerProperties
@@ -21,6 +24,8 @@ import me.rgunny.kachi.notification.worker.fake.FakeNotificationDeduplicationPor
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationIdempotencyKeyPort
 import me.rgunny.kachi.notification.worker.fake.FakeNotificationPersistencePort
+import me.rgunny.kachi.notification.worker.fake.InMemoryRecipientAddressCache
+import me.rgunny.kachi.notification.worker.support.TestVendorResponse
 import me.rgunny.kachi.notification.worker.support.TestVendorServer
 import tools.jackson.databind.json.JsonMapper
 import java.time.Clock
@@ -32,35 +37,39 @@ import me.rgunny.kachi.notification.domain.NotificationOrigin
 /**
  * notification-worker dispatch 통합 테스트용 조립 fixture.
  *
- * 실제 worker config를 통해 Slack/Discord/Telegram sender와 mock sender를 만들고,
+ * 실제 worker config를 통해 Slack/Discord/Telegram sender, mock sender, 수신 주소 resolver를 만들고,
  * persistence/redis/idempotency 같은 외부 저장소 port만 fake로 대체한다.
+ * [TestVendorServer]는 vendor와 user-service 역할을 같이 맡는다.
  */
 class NotificationWorkerDispatchFixture(
-    vendorServer: TestVendorServer,
+    private val vendorServer: TestVendorServer,
     private val clock: Clock,
 ) {
     val persistence = FakeNotificationPersistencePort()
     val deduplication = FakeNotificationDeduplicationPort()
+    val recipientCache = InMemoryRecipientAddressCache()
+    val meterRegistry = SimpleMeterRegistry()
     val listener: NotificationDispatchKafkaListener
+    private val metrics = NotificationWorkerMetrics(meterRegistry)
     private val jsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     init {
         val workerProperties = NotificationWorkerProperties(workerId = "test-worker")
         val dispatchProperties = dispatchProperties()
         val senderProperties = senderProperties(vendorServer)
+        val recipientProperties = recipientProperties(vendorServer)
         val slackConfig = SlackNotificationSenderConfig()
         val discordConfig = DiscordNotificationSenderConfig()
         val telegramConfig = TelegramNotificationSenderConfig()
         val mockConfig = MockNotificationSenderConfig()
+        val recipientConfig = NotificationRecipientConfig()
         val coreConfig = NotificationWorkerCoreConfig()
 
         val slackSender = slackConfig.slackNotificationSender(
             webClient = slackConfig.slackWebClient(senderProperties),
-            properties = senderProperties,
         )
         val discordSender = discordConfig.discordNotificationSender(
             webClient = discordConfig.discordWebClient(senderProperties),
-            properties = senderProperties,
         )
         val telegramSender = telegramConfig.telegramNotificationSender(
             webClient = telegramConfig.telegramWebClient(senderProperties),
@@ -70,10 +79,17 @@ class NotificationWorkerDispatchFixture(
         val router = NotificationSenderRouter(listOf(slackSender, discordSender, telegramSender, mockSender))
         val retryPolicy = coreConfig.dispatchRetryPolicy(dispatchProperties)
         val dispatchPolicy = coreConfig.dispatchNotificationPolicy(workerProperties, dispatchProperties, retryPolicy)
+        val recipientResolver = recipientConfig.recipientResolverPort(
+            webClient = recipientConfig.recipientWebClient(recipientProperties),
+            recipientAddressCache = recipientCache,
+            properties = recipientProperties,
+            metrics = metrics,
+        )
         val dispatchUseCase = DispatchNotificationService(
             notificationPersistencePort = persistence,
             dispatchPersistencePort = FakeNotificationDispatchPersistencePort(persistence),
             deduplicationPort = deduplication,
+            recipientResolverPort = recipientResolver,
             idempotencyKeyPort = FakeNotificationIdempotencyKeyPort(),
             senderRouter = router,
             policy = dispatchPolicy,
@@ -83,13 +99,42 @@ class NotificationWorkerDispatchFixture(
         listener = NotificationDispatchKafkaListener(
             dispatchUseCase = dispatchUseCase,
             jsonMapper = jsonMapper,
-            metrics = NotificationWorkerMetrics(SimpleMeterRegistry()),
+            metrics = metrics,
         )
+    }
+
+    /**
+     * user-service 역할의 vendor server에 그 수신자·채널의 바인딩 응답을 등록한다.
+     * address가 null이면 status대로 주소 없는 응답이 된다.
+     */
+    fun binding(
+        recipientId: String,
+        channel: NotificationChannel,
+        status: String,
+        address: String?,
+    ) {
+        val addressJson = address?.let { "\"$it\"" } ?: "null"
+        vendorServer.respond(
+            bindingPath(recipientId, channel),
+            TestVendorResponse(
+                statusCode = 200,
+                body = """{"success":true,"data":{"channel":"${channel.name}","status":"$status","address":$addressJson},"error":null}""",
+            ),
+        )
+    }
+
+    /** user-service 역할의 vendor server가 그 수신자·채널에 임의 응답을 돌려주게 한다. */
+    fun bindingResponse(recipientId: String, channel: NotificationChannel, response: TestVendorResponse) {
+        vendorServer.respond(bindingPath(recipientId, channel), response)
+    }
+
+    fun bindingPath(recipientId: String, channel: NotificationChannel): String {
+        return "/api/v1/internal/users/$recipientId/channel-bindings/${channel.name}"
     }
 
     fun publishedNotification(
         channel: NotificationChannel,
-        recipientId: String,
+        recipientId: String = UUID.randomUUID().toString(),
     ): Notification {
         return Notification.request(
             requestId = "request-${UUID.randomUUID()}",
@@ -102,6 +147,27 @@ class NotificationWorkerDispatchFixture(
         )
             .markPublished(clock.instant().minusSeconds(5))
             .also(persistence::put)
+    }
+
+    /** 같은 id·requestId를 가진 알림을 RETRY_WAIT 상태로 다시 만든다. stale 회수 뒤의 재전달을 흉내 낼 때 쓴다. */
+    fun retryWaitCopy(notification: Notification): Notification {
+        return Notification.restore(
+            id = notification.id,
+            requestId = notification.requestId,
+            requester = notification.requester,
+            channel = notification.channel,
+            recipientId = notification.recipientId,
+            message = notification.message,
+            origin = notification.origin,
+            requestedAt = notification.requestedAt,
+            status = NotificationStatus.RETRY_WAIT,
+            failureReason = "stale processing recovered",
+            updatedAt = clock.instant(),
+            lastTransitionAt = clock.instant(),
+            dispatchAttempts = notification.dispatchAttempts,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
     fun payload(notification: Notification): String {
@@ -139,6 +205,18 @@ class NotificationWorkerDispatchFixture(
         )
     }
 
+    private fun recipientProperties(vendorServer: TestVendorServer): NotificationRecipientProperties {
+        return NotificationRecipientProperties(
+            cacheTtl = Duration.ofMinutes(5),
+            userService = NotificationRecipientProperties.UserService(
+                baseUrl = vendorServer.baseUrl,
+                channelBindingPath = "/api/v1/internal/users/{userId}/channel-bindings/{channel}",
+                timeout = Duration.ofSeconds(3),
+                maxInMemorySize = 256 * 1024,
+            ),
+        )
+    }
+
     private fun senderProperties(vendorServer: TestVendorServer): NotificationSenderProperties {
         return NotificationSenderProperties(
             mock = NotificationSenderProperties.Mock(
@@ -148,7 +226,6 @@ class NotificationWorkerDispatchFixture(
             ),
             slack = NotificationSenderProperties.Slack(
                 enabled = true,
-                webhookUrl = "${vendorServer.baseUrl}/slack",
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),
@@ -157,7 +234,6 @@ class NotificationWorkerDispatchFixture(
             ),
             discord = NotificationSenderProperties.Discord(
                 enabled = true,
-                webhookUrl = "${vendorServer.baseUrl}/discord",
                 connectTimeout = Duration.ofSeconds(2),
                 responseTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(5),

@@ -37,7 +37,7 @@ class DiscordNotificationSender internal constructor(
         require(command.message.isNotBlank()) { "message must not be blank" }
 
         return try {
-            val response = client.send(content = command.message)
+            val response = client.send(webhookUrl = command.address, content = command.message)
 
             classify(response)
         } catch (exception: CancellationException) {
@@ -49,6 +49,7 @@ class DiscordNotificationSender internal constructor(
                 )
             }
 
+            // ADDRESS-EXPOSURE: 요청 예외 메시지에 webhook URL(수신 주소)이 들어갈 수 있고 failureReason으로 저장된다.
             SendNotificationResult.TransientFailure(
                 RetryFailure.external(
                     code = "DISCORD_WEBHOOK_REQUEST_FAILED",
@@ -58,6 +59,7 @@ class DiscordNotificationSender internal constructor(
                 )
             )
         } catch (exception: Exception) {
+            // ADDRESS-EXPOSURE: 예외 메시지에 webhook URL(수신 주소)이 들어갈 수 있고 로그와 failureReason에 남는다.
             log.warn("discord webhook send failed by unexpected exception", exception)
             SendNotificationResult.TransientFailure(
                 RetryFailure.external(

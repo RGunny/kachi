@@ -25,6 +25,7 @@ import me.rgunny.kachi.user.domain.UserRole
 import me.rgunny.kachi.user.domain.UserStatus
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationRunner
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -38,13 +39,15 @@ import java.time.Instant
  * 사용자 등록·로그인·구독을 손으로 하지 않아도 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있고,
  * 역할별 수신자 API가 관리자를 돌려주어 격리 알림 라우팅을 바로 확인할 수 있다.
  * 모든 단계가 find-or-create라 재기동해도 중복이 생기지 않는다.
- * 바인딩 주소는 형식만 맞춘 값이다.
+ * 시드 사용자의 바인딩 주소는 형식만 맞춘 값이다. 관리자의 바인딩 주소는 [UserSeedProperties]에 설정된 값을 쓰고,
+ * 없는 채널만 형식만 맞춘 값으로 심는다. 이미 있는 관리자 바인딩의 주소가 설정값과 다르면 설정값으로 바꾼다.
  *
  * 유스케이스가 아니라 JPA repository를 직접 쓴다. 유스케이스를 거치면 활성 사용자·채널 바인딩 검증을 시드가 만족시켜야 하고,
  * repository를 직접 만지는 코드는 레이어 규칙상 config에만 둘 수 있다.
  */
 @Configuration
 @Profile("local")
+@EnableConfigurationProperties(UserSeedProperties::class)
 class LocalSeedDataConfig {
 
     /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 → 관리자 사용자 → 관리자 바인딩 순으로 심고 결과를 한 줄 남긴다. */
@@ -55,17 +58,24 @@ class LocalSeedDataConfig {
         keywordJpaRepository: KeywordJpaRepository,
         subscriptionJpaRepository: SubscriptionJpaRepository,
         addressCipherPort: AddressCipherPort,
-        clock: Clock
+        clock: Clock,
+        seedProperties: UserSeedProperties
     ): ApplicationRunner {
         return ApplicationRunner {
             val now = Instant.now(clock)
             val seedUser = findOrCreateSeedUser(userJpaRepository, now)
-            findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, seedUser, SubscriptionChannel.SLACK, now)
+            findOrCreateBinding(
+                channelBindingJpaRepository,
+                addressCipherPort,
+                seedUser,
+                placeholderAddress(SubscriptionChannel.SLACK),
+                now
+            )
             val keywords = SEED_KEYWORD_NAMES.map { findOrCreateKeyword(keywordJpaRepository, it, now) }
             val subscriptions = keywords.map { findOrCreateSubscription(subscriptionJpaRepository, seedUser, it, now) }
             val adminUser = findOrCreateAdminUser(userJpaRepository, now)
             SubscriptionChannel.entries.forEach { channel ->
-                findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, adminUser, channel, now)
+                findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, adminUser, adminAddress(seedProperties, channel), now)
             }
 
             log.info(
@@ -122,19 +132,31 @@ class LocalSeedDataConfig {
         return userJpaRepository.save(UserJpaEntity.from(adminUser)).toDomain()
     }
 
-    /** 사용자의 채널 바인딩을 찾고, 없으면 만들고, 해지돼 있으면 되살린다. */
+    /** 설정된 관리자 주소가 있으면 그것, 없으면 자리표시 주소. 형식이 틀리면 기동 시점에 바로 실패한다. */
+    private fun adminAddress(seedProperties: UserSeedProperties, channel: SubscriptionChannel): ChannelAddress {
+        val configured = seedProperties.adminAddresses.of(channel) ?: return placeholderAddress(channel)
+        return ChannelAddress.of(channel, configured)
+    }
+
+    private fun placeholderAddress(channel: SubscriptionChannel): ChannelAddress {
+        return ChannelAddress.of(channel, PLACEHOLDER_ADDRESSES.getValue(channel))
+    }
+
+    /**
+     * 사용자의 채널 바인딩을 찾고, 없으면 만들고, 해지돼 있거나 주소가 다르면 이 주소로 ACTIVE가 되게 한다.
+     * 활성이고 주소도 같으면 저장하지 않는다.
+     */
     private fun findOrCreateBinding(
         channelBindingJpaRepository: ChannelBindingJpaRepository,
         addressCipherPort: AddressCipherPort,
         user: User,
-        channel: SubscriptionChannel,
+        address: ChannelAddress,
         createdAt: Instant
     ): ChannelBinding {
-        val address = ChannelAddress.of(channel, SEED_ADDRESSES.getValue(channel))
-        val existing = channelBindingJpaRepository.findByUserIdAndChannel(user.id.value, channel)
+        val existing = channelBindingJpaRepository.findByUserIdAndChannel(user.id.value, address.channel)
         if (existing != null) {
             val binding = existing.toDomain(addressCipherPort)
-            return if (binding.isActive) {
+            return if (binding.isActive && binding.address == address) {
                 binding
             } else {
                 channelBindingJpaRepository.save(ChannelBindingJpaEntity.from(binding.bindAddress(address, createdAt), addressCipherPort))
@@ -200,7 +222,7 @@ class LocalSeedDataConfig {
         private val SEED_CHANNELS = setOf(SubscriptionChannel.SLACK)
         private const val SEED_ADMIN_EMAIL = "admin@kachi.local"
         private const val SEED_ADMIN_NICKNAME = "admin"
-        private val SEED_ADDRESSES = mapOf(
+        private val PLACEHOLDER_ADDRESSES = mapOf(
             SubscriptionChannel.SLACK to "https://hooks.slack.com/services/LOCAL/SEED/WEBHOOK",
             SubscriptionChannel.DISCORD to "https://discord.com/api/webhooks/000000/LOCAL-SEED",
             SubscriptionChannel.TELEGRAM to "000000000"

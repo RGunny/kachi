@@ -17,6 +17,7 @@ object NotificationWorkerMetricContract {
         const val SENDER_DURATION = "kachi.notification.sender.duration"
         const val PROCESSING_RECOVERY = "kachi.notification.processing.recovery"
         const val PROCESSING_RECOVERY_DURATION = "kachi.notification.processing.recovery.duration"
+        const val RECIPIENT_RESOLVE = "kachi.notification.recipient.resolve"
     }
 
     /**
@@ -29,6 +30,7 @@ object NotificationWorkerMetricContract {
         const val CLASSIFICATION = "classification"
         const val FAILURE_CATEGORY = "failure_category"
         const val RESULT = "result"
+        const val SOURCE = "source"
     }
 
     /** adapter가 상태나 분류를 알 수 없는 실패에서도 동일한 tag schema를 유지한다. */
@@ -43,6 +45,7 @@ object NotificationWorkerMetricContract {
             const val SENT = "sent"
             const val RETRY_WAIT = "retry_wait"
             const val DEAD = "dead"
+            const val SUPPRESSED = "suppressed"
             const val DUPLICATED = "duplicated"
             const val UNEXPECTED_STATUS = "unexpected_status"
             const val INVALID_PAYLOAD = "invalid_payload"
@@ -73,6 +76,20 @@ object NotificationWorkerMetricContract {
             const val RETRY_WAIT = "retry_wait"
             const val DEAD = "dead"
             const val SKIPPED = "skipped"
+        }
+
+        object RecipientResolve {
+            const val AVAILABLE = "available"
+            const val UNAVAILABLE = "unavailable"
+            const val FAILED = "failed"
+        }
+    }
+
+    /** 결과를 어디서 결정했는지 나타내는 안정적인 source tag 값이다. */
+    object Sources {
+        object RecipientResolve {
+            const val CACHE = "cache"
+            const val USER_SERVICE = "user_service"
         }
     }
 }

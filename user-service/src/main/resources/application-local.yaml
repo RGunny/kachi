@@ -8,6 +8,11 @@ kachi:
       encryption-key: ${KACHI_USER_BINDING_KEY:nEzIn3Dn7DZqxYs2v8sMuFnXGNcPcj54q6nGJp0EJCA=}
     telegram:
       bot-username: ${KACHI_USER_TELEGRAM_BOT_USERNAME:kachi_local_bot}
+    seed:
+      admin-addresses:
+        slack: ${KACHI_USER_SEED_ADMIN_SLACK_WEBHOOK_URL:}
+        discord: ${KACHI_USER_SEED_ADMIN_DISCORD_WEBHOOK_URL:}
+        telegram: ${KACHI_USER_SEED_ADMIN_TELEGRAM_CHAT_ID:}
 
 spring:
   data:

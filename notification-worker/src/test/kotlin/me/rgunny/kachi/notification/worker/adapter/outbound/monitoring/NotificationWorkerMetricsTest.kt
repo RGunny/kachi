@@ -7,12 +7,16 @@ import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.Disp
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.AvailableRecipient
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.RecipientUnavailableReason
+import me.rgunny.kachi.notification.application.port.outbound.recipient.model.UnavailableRecipient
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.retry.RetryFailure
 import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientResolveSource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -32,13 +36,14 @@ class NotificationWorkerMetricsTest {
         metrics.recordDispatch(command(), dispatchResult(NotificationStatus.SENT), ELAPSED)
         metrics.recordDispatch(command(), dispatchResult(NotificationStatus.RETRY_WAIT), ELAPSED)
         metrics.recordDispatch(command(), dispatchResult(NotificationStatus.DEAD), ELAPSED)
+        metrics.recordDispatch(command(), dispatchResult(NotificationStatus.SUPPRESSED), ELAPSED)
         metrics.recordDispatch(command(), dispatchResult(NotificationStatus.SENT, duplicated = true), ELAPSED)
         metrics.recordDispatch(command(), dispatchResult(NotificationStatus.REQUESTED), ELAPSED)
         metrics.recordInvalidDispatchPayload(ELAPSED)
         metrics.recordDispatchNotReady(command(), ELAPSED)
         metrics.recordDispatchFailure(command(), ELAPSED)
 
-        listOf("sent", "retry_wait", "dead", "duplicated").forEach { result ->
+        listOf("sent", "retry_wait", "dead", "suppressed", "duplicated").forEach { result ->
             assertCounter(
                 NotificationWorkerMetricContract.Names.DISPATCH,
                 1.0,
@@ -131,6 +136,35 @@ class NotificationWorkerMetricsTest {
     }
 
     @Test
+    @DisplayName("수신 주소 조회 결과를 channel·result·source 태그로 기록한다")
+    fun recordRecipientResolveResults() {
+        val available = AvailableRecipient("https://hooks.slack.test/services/resolved")
+        val unavailable = UnavailableRecipient(RecipientUnavailableReason.REVOKED)
+        metrics.recordRecipientResolved(NotificationChannel.SLACK, available, RecipientResolveSource.CACHE)
+        metrics.recordRecipientResolved(NotificationChannel.SLACK, unavailable, RecipientResolveSource.CACHE)
+        metrics.recordRecipientResolveFailed(NotificationChannel.SLACK, RecipientResolveSource.CACHE)
+        metrics.recordRecipientResolved(NotificationChannel.SLACK, available, RecipientResolveSource.USER_SERVICE)
+        metrics.recordRecipientResolved(NotificationChannel.SLACK, unavailable, RecipientResolveSource.USER_SERVICE)
+        metrics.recordRecipientResolveFailed(NotificationChannel.SLACK, RecipientResolveSource.USER_SERVICE)
+
+        listOf("cache", "user_service").forEach { source ->
+            listOf("available", "unavailable", "failed").forEach { result ->
+                assertCounter(
+                    NotificationWorkerMetricContract.Names.RECIPIENT_RESOLVE,
+                    1.0,
+                    "channel", "SLACK",
+                    "result", result,
+                    "source", source,
+                )
+            }
+        }
+        assertTagKeys(
+            NotificationWorkerMetricContract.Names.RECIPIENT_RESOLVE,
+            setOf("channel", "result", "source"),
+        )
+    }
+
+    @Test
     @DisplayName("DLT 영속 성공과 실패를 기록한다")
     fun recordDltResults() {
         metrics.recordDltPersisted()
@@ -185,6 +219,11 @@ class NotificationWorkerMetricsTest {
         prometheusMetrics.recordDispatch(command(), dispatchResult(NotificationStatus.SENT), ELAPSED)
         prometheusMetrics.recordSender(NotificationChannel.SLACK, SendNotificationResult.Success(), ELAPSED)
         prometheusMetrics.recordDltPersistFailure()
+        prometheusMetrics.recordRecipientResolved(
+            NotificationChannel.SLACK,
+            AvailableRecipient("https://hooks.slack.test/services/resolved"),
+            RecipientResolveSource.USER_SERVICE,
+        )
         prometheusMetrics.recordProcessingRecovery(
             RecoverStaleProcessingDispatchResult(1, 1, 1, 0, 0, NOW),
             ELAPSED,
@@ -199,6 +238,7 @@ class NotificationWorkerMetricsTest {
             "kachi_notification_sender_duration_seconds_count",
             "kachi_notification_processing_recovery_total",
             "kachi_notification_processing_recovery_duration_seconds_count",
+            "kachi_notification_recipient_resolve_total",
         ).forEach { prometheusName ->
             assertTrue(scrape.contains(prometheusName), "missing Prometheus metric: $prometheusName")
         }

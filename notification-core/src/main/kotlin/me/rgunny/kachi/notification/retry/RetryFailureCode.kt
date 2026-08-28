@@ -42,4 +42,16 @@ enum class RetryFailureCode(
         source = FailureSource.APPLICATION,
         category = FailureCategory.TIMEOUT,
     ),
+    RECIPIENT_RESOLVE_FAILED(
+        code = "RECIPIENT_RESOLVE_FAILED",
+        defaultMessage = "recipient resolve failed",
+        source = FailureSource.APPLICATION,
+        category = FailureCategory.TRANSIENT_ERROR,
+    ),
+    RECIPIENT_RESOLVE_TIMEOUT(
+        code = "RECIPIENT_RESOLVE_TIMEOUT",
+        defaultMessage = "recipient resolve timeout",
+        source = FailureSource.APPLICATION,
+        category = FailureCategory.TIMEOUT,
+    ),
 }
