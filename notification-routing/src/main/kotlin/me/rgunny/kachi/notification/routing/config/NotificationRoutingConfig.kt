@@ -1,10 +1,10 @@
 package me.rgunny.kachi.notification.routing.config
 
 import me.rgunny.kachi.notification.routing.adapter.outbound.messaging.KafkaNotificationRequestPublisher
-import me.rgunny.kachi.notification.routing.adapter.outbound.subscriber.UserServiceSubscriberReaderAdapter
+import me.rgunny.kachi.notification.routing.adapter.outbound.recipient.UserServiceRecipientReaderAdapter
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.NotificationRequestPublisherPort
 import me.rgunny.kachi.notification.routing.application.port.outbound.persistence.RoutingJobPersistencePort
-import me.rgunny.kachi.notification.routing.application.port.outbound.subscriber.SubscriberReaderPort
+import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.RecipientReaderPort
 import me.rgunny.kachi.notification.routing.application.service.RouteNotificationService
 import me.rgunny.kachi.notification.routing.application.service.RoutingPolicy
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -27,10 +27,7 @@ class NotificationRoutingConfig {
 
     @Bean
     fun routingPolicy(properties: NotificationRoutingProperties): RoutingPolicy {
-        return RoutingPolicy(
-            requester = ROUTING_REQUESTER,
-            adminRecipientRefs = properties.admin.recipients,
-        )
+        return RoutingPolicy(requester = ROUTING_REQUESTER)
     }
 
     @Bean
@@ -42,11 +39,11 @@ class NotificationRoutingConfig {
     }
 
     @Bean
-    fun subscriberReaderPort(
+    fun recipientReaderPort(
         userServiceWebClient: WebClient,
         properties: NotificationRoutingProperties,
-    ): SubscriberReaderPort {
-        return UserServiceSubscriberReaderAdapter(
+    ): RecipientReaderPort {
+        return UserServiceRecipientReaderAdapter(
             webClient = userServiceWebClient,
             properties = properties.userService,
         )
@@ -68,14 +65,14 @@ class NotificationRoutingConfig {
     @Bean
     fun routeNotificationService(
         routingJobPersistencePort: RoutingJobPersistencePort,
-        subscriberReaderPort: SubscriberReaderPort,
+        recipientReaderPort: RecipientReaderPort,
         notificationRequestPublisherPort: NotificationRequestPublisherPort,
         routingPolicy: RoutingPolicy,
         clock: Clock,
     ): RouteNotificationService {
         return RouteNotificationService(
             routingJobPersistencePort = routingJobPersistencePort,
-            subscriberReaderPort = subscriberReaderPort,
+            recipientReaderPort = recipientReaderPort,
             notificationRequestPublisherPort = notificationRequestPublisherPort,
             policy = routingPolicy,
             clock = clock,

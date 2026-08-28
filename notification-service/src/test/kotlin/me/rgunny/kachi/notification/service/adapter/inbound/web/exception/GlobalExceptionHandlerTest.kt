@@ -26,7 +26,7 @@ class GlobalExceptionHandlerTest {
     fun handleValidation() {
         val bindingResult = BeanPropertyBindingResult(Any(), "notificationRequest")
         bindingResult.addError(FieldError("notificationRequest", "requestId", "requestId는 필수입니다"))
-        bindingResult.addError(FieldError("notificationRequest", "recipient", "recipient는 필수입니다"))
+        bindingResult.addError(FieldError("notificationRequest", "recipientId", "recipientId는 필수입니다"))
         val exception = MethodArgumentNotValidException(methodParameter(), bindingResult)
 
         val response = handler.handleValidation(exception)

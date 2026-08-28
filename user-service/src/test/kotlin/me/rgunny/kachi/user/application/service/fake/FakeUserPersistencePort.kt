@@ -6,11 +6,12 @@ import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
 
 /**
- * id 조회만 지원하는 사용자 저장소.
+ * 메모리 사용자 저장소.
  *
- * `ActiveUserValidator`가 활성 사용자를 판정하는 데 필요한 `findById`만 채운다. 나머지는 호출되지 않으므로 빈 응답이다.
+ * `findById`와 `findAllByRole`만 채운다. 나머지는 호출되지 않으므로 빈 응답이다.
  */
 class FakeUserPersistencePort(
     private val users: Map<UserId, User>
@@ -21,6 +22,8 @@ class FakeUserPersistencePort(
     override fun findByAuthProviderAndProviderUserId(authProvider: AuthProvider, providerUserId: ProviderUserId): User? = null
 
     override fun existsByEmail(email: Email): Boolean = false
+
+    override fun findAllByRole(role: UserRole): List<User> = users.values.filter { it.role == role }
 
     override fun save(user: User): User = user
 }

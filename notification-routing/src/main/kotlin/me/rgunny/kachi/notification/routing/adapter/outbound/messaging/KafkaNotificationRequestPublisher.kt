@@ -11,7 +11,7 @@ import tools.jackson.databind.json.JsonMapper
 /**
  * 알림 요청을 `NotificationRequestedEvent`로 직렬화해 접수 topic에 발행한다.
  *
- * key는 requestId다. 계약의 `recipient`에는 수신처 참조를 싣는다(ADR 025). 발행 성공의 근거는 broker ack이며 어댑터 자체 timeout은 두지 않는다.
+ * key는 requestId다. 발행 성공의 근거는 broker ack이며 어댑터 자체 timeout은 두지 않는다.
  * producer의 delivery timeout이 future를 닫는다.
  */
 class KafkaNotificationRequestPublisher(
@@ -34,7 +34,7 @@ class KafkaNotificationRequestPublisher(
             requestId = request.requestId,
             requester = request.requester,
             channel = request.channel,
-            recipient = request.recipientRef,
+            recipientId = request.recipientId,
             message = request.message,
             origin = NotificationRequestedOrigin(
                 summaryId = request.origin.summaryId,

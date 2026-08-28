@@ -63,7 +63,7 @@ class NotificationAdminService(
         val outbox = NotificationOutbox.create(
             notificationId = recovered.id,
             topic = policy.dispatchTopic,
-            partitionKey = recovered.recipient,
+            partitionKey = recovered.recipientId,
             eventPayload = eventSerializer.serializeDispatch(recovered.toDispatchMessage()),
             now = now,
         )
@@ -93,7 +93,7 @@ class NotificationAdminService(
             notificationId = id,
             requestId = requestId,
             channel = channel,
-            recipient = recipient,
+            recipientId = recipientId,
             message = message.orEmpty(),
         )
     }

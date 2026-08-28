@@ -10,11 +10,11 @@ import me.rgunny.kachi.notification.contract.NotificationChannel
  */
 object RoutingRequestId {
 
-    fun forSummary(summaryId: String, userId: String, channel: NotificationChannel): String {
-        return "sum:$summaryId:u:$userId:c:${channel.name}"
+    fun forSummary(summaryId: String, recipientId: String, channel: NotificationChannel): String {
+        return "sum:$summaryId:u:$recipientId:c:${channel.name}"
     }
 
-    fun forAdmin(eventKey: String, channel: NotificationChannel): String {
-        return "adm:$eventKey:c:${channel.name}"
+    fun forQuarantine(eventKey: String, recipientId: String, channel: NotificationChannel): String {
+        return "qrt:$eventKey:u:$recipientId:c:${channel.name}"
     }
 }

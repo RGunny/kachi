@@ -135,6 +135,9 @@ class OAuthUserServiceTest {
             return email in existingEmails
         }
 
+        override fun findAllByRole(role: UserRole): List<User> = emptyList()
+
+
         override fun save(user: User): User {
             saveCalled = true
             savedUsers += user

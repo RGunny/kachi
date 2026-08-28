@@ -10,7 +10,7 @@ import me.rgunny.kachi.notification.fake.FakeOutboxPersistencePort
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
-import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import me.rgunny.kachi.notification.retry.RetryPolicy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -69,7 +69,7 @@ class NotificationOutboxAdminServiceTest {
         return NotificationOutbox.create(
             notificationId = NotificationId.newId(),
             topic = DISPATCH_TOPIC,
-            partitionKey = RECIPIENT,
+            partitionKey = RECIPIENT_ID,
             eventPayload = "{}",
             now = NOW.minusSeconds(60),
         ).markPublishing(NOW.minusSeconds(30), "publisher-1")

@@ -1,6 +1,5 @@
 package me.rgunny.kachi.notification.routing.config
 
-import me.rgunny.kachi.notification.contract.NotificationChannel
 import me.rgunny.kachi.notification.routing.support.RoutingTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -9,7 +8,6 @@ import org.springframework.boot.context.properties.source.MapConfigurationProper
 import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 @DisplayName("NotificationRoutingProperties")
 class NotificationRoutingPropertiesTest {
@@ -27,10 +25,9 @@ class NotificationRoutingPropertiesTest {
                 "kachi.notification.routing.dlt.topic" to "notification.routing.dlt",
                 "kachi.notification.routing.retry.max-attempts" to "3",
                 "kachi.notification.routing.retry.backoff" to "1s",
-                "kachi.notification.routing.admin.recipients.slack" to "admin",
-                "kachi.notification.routing.admin.recipients.telegram" to "admin-chat",
                 "kachi.notification.routing.user-service.base-url" to "http://localhost:8080",
                 "kachi.notification.routing.user-service.subscriptions-path" to "/api/v1/internal/subscriptions",
+                "kachi.notification.routing.user-service.users-path" to "/api/v1/internal/users",
                 "kachi.notification.routing.user-service.timeout" to "3s",
                 "kachi.notification.routing.user-service.max-in-memory-size" to "262144",
             )
@@ -48,12 +45,9 @@ class NotificationRoutingPropertiesTest {
         assertEquals("notification.routing.dlt", properties.dlt.topic)
         assertEquals(3, properties.retry.maxAttempts)
         assertEquals(Duration.ofSeconds(1), properties.retry.backoff)
-        assertEquals(
-            mapOf(NotificationChannel.SLACK to "admin", NotificationChannel.TELEGRAM to "admin-chat"),
-            properties.admin.recipients,
-        )
         assertEquals("http://localhost:8080", properties.userService.baseUrl)
         assertEquals("/api/v1/internal/subscriptions", properties.userService.subscriptionsPath)
+        assertEquals("/api/v1/internal/users", properties.userService.usersPath)
         assertEquals(Duration.ofSeconds(3), properties.userService.timeout)
         assertEquals(262144, properties.userService.maxInMemorySize)
     }
@@ -69,8 +63,8 @@ class NotificationRoutingPropertiesTest {
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(dltTopic = "") }
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(maxAttempts = 0) }
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(backoff = Duration.ZERO) }
-        assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(adminRecipients = mapOf(NotificationChannel.SLACK to " ")) }
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(subscriptionsPath = "") }
+        assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(usersPath = "") }
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(timeout = Duration.ZERO) }
         assertFailsWith<IllegalArgumentException> { RoutingTestFixture.properties(maxInMemorySize = 0) }
     }
@@ -83,11 +77,5 @@ class NotificationRoutingPropertiesTest {
         }
 
         assertEquals(NotificationRoutingProperties.NO_USER_SERVICE_BASE_URL_MESSAGE, exception.message)
-    }
-
-    @Test
-    @DisplayName("관리자 수신처는 비어 있어도 된다")
-    fun allowEmptyAdminRecipients() {
-        assertTrue(RoutingTestFixture.properties(adminRecipients = emptyMap()).admin.recipients.isEmpty())
     }
 }

@@ -8,7 +8,7 @@ class Notification private constructor(
     val requestId: String,
     val requester: String,
     val channel: NotificationChannel,
-    val recipient: String,
+    val recipientId: String,
     val message: String?,
     val origin: NotificationOrigin,
     /**
@@ -43,14 +43,14 @@ class Notification private constructor(
             requestId: String,
             requester: String,
             channel: NotificationChannel,
-            recipient: String,
+            recipientId: String,
             message: String?,
             origin: NotificationOrigin,
             now: Instant
         ): Notification {
             require(requestId.isNotBlank()) { "requestId must not be blank" }
             require(requester.isNotBlank()) { "requester must not be blank" }
-            require(recipient.isNotBlank()) { "recipient must not be blank" }
+            require(recipientId.isNotBlank()) { "recipientId must not be blank" }
             require(message == null || message.isNotBlank()) { "message must not be blank" }
 
             return Notification(
@@ -58,7 +58,7 @@ class Notification private constructor(
                 requestId = requestId,
                 requester = requester,
                 channel = channel,
-                recipient = recipient,
+                recipientId = recipientId,
                 message = message,
                 origin = origin,
                 requestedAt = now,
@@ -81,7 +81,7 @@ class Notification private constructor(
             requestId: String,
             requester: String,
             channel: NotificationChannel,
-            recipient: String,
+            recipientId: String,
             message: String?,
             origin: NotificationOrigin,
             requestedAt: Instant,
@@ -96,7 +96,7 @@ class Notification private constructor(
         ): Notification {
             require(requestId.isNotBlank()) { "requestId must not be blank" }
             require(requester.isNotBlank()) { "requester must not be blank" }
-            require(recipient.isNotBlank()) { "recipient must not be blank" }
+            require(recipientId.isNotBlank()) { "recipientId must not be blank" }
             require(message == null || message.isNotBlank()) { "message must not be blank" }
             require(dispatchAttempts >= 0) { "dispatchAttempts must not be negative" }
             require(claimedBy == null || claimedBy.isNotBlank()) { "claimedBy must not be blank" }
@@ -118,7 +118,7 @@ class Notification private constructor(
                 requestId = requestId,
                 requester = requester,
                 channel = channel,
-                recipient = recipient,
+                recipientId = recipientId,
                 message = message,
                 origin = origin,
                 requestedAt = requestedAt,
@@ -322,7 +322,7 @@ class Notification private constructor(
             requestId = requestId,
             requester = requester,
             channel = channel,
-            recipient = recipient,
+            recipientId = recipientId,
             message = message,
             origin = origin,
             requestedAt = requestedAt,

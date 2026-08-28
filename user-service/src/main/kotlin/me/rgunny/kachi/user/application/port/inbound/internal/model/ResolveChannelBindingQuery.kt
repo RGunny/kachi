@@ -1,10 +1,12 @@
 package me.rgunny.kachi.user.application.port.inbound.internal.model
 
-import me.rgunny.kachi.user.domain.ChannelBindingId
+import me.rgunny.kachi.user.domain.SubscriptionChannel
+import me.rgunny.kachi.user.domain.UserId
 
 /**
- * 주소로 풀 수신처 참조.
+ * 주소로 풀 수신자와 채널.
  */
 data class ResolveChannelBindingQuery(
-    val ref: ChannelBindingId
+    val userId: UserId,
+    val channel: SubscriptionChannel
 )

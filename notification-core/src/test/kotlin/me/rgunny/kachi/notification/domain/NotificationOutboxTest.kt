@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.domain
 import me.rgunny.kachi.notification.retry.RetryPolicy
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
-import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -159,7 +159,7 @@ class NotificationOutboxTest {
         return NotificationOutbox.create(
             notificationId = NotificationId.newId(),
             topic = DISPATCH_TOPIC,
-            partitionKey = RECIPIENT,
+            partitionKey = RECIPIENT_ID,
             eventPayload = "{}",
             now = now,
         )

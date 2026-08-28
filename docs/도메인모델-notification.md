@@ -26,8 +26,9 @@ _Aggregate Root_
 - `requestId`: upstream 요청 멱등 키
 - `requester`: 요청 주체
 - `channel`: `NotificationChannel` 발송 채널
-- `recipient`: 수신자
+- `recipientId`: 수신자 식별자(user-service 사용자 id). 주소가 아니며 주소는 worker가 `(recipientId, channel)`로 조회한다
 - `message`: 발송 메시지 (null 허용, 빈 문자열 불가)
+- `origin`: `NotificationOrigin` 출처(summaryId, keyword, userId). 요청 계약에 실려 온 알림만 값을 가진다
 - `requestedAt`: 최초 접수 시각
 - `status`: `NotificationStatus` 알림 상태
 - `failureReason`: 마지막 실패 사유
@@ -47,16 +48,17 @@ _Aggregate Root_
 - `markFailed(now, reason)`: 발송 실패. `PROCESSING → FAILED`, 시도 횟수 증가, claim 해제
 - `markRetryWait(now, reason)`: 자동 재시도 대기. `FAILED → RETRY_WAIT`
 - `markDead(now, reason)`: 자동 재시도 종료. `FAILED → DEAD` (멱등)
+- `markSuppressed(now, reason)`: 수신자 바인딩이 유효하지 않아 발송하지 않고 종료. `PROCESSING → SUPPRESSED`
 - `recoverDeadToRequested(now, reason)`: 운영자 수동 복구. `DEAD → REQUESTED`
 - `canRetry(maxAttempts)`: 시도 횟수가 한도 미만인지 판단한다
 
 #### 규칙(Rules)
 
-- requestId/requester/recipient는 빈 값일 수 없다.
+- requestId/requester/recipientId는 빈 값일 수 없다.
 - 허용되지 않은 상태에서의 전이는 예외로 차단한다. 
   멱등 마커와 저장소 unique 제약을 통과해도 같은 알림 row의 잘못된 상태 변경은 이 가드가 막는다 (최종 방어선).
 - 같은 상태로의 재전이는 멱등으로 무시한다 (중복 메시지 대비).
-- `SENT`와 `DEAD`는 자동 처리의 종착 상태다.
+- `SENT`·`DEAD`·`SUPPRESSED`는 자동 처리의 종착 상태다.
 - 모든 상태 전이는 `uncommittedHistories`에 `NotificationHistory`로 쌓이고, 
   현재 상태 변경과 같은 MongoDB 트랜잭션에서 원자적으로 저장된다 (ADR 017).
 - claim 정보는 `PROCESSING`일 때만 존재한다. `claimedAt`/`claimedBy`는 함께 있거나 함께 없다.
@@ -75,6 +77,7 @@ _Enum_
 
 발송 처리 측 (worker):
   PUBLISHED ─▶ PROCESSING ─▶ SENT
+                         ├─▶ SUPPRESSED
                          └─▶ FAILED ─┬─▶ RETRY_WAIT ─▶ PROCESSING ...
                                      └─▶ DEAD ─▶ (운영자 수동 복구) REQUESTED
 ```
@@ -86,6 +89,7 @@ _Enum_
 - `FAILED`: sender 호출 실패, `RETRY_WAIT` 또는 `DEAD` 분기 직전
 - `RETRY_WAIT`: retry topic/backoff 후 재시도 가능한 상태
 - `SENT`: 외부 채널 발송 성공
+- `SUPPRESSED`: 수신자의 채널 바인딩이 해지되는 등 주소가 없어 발송하지 않고 종료 (W1)
 - `DEAD`: 자동 재시도 종료, 운영자 수동 재처리 대상 (DLT 진입과 함께)
 
 ### 알림 채널(NotificationChannel)

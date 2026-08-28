@@ -112,11 +112,11 @@ class TelegramNotificationSenderTest {
     }
 
     @Test
-    @DisplayName("recipient가 비어 있으면 vendor 호출 없이 permanent validation failure로 분류한다")
+    @DisplayName("recipientId가 비어 있으면 vendor 호출 없이 permanent validation failure로 분류한다")
     fun blankRecipient() = runBlocking {
         val sender = senderOf(HttpStatus.OK, OK_BODY)
 
-        val result = sender.send(command(recipient = ""))
+        val result = sender.send(command(recipientId = ""))
 
         val failure = assertIs<SendNotificationResult.PermanentFailure>(result).failure
         assertEquals("TELEGRAM_INVALID_RECIPIENT", failure.code)
@@ -153,13 +153,13 @@ class TelegramNotificationSenderTest {
     }
 
     private fun command(
-        recipient: String = "123456789",
+        recipientId: String = "123456789",
         message: String = "hello",
     ): SendNotificationCommand {
         return SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.TELEGRAM,
-            recipient = recipient,
+            recipientId = recipientId,
             message = message,
             idempotencyKey = "idempotency-key",
         )

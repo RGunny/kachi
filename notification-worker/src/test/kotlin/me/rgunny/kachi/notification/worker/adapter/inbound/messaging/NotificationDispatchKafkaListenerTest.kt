@@ -125,7 +125,7 @@ class NotificationDispatchKafkaListenerTest {
               "notificationId": "${UUID.randomUUID()}",
               "requestId": "request-1",
               "channel": "SLACK",
-              "recipient": "C123",
+              "recipientId": "user-1",
               "message": "hello"
             }
         """.trimIndent()

@@ -89,13 +89,13 @@ class NotificationWorkerDispatchFixture(
 
     fun publishedNotification(
         channel: NotificationChannel,
-        recipient: String,
+        recipientId: String,
     ): Notification {
         return Notification.request(
             requestId = "request-${UUID.randomUUID()}",
             requester = "test-requester",
             channel = channel,
-            recipient = recipient,
+            recipientId = recipientId,
             message = MESSAGE,
             origin = NotificationOrigin.NONE,
             now = clock.instant().minusSeconds(10),
@@ -110,7 +110,7 @@ class NotificationWorkerDispatchFixture(
                 notificationId = notification.id.id.toString(),
                 requestId = notification.requestId,
                 channel = ContractNotificationChannel.valueOf(notification.channel.name),
-                recipient = notification.recipient,
+                recipientId = notification.recipientId,
                 message = MESSAGE,
             )
         )

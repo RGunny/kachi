@@ -6,6 +6,7 @@ import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.domain.UserId
+import me.rgunny.kachi.user.domain.UserRole
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -29,6 +30,10 @@ class UserPersistenceAdapter(
 
     override fun existsByEmail(email: Email): Boolean {
         return userJpaRepository.existsByEmail(email.value)
+    }
+
+    override fun findAllByRole(role: UserRole): List<User> {
+        return userJpaRepository.findAllByRole(role).map { it.toDomain() }
     }
 
     override fun save(user: User): User {

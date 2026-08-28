@@ -6,8 +6,7 @@ import java.util.UUID
 /**
  * 채널 바인딩 식별자.
  *
- * 알림 라우팅이 수신처를 가리키는 recipientRef가 이 값이다.
- * 주소가 바뀌어도 id는 바뀌지 않는다.
+ * 저장소 안에서만 쓴다. 알림 쪽은 바인딩을 `(userId, channel)`로 가리키므로 이 값이 밖으로 나가지 않는다.
  */
 @JvmInline
 value class ChannelBindingId private constructor(

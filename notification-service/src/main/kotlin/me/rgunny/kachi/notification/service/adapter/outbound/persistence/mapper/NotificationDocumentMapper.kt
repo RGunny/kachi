@@ -24,7 +24,7 @@ class NotificationDocumentMapper {
             requestId = notification.requestId,
             requester = notification.requester,
             channel = notification.channel.name,
-            recipient = notification.recipient,
+            recipientId = notification.recipientId,
             message = notification.message,
             summaryId = notification.origin.summaryId,
             keyword = notification.origin.keyword,
@@ -46,7 +46,7 @@ class NotificationDocumentMapper {
             requestId = document.requestId,
             requester = document.requester,
             channel = NotificationChannel.valueOf(document.channel),
-            recipient = document.recipient,
+            recipientId = document.recipientId,
             message = document.message,
             origin = NotificationOrigin(
                 summaryId = document.summaryId,

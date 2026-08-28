@@ -19,7 +19,7 @@ class NotificationRequestedEventMapperTest {
             requestId = "request-1",
             requester = "collector-service",
             channel = me.rgunny.kachi.notification.contract.NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
         )
 
@@ -28,7 +28,7 @@ class NotificationRequestedEventMapperTest {
         assertEquals("request-1", command.requestId)
         assertEquals("collector-service", command.requester)
         assertEquals(NotificationChannel.SLACK, command.channel)
-        assertEquals("C123", command.recipient)
+        assertEquals("user-1", command.recipientId)
         assertEquals("hello", command.message)
         assertEquals(NotificationOrigin.NONE, command.origin)
     }
@@ -40,7 +40,7 @@ class NotificationRequestedEventMapperTest {
             requestId = "sum:summary-1:u:user-1:c:SLACK",
             requester = "notification-routing",
             channel = me.rgunny.kachi.notification.contract.NotificationChannel.SLACK,
-            recipient = "ref-1",
+            recipientId = "user-1",
             message = "hello",
             origin = NotificationRequestedOrigin(summaryId = "summary-1", keyword = "tesla", userId = "user-1"),
         )
@@ -58,7 +58,7 @@ class NotificationRequestedEventMapperTest {
             requestId = "request-1",
             requester = "collector-service",
             channel = me.rgunny.kachi.notification.contract.NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
         )
 

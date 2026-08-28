@@ -24,10 +24,10 @@ class MockNotificationSender(
 
     override suspend fun send(command: SendNotificationCommand): SendNotificationResult {
         log.info(
-            "mock notification send notificationId={} channel={} recipient={} mode={}",
+            "mock notification send notificationId={} channel={} recipientId={} mode={}",
             command.notificationId.id,
             command.channel,
-            command.recipient,
+            command.recipientId,
             mode,
         )
 

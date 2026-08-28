@@ -12,7 +12,7 @@ import me.rgunny.kachi.notification.domain.NotificationId
 data class SendNotificationCommand(
     val notificationId: NotificationId,
     val channel: NotificationChannel,
-    val recipient: String,
+    val recipientId: String,
     val message: String,
     val idempotencyKey: String,
 )

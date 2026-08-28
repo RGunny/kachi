@@ -80,7 +80,7 @@ class NotificationOutboxAdminControllerTest {
                 outboxId = outboxId,
                 notificationId = notificationId,
                 topic = "notification.dispatch",
-                partitionKey = "C123",
+                partitionKey = "user-1",
                 status = status,
                 retryCount = 0,
                 nextRetryAt = now,

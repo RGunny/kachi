@@ -15,7 +15,7 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.CLOCK
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.MESSAGE
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
-import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
 import org.junit.jupiter.api.DisplayName
@@ -214,7 +214,7 @@ class PublishNotificationDispatchServiceTest {
             requestId = REQUEST_ID,
             requester = REQUESTER,
             channel = NotificationChannel.SLACK,
-            recipient = RECIPIENT,
+            recipientId = RECIPIENT_ID,
             message = MESSAGE,
             origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
@@ -225,7 +225,7 @@ class PublishNotificationDispatchServiceTest {
         return NotificationOutbox.create(
             notificationId = notificationId,
             topic = DISPATCH_TOPIC,
-            partitionKey = RECIPIENT,
+            partitionKey = RECIPIENT_ID,
             eventPayload = "{}",
             now = now.minusSeconds(10),
         )

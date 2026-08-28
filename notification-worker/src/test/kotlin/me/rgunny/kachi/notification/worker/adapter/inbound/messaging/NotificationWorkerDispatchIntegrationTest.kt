@@ -29,8 +29,8 @@ class NotificationWorkerDispatchIntegrationTest {
         TestVendorServer().use { vendorServer ->
             val fixture = NotificationWorkerDispatchFixture(vendorServer, clock)
 
-            val slack = fixture.publishedNotification(NotificationChannel.SLACK, "slack-recipient")
-            val discord = fixture.publishedNotification(NotificationChannel.DISCORD, "discord-recipient")
+            val slack = fixture.publishedNotification(NotificationChannel.SLACK, "user-slack")
+            val discord = fixture.publishedNotification(NotificationChannel.DISCORD, "user-discord")
             val telegram = fixture.publishedNotification(NotificationChannel.TELEGRAM, "telegram-chat")
             val email = fixture.publishedNotification(NotificationChannel.EMAIL, "rgunny@kachi.com")
 
@@ -72,7 +72,7 @@ class NotificationWorkerDispatchIntegrationTest {
             )
         ).use { vendorServer ->
             val fixture = NotificationWorkerDispatchFixture(vendorServer, clock)
-            val notification = fixture.publishedNotification(NotificationChannel.SLACK, "slack-recipient")
+            val notification = fixture.publishedNotification(NotificationChannel.SLACK, "user-slack")
             val acknowledgment = FakeAcknowledgment()
 
             assertFailsWith<RetryableDispatchMessageException> {
@@ -94,7 +94,7 @@ class NotificationWorkerDispatchIntegrationTest {
             )
         ).use { vendorServer ->
             val fixture = NotificationWorkerDispatchFixture(vendorServer, clock)
-            val notification = fixture.publishedNotification(NotificationChannel.DISCORD, "discord-recipient")
+            val notification = fixture.publishedNotification(NotificationChannel.DISCORD, "user-discord")
             val acknowledgment = FakeAcknowledgment()
 
             fixture.listener.consume(fixture.payload(notification), acknowledgment)

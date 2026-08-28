@@ -36,7 +36,7 @@ class NotificationRequestedKafkaListenerTest {
               "requestId": "request-1",
               "requester": "collector-service",
               "channel": "SLACK",
-              "recipient": "C123",
+              "recipientId": "user-1",
               "message": "hello"
             }
             """.trimIndent()
@@ -46,7 +46,7 @@ class NotificationRequestedKafkaListenerTest {
         requireNotNull(command)
         assertEquals("request-1", command.requestId)
         assertEquals("collector-service", command.requester)
-        assertEquals("C123", command.recipient)
+        assertEquals("user-1", command.recipientId)
         assertEquals("hello", command.message)
         assertEquals(
             1.0,
@@ -83,7 +83,7 @@ class NotificationRequestedKafkaListenerTest {
                   "requestId": "request-1",
                   "requester": "collector-service",
                   "channel": "SLACK",
-                  "recipient": "C123",
+                  "recipientId": "user-1",
                   "message": "hello"
                 }
                 """.trimIndent()

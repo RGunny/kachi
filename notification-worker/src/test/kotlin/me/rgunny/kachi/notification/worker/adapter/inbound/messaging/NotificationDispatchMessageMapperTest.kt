@@ -20,7 +20,7 @@ class NotificationDispatchMessageMapperTest {
             notificationId = notificationId.toString(),
             requestId = "request-1",
             channel = ContractNotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
         )
 
@@ -29,7 +29,7 @@ class NotificationDispatchMessageMapperTest {
         assertEquals(notificationId, command.notificationId.id)
         assertEquals("request-1", command.requestId)
         assertEquals(NotificationChannel.SLACK, command.channel)
-        assertEquals("C123", command.recipient)
+        assertEquals("user-1", command.recipientId)
         assertEquals("hello", command.message)
     }
 
@@ -40,7 +40,7 @@ class NotificationDispatchMessageMapperTest {
             notificationId = UUID.randomUUID().toString(),
             requestId = "request-1",
             channel = ContractNotificationChannel.KAKAO,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
         )
 

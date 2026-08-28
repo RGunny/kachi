@@ -1,10 +1,9 @@
 package me.rgunny.kachi.user.application.service
 
-import me.rgunny.kachi.user.application.exception.ChannelBindingRefNotFoundException
+import me.rgunny.kachi.user.application.exception.ChannelBindingNotFoundException
 import me.rgunny.kachi.user.application.port.inbound.internal.model.ResolveChannelBindingQuery
 import me.rgunny.kachi.user.application.service.fake.FakeChannelBindingPersistencePort
 import me.rgunny.kachi.user.domain.ChannelBinding
-import me.rgunny.kachi.user.domain.ChannelBindingId
 import me.rgunny.kachi.user.domain.ChannelBindingStatus
 import me.rgunny.kachi.user.domain.LinkToken
 import me.rgunny.kachi.user.domain.SubscriptionChannel
@@ -29,7 +28,7 @@ class ChannelBindingResolveServiceTest {
         val binding = activeBinding(userId, SubscriptionChannel.SLACK)
         val service = ChannelBindingResolveService(FakeChannelBindingPersistencePort(listOf(binding)))
 
-        val result = service.resolve(ResolveChannelBindingQuery(binding.id))
+        val result = service.resolve(ResolveChannelBindingQuery(userId, SubscriptionChannel.SLACK))
 
         assertEquals(SubscriptionChannel.SLACK, result.channel)
         assertEquals(ChannelBindingStatus.ACTIVE, result.status)
@@ -45,8 +44,8 @@ class ChannelBindingResolveServiceTest {
         val revoked = activeBinding(userId, SubscriptionChannel.SLACK).revoke(UserTestFixture.NOW)
         val service = ChannelBindingResolveService(FakeChannelBindingPersistencePort(listOf(pending, revoked)))
 
-        val pendingResult = service.resolve(ResolveChannelBindingQuery(pending.id))
-        val revokedResult = service.resolve(ResolveChannelBindingQuery(revoked.id))
+        val pendingResult = service.resolve(ResolveChannelBindingQuery(userId, SubscriptionChannel.TELEGRAM))
+        val revokedResult = service.resolve(ResolveChannelBindingQuery(userId, SubscriptionChannel.SLACK))
 
         assertEquals(ChannelBindingStatus.PENDING, pendingResult.status)
         assertNull(pendingResult.address)
@@ -55,15 +54,15 @@ class ChannelBindingResolveServiceTest {
     }
 
     @Test
-    @DisplayName("없는 참조는 예외다")
-    fun rejectUnknownRef() {
-        val service = ChannelBindingResolveService(FakeChannelBindingPersistencePort())
-        val ref = ChannelBindingId.newId()
+    @DisplayName("사용자에게 그 채널의 바인딩이 없으면 예외다")
+    fun rejectMissingBinding() {
+        val service = ChannelBindingResolveService(FakeChannelBindingPersistencePort(listOf(activeBinding(userId, SubscriptionChannel.SLACK))))
 
-        val exception = assertFailsWith<ChannelBindingRefNotFoundException> {
-            service.resolve(ResolveChannelBindingQuery(ref))
+        val exception = assertFailsWith<ChannelBindingNotFoundException> {
+            service.resolve(ResolveChannelBindingQuery(userId, SubscriptionChannel.DISCORD))
         }
 
-        assertEquals(ref, exception.ref)
+        assertEquals(userId, exception.userId)
+        assertEquals(SubscriptionChannel.DISCORD, exception.channel)
     }
 }

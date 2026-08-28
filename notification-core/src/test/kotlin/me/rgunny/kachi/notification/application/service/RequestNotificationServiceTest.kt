@@ -14,7 +14,7 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DEDUPE_TTL
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.MESSAGE
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
-import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
 import org.junit.jupiter.api.DisplayName
@@ -50,7 +50,7 @@ class RequestNotificationServiceTest {
         assertEquals(ORIGIN, notificationPersistence.saved.single().origin)
         assertEquals(1, outboxPersistence.saved.size)
         assertEquals(DISPATCH_TOPIC, outboxPersistence.saved.first().topic)
-        assertEquals(RECIPIENT, outboxPersistence.saved.first().partitionKey)
+        assertEquals(RECIPIENT_ID, outboxPersistence.saved.first().partitionKey)
         assertEquals("payload-$REQUEST_ID", outboxPersistence.saved.first().eventPayload)
         assertEquals(command().requestId, serializer.messages.single().requestId)
     }
@@ -62,7 +62,7 @@ class RequestNotificationServiceTest {
             requestId = REQUEST_ID,
             requester = REQUESTER,
             channel = NotificationChannel.SLACK,
-            recipient = RECIPIENT,
+            recipientId = RECIPIENT_ID,
             message = MESSAGE,
             origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
@@ -136,7 +136,7 @@ class RequestNotificationServiceTest {
             requestId = REQUEST_ID,
             requester = REQUESTER,
             channel = NotificationChannel.SLACK,
-            recipient = RECIPIENT,
+            recipientId = RECIPIENT_ID,
             message = MESSAGE,
             origin = ORIGIN,
         )

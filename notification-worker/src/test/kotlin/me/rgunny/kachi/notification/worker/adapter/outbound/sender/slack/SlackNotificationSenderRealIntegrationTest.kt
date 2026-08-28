@@ -43,7 +43,7 @@ class SlackNotificationSenderRealIntegrationTest {
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.SLACK,
-                recipient = "slack-webhook",
+                recipientId = "user-1",
                 message = "[${currentTimestamp()}] [notification-worker] [slack-webhook-test] SlackNotificationSender real integration test",
                 idempotencyKey = "slack-real-integration-test",
                 )

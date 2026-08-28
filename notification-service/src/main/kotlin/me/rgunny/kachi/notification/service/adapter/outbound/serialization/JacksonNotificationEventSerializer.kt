@@ -18,7 +18,7 @@ class JacksonNotificationEventSerializer(
                 notificationId = message.notificationId.id.toString(),
                 requestId = message.requestId,
                 channel = ContractNotificationChannel.valueOf(message.channel.name),
-                recipient = message.recipient,
+                recipientId = message.recipientId,
                 message = message.message,
             )
         )

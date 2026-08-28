@@ -222,7 +222,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
             requestId = requestId,
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             origin = NotificationOrigin.NONE,
             now = requestedAt,
@@ -236,7 +236,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
         val outbox = NotificationOutbox.create(
             notificationId = notificationId,
             topic = "notification.dispatch",
-            partitionKey = "C123",
+            partitionKey = "user-1",
             eventPayload = """{"notificationId":"${notificationId.id}"}""",
             now = requestedAt,
         )

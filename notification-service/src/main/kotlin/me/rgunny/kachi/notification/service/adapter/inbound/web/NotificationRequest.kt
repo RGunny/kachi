@@ -17,9 +17,9 @@ data class NotificationRequest(
 
     val channel: NotificationChannel,
 
-    @field:NotBlank(message = "recipient는 필수입니다")
-    @field:Size(max = 500, message = "recipient는 500자 이하여야 합니다")
-    val recipient: String,
+    @field:NotBlank(message = "recipientId는 필수입니다")
+    @field:Size(max = 64, message = "recipientId는 64자 이하여야 합니다")
+    val recipientId: String,
 
     @field:NotBlank(message = "message는 필수입니다")
     @field:Size(max = 4000, message = "message는 4000자 이하여야 합니다")
@@ -30,7 +30,7 @@ data class NotificationRequest(
             requestId = requestId,
             requester = requester,
             channel = channel,
-            recipient = recipient,
+            recipientId = recipientId,
             message = message,
             origin = NotificationOrigin.NONE,
         )

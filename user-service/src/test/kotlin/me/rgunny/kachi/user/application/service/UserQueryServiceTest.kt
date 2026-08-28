@@ -93,6 +93,9 @@ class UserQueryServiceTest {
             return false
         }
 
+        override fun findAllByRole(role: UserRole): List<User> = emptyList()
+
+
         override fun save(user: User): User {
             return user
         }

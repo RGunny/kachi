@@ -28,7 +28,7 @@ data class NotificationDocument(
     val requestId: String,
     val requester: String,
     val channel: String,
-    val recipient: String,
+    val recipientId: String,
     val message: String?,
     val summaryId: String?,
     val keyword: String?,

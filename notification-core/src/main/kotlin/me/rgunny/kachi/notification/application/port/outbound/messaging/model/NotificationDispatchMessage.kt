@@ -12,6 +12,6 @@ data class NotificationDispatchMessage(
     val notificationId: NotificationId,
     val requestId: String,
     val channel: NotificationChannel,
-    val recipient: String,
+    val recipientId: String,
     val message: String,
 )

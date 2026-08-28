@@ -1,19 +1,19 @@
 package me.rgunny.kachi.notification.routing.application.service
 
 import me.rgunny.kachi.notification.contract.NotificationChannel
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteAdminCommand
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationOutcome
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteQuarantineCommand
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteSummaryCommand
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.model.NotificationRequestOrigin
-import me.rgunny.kachi.notification.routing.application.port.outbound.subscriber.model.Subscriber
+import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.model.Recipient
 import me.rgunny.kachi.notification.routing.domain.RoutingJob
 import me.rgunny.kachi.notification.routing.domain.RoutingJobKind
 import me.rgunny.kachi.notification.routing.domain.RoutingJobStatus
 import me.rgunny.kachi.notification.routing.exception.routing.RoutingErrorCode
-import me.rgunny.kachi.notification.routing.exception.routing.SubscriberReaderException
+import me.rgunny.kachi.notification.routing.exception.routing.RecipientReaderException
 import me.rgunny.kachi.notification.routing.fake.FakeNotificationRequestPublisherPort
 import me.rgunny.kachi.notification.routing.fake.FakeRoutingJobPersistencePort
-import me.rgunny.kachi.notification.routing.fake.FakeSubscriberReaderPort
+import me.rgunny.kachi.notification.routing.fake.FakeRecipientReaderPort
 import me.rgunny.kachi.notification.routing.support.RoutingTestFixture.CLOCK
 import me.rgunny.kachi.notification.routing.support.RoutingTestFixture.NOW
 import me.rgunny.kachi.notification.routing.support.runSuspend
@@ -29,21 +29,21 @@ class RouteNotificationServiceTest {
     private val clock = CLOCK
 
     private val subscribers = listOf(
-        Subscriber("user-1", NotificationChannel.SLACK, "ref-1"),
-        Subscriber("user-1", NotificationChannel.TELEGRAM, "ref-2"),
-        Subscriber("user-2", NotificationChannel.DISCORD, "ref-3"),
+        Recipient("user-1", NotificationChannel.SLACK),
+        Recipient("user-1", NotificationChannel.TELEGRAM),
+        Recipient("user-2", NotificationChannel.DISCORD),
     )
-    private val adminRecipients = mapOf(
-        NotificationChannel.SLACK to "admin",
-        NotificationChannel.DISCORD to "admin",
-        NotificationChannel.TELEGRAM to "admin",
+    private val admins = listOf(
+        Recipient("admin-1", NotificationChannel.SLACK),
+        Recipient("admin-1", NotificationChannel.TELEGRAM),
+        Recipient("admin-2", NotificationChannel.DISCORD),
     )
 
     @Test
     @DisplayName("구독자 x 채널마다 결정적 requestId로 발행한다")
     fun routeSummary() = runSuspend {
         val jobs = FakeRoutingJobPersistencePort()
-        val reader = FakeSubscriberReaderPort(subscribers)
+        val reader = FakeRecipientReaderPort(subscribers)
         val publisher = FakeNotificationRequestPublisherPort()
         val service = service(jobs, reader, publisher)
 
@@ -60,7 +60,7 @@ class RouteNotificationServiceTest {
         val first = publisher.published.first()
         assertEquals("notification-routing", first.requester)
         assertEquals(NotificationChannel.SLACK, first.channel)
-        assertEquals("ref-1", first.recipientRef)
+        assertEquals("user-1", first.recipientId)
         assertEquals("summary body", first.message)
         assertEquals(NotificationRequestOrigin("summary-1", "tesla", "user-1"), first.origin)
 
@@ -78,7 +78,7 @@ class RouteNotificationServiceTest {
         val jobs = FakeRoutingJobPersistencePort().also {
             it.put(RoutingJob.start("summary-1", RoutingJobKind.SUMMARY, "tesla", now.minusSeconds(60)).complete(3, 3, now.minusSeconds(30)))
         }
-        val reader = FakeSubscriberReaderPort(subscribers)
+        val reader = FakeRecipientReaderPort(subscribers)
         val publisher = FakeNotificationRequestPublisherPort()
 
         val result = service(jobs, reader, publisher).routeSummary(summaryCommand())
@@ -97,7 +97,7 @@ class RouteNotificationServiceTest {
         val jobs = FakeRoutingJobPersistencePort().also { it.put(started) }
         val publisher = FakeNotificationRequestPublisherPort()
 
-        val result = service(jobs, FakeSubscriberReaderPort(subscribers), publisher).routeSummary(summaryCommand())
+        val result = service(jobs, FakeRecipientReaderPort(subscribers), publisher).routeSummary(summaryCommand())
 
         assertEquals(RouteNotificationOutcome.ROUTED, result.outcome)
         assertEquals(3, result.targetCount)
@@ -113,7 +113,7 @@ class RouteNotificationServiceTest {
         val jobs = FakeRoutingJobPersistencePort()
         val publisher = FakeNotificationRequestPublisherPort()
 
-        val result = service(jobs, FakeSubscriberReaderPort(), publisher).routeSummary(summaryCommand())
+        val result = service(jobs, FakeRecipientReaderPort(), publisher).routeSummary(summaryCommand())
 
         assertEquals(RouteNotificationOutcome.ROUTED, result.outcome)
         assertEquals(0, result.targetCount)
@@ -128,7 +128,7 @@ class RouteNotificationServiceTest {
         val publisher = FakeNotificationRequestPublisherPort().also { it.failAt = 2 }
 
         assertFailsWith<IllegalStateException> {
-            service(jobs, FakeSubscriberReaderPort(subscribers), publisher).routeSummary(summaryCommand())
+            service(jobs, FakeRecipientReaderPort(subscribers), publisher).routeSummary(summaryCommand())
         }
 
         assertEquals(2, publisher.published.size)
@@ -137,15 +137,15 @@ class RouteNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("구독 조회 실패는 전파한다")
+    @DisplayName("수신자 조회 실패는 전파한다")
     fun propagateReaderFailure() = runSuspend {
         val jobs = FakeRoutingJobPersistencePort()
-        val reader = FakeSubscriberReaderPort().also {
-            it.failure = SubscriberReaderException(RoutingErrorCode.USER_SERVICE_REQUEST_FAILED, "status=503")
+        val reader = FakeRecipientReaderPort().also {
+            it.failure = RecipientReaderException(RoutingErrorCode.USER_SERVICE_REQUEST_FAILED, "status=503")
         }
         val publisher = FakeNotificationRequestPublisherPort()
 
-        assertFailsWith<SubscriberReaderException> {
+        assertFailsWith<RecipientReaderException> {
             service(jobs, reader, publisher).routeSummary(summaryCommand())
         }
 
@@ -160,7 +160,7 @@ class RouteNotificationServiceTest {
         val jobs = FakeRoutingJobPersistencePort().also { it.conflictOnce = existing }
         val publisher = FakeNotificationRequestPublisherPort()
 
-        val result = service(jobs, FakeSubscriberReaderPort(subscribers), publisher).routeSummary(summaryCommand())
+        val result = service(jobs, FakeRecipientReaderPort(subscribers), publisher).routeSummary(summaryCommand())
 
         assertEquals(RouteNotificationOutcome.ROUTED, result.outcome)
         assertEquals(existing.id, result.jobId)
@@ -169,46 +169,48 @@ class RouteNotificationServiceTest {
     }
 
     @Test
-    @DisplayName("관리자 알림은 설정 수신처 채널마다 1건 발행한다")
-    fun routeAdmin() = runSuspend {
+    @DisplayName("격리 알림은 관리자 x 채널마다 구독자 알림과 같은 모양으로 발행한다")
+    fun routeQuarantine() = runSuspend {
         val jobs = FakeRoutingJobPersistencePort()
-        val reader = FakeSubscriberReaderPort(subscribers)
+        val reader = FakeRecipientReaderPort(subscribers = subscribers, admins = admins)
         val publisher = FakeNotificationRequestPublisherPort()
 
-        val result = service(jobs, reader, publisher).routeAdmin(
-            RouteAdminCommand(eventKey = "quarantine-1:1700000000000", keyword = "tesla", message = "admin body")
+        val result = service(jobs, reader, publisher).routeQuarantine(
+            RouteQuarantineCommand(eventKey = "quarantine-1:1700000000000", keyword = "tesla", message = "quarantine body")
         )
 
         assertEquals(RouteNotificationOutcome.ROUTED, result.outcome)
         assertEquals(3, result.targetCount)
         assertEquals(3, result.publishedCount)
         assertTrue(reader.requestedKeywords.isEmpty())
+        assertEquals(1, reader.adminRequests)
         assertEquals(
-            setOf(
-                "adm:quarantine-1:1700000000000:c:SLACK",
-                "adm:quarantine-1:1700000000000:c:DISCORD",
-                "adm:quarantine-1:1700000000000:c:TELEGRAM",
+            listOf(
+                "qrt:quarantine-1:1700000000000:u:admin-1:c:SLACK",
+                "qrt:quarantine-1:1700000000000:u:admin-1:c:TELEGRAM",
+                "qrt:quarantine-1:1700000000000:u:admin-2:c:DISCORD",
             ),
-            publisher.published.map { it.requestId }.toSet(),
+            publisher.published.map { it.requestId },
         )
-        publisher.published.forEach {
-            assertEquals("admin", it.recipientRef)
-            assertEquals("admin body", it.message)
-            assertEquals(NotificationRequestOrigin(summaryId = null, keyword = "tesla", userId = null), it.origin)
-        }
+        val first = publisher.published.first()
+        assertEquals("notification-routing", first.requester)
+        assertEquals(NotificationChannel.SLACK, first.channel)
+        assertEquals("admin-1", first.recipientId)
+        assertEquals("quarantine body", first.message)
+        assertEquals(NotificationRequestOrigin(summaryId = null, keyword = "tesla", userId = "admin-1"), first.origin)
         val job = jobs.saved.single()
-        assertEquals(RoutingJobKind.ADMIN, job.kind)
+        assertEquals(RoutingJobKind.QUARANTINE, job.kind)
         assertEquals("quarantine-1:1700000000000", job.eventKey)
     }
 
     @Test
-    @DisplayName("관리자 수신처가 비어 있으면 대상 0으로 완료한다")
-    fun routeAdminWithoutRecipients() = runSuspend {
+    @DisplayName("관리자가 없으면 대상 0으로 완료한다")
+    fun routeQuarantineWithoutAdmins() = runSuspend {
         val jobs = FakeRoutingJobPersistencePort()
         val publisher = FakeNotificationRequestPublisherPort()
-        val service = service(jobs, FakeSubscriberReaderPort(), publisher, adminRecipients = emptyMap())
+        val service = service(jobs, FakeRecipientReaderPort(subscribers = subscribers), publisher)
 
-        val result = service.routeAdmin(RouteAdminCommand("quarantine-1:1", "tesla", "admin body"))
+        val result = service.routeQuarantine(RouteQuarantineCommand("quarantine-1:1", "tesla", "quarantine body"))
 
         assertEquals(RouteNotificationOutcome.ROUTED, result.outcome)
         assertEquals(0, result.targetCount)
@@ -218,15 +220,14 @@ class RouteNotificationServiceTest {
 
     private fun service(
         jobs: FakeRoutingJobPersistencePort,
-        reader: FakeSubscriberReaderPort,
+        reader: FakeRecipientReaderPort,
         publisher: FakeNotificationRequestPublisherPort,
-        adminRecipients: Map<NotificationChannel, String> = this.adminRecipients,
     ): RouteNotificationService {
         return RouteNotificationService(
             routingJobPersistencePort = jobs,
-            subscriberReaderPort = reader,
+            recipientReaderPort = reader,
             notificationRequestPublisherPort = publisher,
-            policy = RoutingPolicy(requester = "notification-routing", adminRecipientRefs = adminRecipients),
+            policy = RoutingPolicy(requester = "notification-routing"),
             clock = clock,
         )
     }

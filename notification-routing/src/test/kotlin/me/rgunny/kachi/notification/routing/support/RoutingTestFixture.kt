@@ -5,7 +5,6 @@ import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
 import me.rgunny.kachi.ai.contract.AiSummaryCreatedEvent
 import me.rgunny.kachi.ai.contract.AiSummarySentiment
 import me.rgunny.kachi.ai.contract.AiTargetType
-import me.rgunny.kachi.notification.contract.NotificationChannel
 import me.rgunny.kachi.notification.routing.config.NotificationRoutingProperties
 import java.time.Clock
 import java.time.Duration
@@ -19,6 +18,7 @@ object RoutingTestFixture {
     val NOW: Instant = Instant.parse("2026-06-13T00:00:00Z")
     val CLOCK: Clock = Clock.fixed(NOW, ZoneOffset.UTC)
     const val SUBSCRIPTIONS_PATH = "/api/v1/internal/subscriptions"
+    const val USERS_PATH = "/api/v1/internal/users"
 
     fun properties(
         groupId: String = "notification-routing",
@@ -29,9 +29,9 @@ object RoutingTestFixture {
         dltTopic: String = "notification.routing.dlt",
         maxAttempts: Long = 3,
         backoff: Duration = Duration.ofSeconds(1),
-        adminRecipients: Map<NotificationChannel, String> = mapOf(NotificationChannel.SLACK to "admin"),
         baseUrl: String = "http://localhost:8080",
         subscriptionsPath: String = SUBSCRIPTIONS_PATH,
+        usersPath: String = USERS_PATH,
         timeout: Duration = Duration.ofSeconds(3),
         maxInMemorySize: Int = 262144,
     ): NotificationRoutingProperties {
@@ -42,8 +42,7 @@ object RoutingTestFixture {
             topics = NotificationRoutingProperties.Topics(summaryCreatedTopic, keywordQuarantinedTopic),
             dlt = NotificationRoutingProperties.Dlt(dltTopic),
             retry = NotificationRoutingProperties.Retry(maxAttempts, backoff),
-            admin = NotificationRoutingProperties.Admin(adminRecipients),
-            userService = NotificationRoutingProperties.UserService(baseUrl, subscriptionsPath, timeout, maxInMemorySize),
+            userService = NotificationRoutingProperties.UserService(baseUrl, subscriptionsPath, usersPath, timeout, maxInMemorySize),
         )
     }
 

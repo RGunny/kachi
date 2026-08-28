@@ -20,7 +20,7 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DEDUPE_TTL
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.IDEMPOTENCY_KEY_TTL
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.MESSAGE
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
-import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
 import me.rgunny.kachi.notification.retry.RetryFailure
@@ -321,7 +321,7 @@ class DispatchNotificationServiceTest {
             requestId = REQUEST_ID,
             requester = REQUESTER,
             channel = NotificationChannel.SLACK,
-            recipient = RECIPIENT,
+            recipientId = RECIPIENT_ID,
             message = MESSAGE,
             origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
@@ -356,7 +356,7 @@ class DispatchNotificationServiceTest {
             notificationId = notificationId,
             requestId = REQUEST_ID,
             channel = NotificationChannel.SLACK,
-            recipient = RECIPIENT,
+            recipientId = RECIPIENT_ID,
             message = MESSAGE,
         )
     }

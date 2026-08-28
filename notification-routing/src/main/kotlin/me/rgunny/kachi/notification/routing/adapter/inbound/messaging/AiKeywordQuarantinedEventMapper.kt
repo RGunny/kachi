@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.routing.adapter.inbound.messaging
 
 import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
-import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteAdminCommand
+import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteQuarantineCommand
 
 /**
  * eventKey는 quarantineId와 격리 시각을 합친 값이다.
@@ -9,12 +9,12 @@ import me.rgunny.kachi.notification.routing.application.port.inbound.routing.mod
  */
 object AiKeywordQuarantinedEventMapper {
 
-    fun toCommand(event: AiKeywordQuarantinedEvent): RouteAdminCommand {
+    fun toCommand(event: AiKeywordQuarantinedEvent): RouteQuarantineCommand {
         require(event.schemaVersion == AiKeywordQuarantinedEvent.CURRENT_SCHEMA_VERSION) {
             "unsupported ai keyword quarantined schemaVersion=${event.schemaVersion}"
         }
 
-        return RouteAdminCommand(
+        return RouteQuarantineCommand(
             eventKey = eventKey(event),
             keyword = event.keyword,
             message = AiNotificationMessageRenderer.render(event),

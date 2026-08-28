@@ -209,7 +209,7 @@ class NotificationWorkerMetricsTest {
             notificationId = NotificationId.newId(),
             requestId = "request-1",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
         )
     }

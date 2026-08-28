@@ -56,7 +56,8 @@ user-service
   └─ 키워드 구독·채널 바인딩 등록/관리
       -> collector-service ── 활성 키워드 조회(HTTP internal) 후 뉴스 수집
           -> ai-service ── 수집 뉴스를 키워드별로 LLM 요약 (newsHash 중복 방지), `ai.summary.created`·`ai.keyword.quarantined` 발행
-              -> notification-service ── 알림 접수, outbox 발행 (ai 이벤트 소비는 routing 예정)
+              -> notification-routing ── ai 이벤트를 구독자·관리자 x 채널로 펼쳐 `notification.requested` 발행
+              -> notification-service ── 알림 접수, outbox 발행
                   -> notification-worker ── Slack/Discord/Telegram 발송
                       -> history-service ── 이력 적재 / 통계 집계 (미구현)
 ```
@@ -218,3 +219,4 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [024. 상태 전이 aggregate 불변화와 finalize CAS](./docs/decisions/024-상태-전이-aggregate-불변화와-finalize-cas.md) | notification aggregate 불변 전환, outbox finalize의 claim CAS, ai-service와 남기는 차이 |
 | [025. 키워드 구독과 알림 라우팅](./docs/decisions/025-키워드-구독과-알림-라우팅.md) | 구독·채널 바인딩 소유권, 키워드 identity 정규화, notification routing fan-out, 홉별 멱등 키, 주소 참조 |
 | [026. 키워드 identity와 구독, 채널 바인딩](./docs/decisions/026-키워드-identity와-구독-채널-바인딩.md) | canonical 키워드와 구독 분리, 정규화 규칙, 채널 바인딩 생명주기와 주소 암호화, internal API 계약 |
+| [027. 알림 라우팅 서비스](./docs/decisions/027-알림-라우팅.md) | routing을 독립 모듈·프로세스로, `notification.requested` 계약 연결, RoutingJob 멱등, 결정적 requestId, 키워드 격리 알림 수신자 |

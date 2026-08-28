@@ -117,7 +117,7 @@ class NotificationAdminControllerTest {
                 requestId = "request-1",
                 requester = "collector-service",
                 channel = NotificationChannel.SLACK,
-                recipient = "C123",
+                recipientId = "user-1",
                 status = status,
                 failureReason = "invalid recipient",
                 dispatchAttempts = 3,

@@ -1,6 +1,5 @@
 package me.rgunny.kachi.notification.routing.config
 
-import me.rgunny.kachi.notification.contract.NotificationChannel
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
@@ -17,7 +16,6 @@ data class NotificationRoutingProperties(
     val topics: Topics,
     val dlt: Dlt,
     val retry: Retry,
-    val admin: Admin,
     val userService: UserService,
 ) {
     companion object {
@@ -61,27 +59,16 @@ data class NotificationRoutingProperties(
         }
     }
 
-    /**
-     * 관리자 알림 수신처. 값은 주소가 아니라 수신처 참조이며 비어 있어도 된다.
-     */
-    data class Admin(
-        val recipients: Map<NotificationChannel, String>,
-    ) {
-        init {
-            recipients.forEach { (channel, recipient) ->
-                require(recipient.isNotBlank()) { "admin.recipients.${channel.name.lowercase()}는 비어 있을 수 없습니다" }
-            }
-        }
-    }
-
     data class UserService(
         val baseUrl: String,
         val subscriptionsPath: String,
+        val usersPath: String,
         val timeout: Duration,
         val maxInMemorySize: Int,
     ) {
         init {
             require(subscriptionsPath.isNotBlank()) { "user-service.subscriptions-path는 비어 있을 수 없습니다" }
+            require(usersPath.isNotBlank()) { "user-service.users-path는 비어 있을 수 없습니다" }
             require(!timeout.isNegative && !timeout.isZero) { "user-service.timeout은 0보다 커야 합니다" }
             require(maxInMemorySize > 0) { "user-service.max-in-memory-size는 0보다 커야 합니다" }
         }
