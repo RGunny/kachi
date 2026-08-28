@@ -150,6 +150,34 @@ class NotificationWorkerDispatchIntegrationTest {
     }
 
     @Test
+    @DisplayName("이미 vendor까지 간 requestId가 RETRY_WAIT로 돌아와 다시 오면 sent 마커에 걸려 SUPPRESSED로 끝낸다")
+    fun suppressResendOfAlreadySentRequest() {
+        TestVendorServer().use { vendorServer ->
+            val fixture = NotificationWorkerDispatchFixture(vendorServer, clock)
+            val notification = fixture.publishedNotification(NotificationChannel.SLACK)
+            fixture.binding(notification.recipientId, NotificationChannel.SLACK, "ACTIVE", "${vendorServer.baseUrl}/slack")
+
+            fixture.listener.consume(fixture.payload(notification), FakeAcknowledgment())
+            assertEquals(NotificationStatus.SENT, fixture.persistence.require(notification.id).status)
+
+            // vendor 호출 뒤 저장 전에 worker가 죽어 stale 회수로 RETRY_WAIT가 된 상황을 재현한다.
+            // dispatch dedupe 마커는 TTL이 지나 사라졌고 sent 마커만 남아 있다.
+            fixture.persistence.put(fixture.retryWaitCopy(notification))
+            fixture.deduplication.expire("notification:dispatch:${notification.id.id}")
+            val acknowledgment = FakeAcknowledgment()
+
+            fixture.listener.consume(fixture.payload(notification), acknowledgment)
+
+            assertTrue(acknowledgment.acked)
+            val saved = fixture.persistence.require(notification.id)
+            assertEquals(NotificationStatus.SUPPRESSED, saved.status)
+            assertEquals("already sent", saved.failureReason)
+            assertEquals(1, vendorServer.paths.count { it == "/slack" })
+            assertTrue(fixture.deduplication.isHeld("notification:sent:${notification.requestId}"))
+        }
+    }
+
+    @Test
     @DisplayName("real sender가 retryable 실패를 반환하면 listener는 retry 예외를 던지고 ack하지 않는다")
     fun throwRetryExceptionWhenRealSenderReturnsRetryableFailure() {
         TestVendorServer(
@@ -172,7 +200,10 @@ class NotificationWorkerDispatchIntegrationTest {
 
             assertFalse(acknowledgment.acked)
             assertEquals(NotificationStatus.RETRY_WAIT, fixture.persistence.require(notification.id).status)
-            assertEquals(listOf("notification:dispatch:${notification.id.id}"), fixture.deduplication.releasedKeys)
+            assertEquals(
+                listOf("notification:sent:${notification.requestId}", "notification:dispatch:${notification.id.id}"),
+                fixture.deduplication.releasedKeys,
+            )
         }
     }
 

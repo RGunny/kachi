@@ -278,6 +278,109 @@ class DispatchNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("sent 마커 선점에 실패하면 sender를 부르지 않고 SUPPRESSED(already sent)로 끝낸다")
+    fun suppressWhenAlreadySent() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort(acquireResults = mapOf(SENT_GUARD_KEY to false))
+        val idempotency = FakeIdempotencyKeyPort()
+        val sender = FakeSender()
+        val service = service(persistence, deduplication, idempotency, sender)
+
+        val result = service.dispatch(command(notification.id))
+
+        assertEquals(NotificationStatus.SUPPRESSED, result.status)
+        assertFalse(result.dispatchAttempted)
+        assertEquals(DispatchFailureClassification.NONE, result.failureClassification)
+        assertEquals("already sent", persistence.saved.last().failureReason)
+        assertEquals(0, sender.sendCount)
+        assertEquals(1, idempotency.callCount)
+        assertTrue(deduplication.releasedKeys.isEmpty())
+    }
+
+    @Test
+    @DisplayName("sent 마커는 idempotency key TTL로 선점하고 SENT 뒤에는 풀지 않는다")
+    fun keepSentGuardAfterSent() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), FakeSender())
+
+        service.dispatch(command(notification.id))
+
+        assertEquals(
+            listOf("notification:dispatch:${notification.id.id}" to DEDUPE_TTL, SENT_GUARD_KEY to IDEMPOTENCY_KEY_TTL),
+            deduplication.acquiredKeys,
+        )
+        assertTrue(deduplication.releasedKeys.isEmpty())
+    }
+
+    @Test
+    @DisplayName("RETRY_WAIT로 확정하면 sent 마커도 푼다")
+    fun releaseSentGuardOnRetryWait() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val sender = FakeSender(result = SendNotificationResult.TransientFailure(timeoutFailure()))
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), sender, maxAttempts = 2)
+
+        val result = service.dispatch(command(notification.id))
+
+        assertEquals(NotificationStatus.RETRY_WAIT, result.status)
+        assertEquals(listOf(SENT_GUARD_KEY, "notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("DEAD로 확정하면 sent 마커를 풀지 않는다")
+    fun keepSentGuardOnDead() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val sender = FakeSender(result = SendNotificationResult.PermanentFailure(invalidRecipientFailure()))
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), sender)
+
+        val result = service.dispatch(command(notification.id))
+
+        assertEquals(NotificationStatus.DEAD, result.status)
+        assertTrue(deduplication.releasedKeys.isEmpty())
+    }
+
+    @Test
+    @DisplayName("sender 호출 중 예상 밖 예외가 나면 sent 마커와 dedupe를 모두 푼다")
+    fun releaseSentGuardOnUnexpectedSenderException() {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val sender = FakeSender(failure = IllegalStateException("sender-down"))
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), sender)
+
+        assertFailsWith<IllegalStateException> {
+            runSuspend { service.dispatch(command(notification.id)) }
+        }
+
+        assertEquals(listOf(SENT_GUARD_KEY, "notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+    }
+
+    @Test
+    @DisplayName("수신 주소가 없거나 조회에 실패하면 sent 마커를 선점하지 않는다")
+    fun doNotAcquireSentGuardBeforeSend() = runSuspend {
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also { it.put(notification) }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(
+            persistence = persistence,
+            deduplication = deduplication,
+            idempotency = FakeIdempotencyKeyPort(),
+            sender = FakeSender(),
+            resolver = FakeRecipientResolverPort(result = UnavailableRecipient(RecipientUnavailableReason.REVOKED)),
+        )
+
+        service.dispatch(command(notification.id))
+
+        assertEquals(listOf("notification:dispatch:${notification.id.id}" to DEDUPE_TTL), deduplication.acquiredKeys)
+    }
+
+    @Test
     @DisplayName("PUBLISHED 알림 claim 후 발송 성공이면 SENT로 완료한다")
     fun dispatchSuccess() = runSuspend {
         val notification = publishedNotification()
@@ -363,7 +466,7 @@ class DispatchNotificationServiceTest {
         assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
         assertEquals(RetryFailureCode.VENDOR_RATE_LIMITED.code, result.failure?.code)
         assertEquals(1, persistence.saved.last().dispatchAttempts)
-        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+        assertEquals(listOf(SENT_GUARD_KEY, "notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
     }
 
     @Test
@@ -434,7 +537,7 @@ class DispatchNotificationServiceTest {
             runSuspend { service.dispatch(command(notification.id)) }
         }
 
-        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+        assertEquals(listOf(SENT_GUARD_KEY, "notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
     }
 
     @Test
@@ -457,7 +560,7 @@ class DispatchNotificationServiceTest {
         assertEquals(NotificationStatus.RETRY_WAIT, result.status)
         assertEquals("vendor timeout", persistence.saved.last().failureReason)
         assertEquals(DispatchFailureClassification.RETRYABLE, result.failureClassification)
-        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+        assertEquals(listOf(SENT_GUARD_KEY, "notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
     }
 
     @Test
@@ -571,6 +674,10 @@ class DispatchNotificationServiceTest {
 
     private fun invalidRecipientFailure(): RetryFailure {
         return RetryFailure.of(RetryFailureCode.INVALID_RECIPIENT)
+    }
+
+    private companion object {
+        const val SENT_GUARD_KEY = "notification:sent:$REQUEST_ID"
     }
 
     private fun resolveException(code: RetryFailureCode): RecipientResolveException {

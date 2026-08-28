@@ -7,6 +7,7 @@ import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.contract.NotificationChannel as ContractNotificationChannel
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.NotificationDispatchKafkaListener
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.config.DiscordNotificationSenderConfig
@@ -143,6 +144,27 @@ class NotificationWorkerDispatchFixture(
         )
             .markPublished(clock.instant().minusSeconds(5))
             .also(persistence::put)
+    }
+
+    /** 같은 id·requestId를 가진 알림을 RETRY_WAIT 상태로 다시 만든다. stale 회수 뒤의 재전달을 흉내 낼 때 쓴다. */
+    fun retryWaitCopy(notification: Notification): Notification {
+        return Notification.restore(
+            id = notification.id,
+            requestId = notification.requestId,
+            requester = notification.requester,
+            channel = notification.channel,
+            recipientId = notification.recipientId,
+            message = notification.message,
+            origin = notification.origin,
+            requestedAt = notification.requestedAt,
+            status = NotificationStatus.RETRY_WAIT,
+            failureReason = "stale processing recovered",
+            updatedAt = clock.instant(),
+            lastTransitionAt = clock.instant(),
+            dispatchAttempts = notification.dispatchAttempts,
+            claimedAt = null,
+            claimedBy = null,
+        )
     }
 
     fun payload(notification: Notification): String {

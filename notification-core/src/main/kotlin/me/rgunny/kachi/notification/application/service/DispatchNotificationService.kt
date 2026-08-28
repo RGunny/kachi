@@ -32,6 +32,10 @@ import java.time.Instant
  *
  * claim한 알림의 `(recipientId, channel)`을 수신 주소로 바꾼 뒤 sender에 넘긴다.
  * 주소가 없으면 발송하지 않고 SUPPRESSED로 끝내고, 조회가 실패하면 발송 실패와 같은 재시도 분류를 탄다.
+ *
+ * 발송 직전에 `notification:sent:{requestId}` 마커를 선점한다.
+ * vendor 호출 뒤 결과를 저장하기 전에 worker가 죽어 stale 회수로 RETRY_WAIT가 된 알림이 다시 나가는 것을 막는 마지막 층이다.
+ * 선점에 실패하면 SUPPRESSED로 끝낸다.
  */
 class DispatchNotificationService(
     private val notificationPersistencePort: NotificationPersistencePort,
@@ -97,6 +101,9 @@ class DispatchNotificationService(
             )
         }
 
+        // sent 마커를 잡은 뒤 RETRY_WAIT나 예상 밖 예외로 빠져나가면 풀어야 다음 시도가 막히지 않는다.
+        var sentGuardKey: String? = null
+
         val sendResult = try {
             // 6. claim한 알림의 (recipientId, channel)을 수신 주소로 바꾼다.
             // 주소가 없으면 sender와 idempotency key를 건드리지 않고 SUPPRESSED로 끝낸다.
@@ -118,7 +125,18 @@ class DispatchNotificationService(
                 ttl = policy.idempotencyKeyTtl,
             )
 
-            // 8. channel에 맞는 sender를 선택하고 조회한 주소로 발송한다.
+            // 8. 발송 직전에 requestId 단위 sent 마커를 선점한다. 이미 있으면 vendor 호출까지 간 시도가 있었던 것이다.
+            val guardKey = sentGuardKey(command.requestId)
+            if (!deduplicationPort.acquire(guardKey, policy.idempotencyKeyTtl)) {
+                return completeAsSuppressed(
+                    claimed = claimedNotification,
+                    reason = ALREADY_SENT_REASON,
+                    now = now,
+                )
+            }
+            sentGuardKey = guardKey
+
+            // 9. channel에 맞는 sender를 선택하고 조회한 주소로 발송한다.
             val sender = senderRouter.route(claimedNotification.channel)
             sender.send(
                 SendNotificationCommand(
@@ -144,11 +162,12 @@ class DispatchNotificationService(
             SendNotificationResult.PermanentFailure(e.failure)
         } catch (e: Exception) {
             // TODO: PROCESSING 상태가 이미 확정된 뒤의 장애까지 내부 회수하려면 stale PROCESSING recovery use case를 별도로 둔다.
+            sentGuardKey?.let { deduplicationPort.release(it) }
             deduplicationPort.release(dedupeKey)
             throw e
         }
 
-        // 9. sender가 명시적인 결과를 반환하면 그 결과를 기준으로 알림 상태를 확정한다.
+        // 10. sender가 명시적인 결과를 반환하면 그 결과를 기준으로 알림 상태를 확정한다.
         // vendor HTTP/Redis는 Mongo rollback 대상이 아니므로, 외부 호출 이후 DB finalize는 별도 저장 경계로 분리한다.
         return when (sendResult) {
             is SendNotificationResult.Success -> completeAsSent(
@@ -159,12 +178,14 @@ class DispatchNotificationService(
                 claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
+                sentGuardKey = sentGuardKey,
                 now = now,
             )
             is SendNotificationResult.TransientFailure -> completeAsRetryableFailure(
                 claimed = claimedNotification,
                 failure = sendResult.failure,
                 dedupeKey = dedupeKey,
+                sentGuardKey = sentGuardKey,
                 now = now,
             )
             is SendNotificationResult.PermanentFailure -> completeAsDead(
@@ -184,6 +205,10 @@ class DispatchNotificationService(
 
     private fun dispatchDedupeKey(notificationId: NotificationId): String {
         return "notification:dispatch:${notificationId.id}"
+    }
+
+    private fun sentGuardKey(requestId: String): String {
+        return "notification:sent:$requestId"
     }
 
     private suspend fun completeAsSent(
@@ -235,6 +260,7 @@ class DispatchNotificationService(
         failure: RetryFailure,
         dedupeKey: String,
         now: Instant,
+        sentGuardKey: String? = null,
         dispatchAttempted: Boolean = true,
     ): DispatchNotificationResult {
         // 1. 이번 발송 시도를 포함한 attempts로 retry/give-up 결정을 계산한다.
@@ -253,7 +279,8 @@ class DispatchNotificationService(
         val savedNotification = saveFinalizedIfClaimMatches(claimed, finalized)
             ?: return staleFinalizeResult(claimed, now, dispatchAttempted)
         if (failureClassification == DispatchFailureClassification.RETRYABLE) {
-            // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
+            // 4. 재시도 가능한 실패는 RETRY_WAIT 저장 후에만 sent 마커와 dedupe marker를 해제해 다음 dispatch 메시지를 허용한다.
+            sentGuardKey?.let { deduplicationPort.release(it) }
             deduplicationPort.release(dedupeKey)
         }
 
@@ -311,6 +338,10 @@ class DispatchNotificationService(
             dispatchCompletedAt = now,
             failureClassification = DispatchFailureClassification.NONE,
         )
+    }
+
+    private companion object {
+        const val ALREADY_SENT_REASON = "already sent"
     }
 
     /**
