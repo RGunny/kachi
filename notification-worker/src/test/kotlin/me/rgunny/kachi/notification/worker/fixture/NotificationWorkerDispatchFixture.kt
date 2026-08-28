@@ -48,7 +48,9 @@ class NotificationWorkerDispatchFixture(
     val persistence = FakeNotificationPersistencePort()
     val deduplication = FakeNotificationDeduplicationPort()
     val recipientCache = InMemoryRecipientAddressCache()
+    val meterRegistry = SimpleMeterRegistry()
     val listener: NotificationDispatchKafkaListener
+    private val metrics = NotificationWorkerMetrics(meterRegistry)
     private val jsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     init {
@@ -81,6 +83,7 @@ class NotificationWorkerDispatchFixture(
             webClient = recipientConfig.recipientWebClient(recipientProperties),
             recipientAddressCache = recipientCache,
             properties = recipientProperties,
+            metrics = metrics,
         )
         val dispatchUseCase = DispatchNotificationService(
             notificationPersistencePort = persistence,
@@ -96,7 +99,7 @@ class NotificationWorkerDispatchFixture(
         listener = NotificationDispatchKafkaListener(
             dispatchUseCase = dispatchUseCase,
             jsonMapper = jsonMapper,
-            metrics = NotificationWorkerMetrics(SimpleMeterRegistry()),
+            metrics = metrics,
         )
     }
 

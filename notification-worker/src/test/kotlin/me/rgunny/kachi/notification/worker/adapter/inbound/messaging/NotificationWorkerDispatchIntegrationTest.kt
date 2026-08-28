@@ -3,6 +3,7 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException
+import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract
 import me.rgunny.kachi.notification.worker.fake.FakeAcknowledgment
 import me.rgunny.kachi.notification.worker.fixture.NotificationWorkerDispatchFixture
 import me.rgunny.kachi.notification.worker.support.TestVendorResponse
@@ -83,6 +84,20 @@ class NotificationWorkerDispatchIntegrationTest {
             assertEquals(0, saved.dispatchAttempts)
             assertEquals(listOf(fixture.bindingPath(notification.recipientId, NotificationChannel.SLACK)), vendorServer.paths)
             assertTrue(fixture.deduplication.releasedKeys.isEmpty())
+            assertEquals(
+                1.0,
+                fixture.meterRegistry.get(NotificationWorkerMetricContract.Names.DISPATCH)
+                    .tags("channel", "SLACK", "result", "suppressed")
+                    .counter()
+                    .count(),
+            )
+            assertEquals(
+                1.0,
+                fixture.meterRegistry.get(NotificationWorkerMetricContract.Names.RECIPIENT_RESOLVE)
+                    .tags("channel", "SLACK", "result", "unavailable", "source", "user_service")
+                    .counter()
+                    .count(),
+            )
         }
     }
 
