@@ -13,7 +13,7 @@ object NotificationDispatchMessageMapper {
             notificationId = NotificationId.of(UUID.fromString(payload.notificationId)),
             requestId = payload.requestId,
             channel = NotificationChannel.valueOf(payload.channel.name),
-            recipient = payload.recipient,
+            recipientId = payload.recipientId,
             message = payload.message,
         )
     }

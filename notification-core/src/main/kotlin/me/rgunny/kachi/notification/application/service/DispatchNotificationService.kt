@@ -102,7 +102,7 @@ class DispatchNotificationService(
                 SendNotificationCommand(
                     notificationId = claimedNotification.id,
                     channel = claimedNotification.channel,
-                    recipient = claimedNotification.recipient,
+                    recipientId = claimedNotification.recipientId,
                     message = command.message,
                     idempotencyKey = idempotencyKey,
                 )

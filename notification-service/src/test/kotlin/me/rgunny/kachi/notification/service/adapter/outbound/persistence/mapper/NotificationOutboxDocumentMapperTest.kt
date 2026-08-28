@@ -21,7 +21,7 @@ class NotificationOutboxDocumentMapperTest {
         val outbox = NotificationOutbox.create(
             notificationId = NotificationId.newId(),
             topic = "notification.dispatch",
-            partitionKey = "C123",
+            partitionKey = "user-1",
             eventPayload = """{"notificationId":"n1"}""",
             now = createdAt,
         ).markPublishing(claimedAt, "notification-service-1")
@@ -32,7 +32,7 @@ class NotificationOutboxDocumentMapperTest {
         assertEquals(outbox.id, restored.id)
         assertEquals(outbox.notificationId, restored.notificationId)
         assertEquals("notification.dispatch", restored.topic)
-        assertEquals("C123", restored.partitionKey)
+        assertEquals("user-1", restored.partitionKey)
         assertEquals("""{"notificationId":"n1"}""", restored.eventPayload)
         assertEquals(createdAt, restored.createdAt)
         assertEquals(NotificationOutboxStatus.PUBLISHING, restored.outboxStatus)

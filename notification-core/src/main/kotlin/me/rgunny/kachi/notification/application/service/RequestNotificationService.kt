@@ -52,7 +52,7 @@ class RequestNotificationService(
                 requestId = command.requestId,
                 requester = command.requester,
                 channel = command.channel,
-                recipient = command.recipient,
+                recipientId = command.recipientId,
                 message = command.message,
                 origin = command.origin,
                 now = now,
@@ -63,14 +63,14 @@ class RequestNotificationService(
                 notificationId = notification.id,
                 requestId = notification.requestId,
                 channel = notification.channel,
-                recipient = notification.recipient,
+                recipientId = notification.recipientId,
                 message = notification.message.orEmpty(),
             )
             val dispatchPayload = eventSerializer.serializeDispatch(dispatchMessage)
             val outbox = NotificationOutbox.create(
                 notificationId = notification.id,
                 topic = policy.dispatchTopic,
-                partitionKey = command.recipient,
+                partitionKey = command.recipientId,
                 eventPayload = dispatchPayload,
                 now = now,
             )

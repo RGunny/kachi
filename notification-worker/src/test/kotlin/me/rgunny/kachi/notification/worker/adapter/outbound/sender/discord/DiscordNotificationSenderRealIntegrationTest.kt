@@ -39,7 +39,7 @@ class DiscordNotificationSenderRealIntegrationTest {
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.DISCORD,
-                recipient = "discord-webhook",
+                recipientId = "user-1",
                 message = "[${currentTimestamp()}] [notification-worker] [discord-webhook-test] DiscordNotificationSender real integration test",
                 idempotencyKey = "discord-real-integration-test",
                 )

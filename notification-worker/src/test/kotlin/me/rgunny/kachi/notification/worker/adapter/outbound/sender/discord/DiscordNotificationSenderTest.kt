@@ -157,7 +157,7 @@ class DiscordNotificationSenderTest {
         return SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.DISCORD,
-            recipient = "discord-webhook",
+            recipientId = "user-1",
             message = "hello",
             idempotencyKey = "idempotency-key",
         )

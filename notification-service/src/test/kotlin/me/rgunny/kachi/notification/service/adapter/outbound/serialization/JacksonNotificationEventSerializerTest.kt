@@ -27,7 +27,7 @@ class JacksonNotificationEventSerializerTest {
                 notificationId = notificationId,
                 requestId = "request-1",
                 channel = NotificationChannel.SLACK,
-                recipient = "C123",
+                recipientId = "user-1",
                 message = "hello",
             )
         )
@@ -37,7 +37,7 @@ class JacksonNotificationEventSerializerTest {
         assertEquals(notificationId.id.toString(), event.notificationId)
         assertEquals("request-1", event.requestId)
         assertEquals(ContractNotificationChannel.SLACK, event.channel)
-        assertEquals("C123", event.recipient)
+        assertEquals("user-1", event.recipientId)
         assertEquals("hello", event.message)
     }
 }

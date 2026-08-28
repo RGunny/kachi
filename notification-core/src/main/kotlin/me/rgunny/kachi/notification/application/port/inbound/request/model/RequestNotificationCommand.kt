@@ -13,7 +13,7 @@ data class RequestNotificationCommand(
     val requestId: String,
     val requester: String,
     val channel: NotificationChannel,
-    val recipient: String,
+    val recipientId: String,
     val message: String,
     val origin: NotificationOrigin,
 )

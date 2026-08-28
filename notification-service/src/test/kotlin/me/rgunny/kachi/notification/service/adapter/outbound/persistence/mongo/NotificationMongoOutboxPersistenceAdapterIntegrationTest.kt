@@ -169,7 +169,7 @@ class NotificationMongoOutboxPersistenceAdapterIntegrationTest : PersistenceAdap
         }
     }
 
-    private fun outbox(partitionKey: String = "C123"): NotificationOutbox {
+    private fun outbox(partitionKey: String = "user-1"): NotificationOutbox {
         return NotificationOutbox.create(
             notificationId = NotificationId.newId(),
             topic = "notification.dispatch",

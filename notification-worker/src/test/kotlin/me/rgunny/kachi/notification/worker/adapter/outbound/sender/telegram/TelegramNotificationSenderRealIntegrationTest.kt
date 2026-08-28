@@ -42,7 +42,7 @@ class TelegramNotificationSenderRealIntegrationTest {
                 SendNotificationCommand(
                 notificationId = NotificationId.newId(),
                 channel = NotificationChannel.TELEGRAM,
-                recipient = configuredChatId,
+                recipientId = configuredChatId,
                 message = "[${currentTimestamp()}] [notification-worker] [telegram-sendMessage-test] TelegramNotificationSender real integration test",
                 idempotencyKey = "telegram-real-integration-test",
                 )

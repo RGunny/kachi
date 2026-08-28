@@ -120,7 +120,7 @@ class SlackNotificationSenderTest {
         return SendNotificationCommand(
             notificationId = NotificationId.newId(),
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             idempotencyKey = "idempotency-key",
         )

@@ -16,7 +16,7 @@ object NotificationRequestedEventMapper {
             requestId = event.requestId,
             requester = event.requester,
             channel = NotificationChannel.valueOf(event.channel.name),
-            recipient = event.recipient,
+            recipientId = event.recipientId,
             message = event.message,
             origin = event.origin?.let { NotificationOrigin(it.summaryId, it.keyword, it.userId) } ?: NotificationOrigin.NONE,
         )

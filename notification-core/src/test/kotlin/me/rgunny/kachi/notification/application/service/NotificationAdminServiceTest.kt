@@ -144,7 +144,7 @@ class NotificationAdminServiceTest {
             requestId = requestId,
             requester = REQUESTER,
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = MESSAGE,
             origin = NotificationOrigin.NONE,
             now = NOW,

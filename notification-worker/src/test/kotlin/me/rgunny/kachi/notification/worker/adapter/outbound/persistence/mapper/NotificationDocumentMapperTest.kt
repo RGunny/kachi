@@ -25,7 +25,7 @@ class NotificationDocumentMapperTest {
             requestId = "request-1",
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             origin = origin,
             now = requestedAt,
@@ -39,7 +39,7 @@ class NotificationDocumentMapperTest {
         assertEquals("request-1", restored.requestId)
         assertEquals("collector-service", restored.requester)
         assertEquals(NotificationChannel.SLACK, restored.channel)
-        assertEquals("C123", restored.recipient)
+        assertEquals("user-1", restored.recipientId)
         assertEquals("hello", restored.message)
         assertEquals("summary-1", document.summaryId)
         assertEquals("tesla", document.keyword)
@@ -66,7 +66,7 @@ class NotificationDocumentMapperTest {
             requestId = "request-2",
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             origin = NotificationOrigin.NONE,
             now = requestedAt,

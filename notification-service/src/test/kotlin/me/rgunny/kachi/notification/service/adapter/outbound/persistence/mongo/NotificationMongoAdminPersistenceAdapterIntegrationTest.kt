@@ -124,7 +124,7 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
             requestId = requestId,
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             origin = NotificationOrigin.NONE,
             now = NOW,
@@ -135,7 +135,7 @@ class NotificationMongoAdminPersistenceAdapterIntegrationTest : PersistenceAdapt
         return NotificationOutbox.create(
             notificationId = notificationId,
             topic = "notification.dispatch",
-            partitionKey = "C123",
+            partitionKey = "user-1",
             eventPayload = """{"notificationId":"${notificationId.id}"}""",
             now = NOW.plusSeconds(5),
         )

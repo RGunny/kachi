@@ -147,7 +147,7 @@ class NotificationMongoDispatchPersistenceAdapterIntegrationTest : PersistenceAd
             requestId = "request-1",
             requester = "collector-service",
             channel = NotificationChannel.SLACK,
-            recipient = "C123",
+            recipientId = "user-1",
             message = "hello",
             origin = NotificationOrigin.NONE,
             now = requestedAt,
