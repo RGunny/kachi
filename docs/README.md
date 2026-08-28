@@ -15,6 +15,7 @@ docs/의 각 문서는 축이 하나다. 같은 내용을 두 문서에 적지 �
 | [테스트전략.md](테스트전략.md) | 검증 | 테스트 분류, 인프라 정책(Testcontainers), 모듈별 적용 기준 | 테스트 정책 변경 |
 | [포트-구성.md](포트-구성.md) | 운영 | local 실행 TCP 포트, endpoint, 연결 지도 | 포트/endpoint 추가·변경 |
 | [collector-webclient-설정.md](collector-webclient-설정.md) | 운영 | collector WebClient 설정 상세 | 해당 설정 변경 |
+| [알림-멱등-가드.md](알림-멱등-가드.md) | 운영 | 알림이 한 번만 가게 하는 네 층의 가드와 각 층이 막는 상황 | 가드 추가·변경 |
 | [decisions/](decisions/) | 왜(Why) | ADR — 설계 결정의 배경, 대안, 반려안 | 되돌리기 어려운 결정마다 |
 
 ## 도메인모델 문서 규칙

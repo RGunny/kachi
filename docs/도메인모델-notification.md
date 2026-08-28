@@ -6,7 +6,7 @@ notification-service(접수·outbox 발행)와 notification-worker(dispatch·ven
 
 관련 결정: ADR 012(모듈 설계), 013(outbox dispatch flow), 014(재시도 분류),
 015(outbox 발행 runtime), 016(vendor sender 구조), 017(Mongo 트랜잭션 전제),
-018(재시도 폭주 방지), 024(aggregate 불변화와 finalize CAS).
+018(재시도 폭주 방지), 024(aggregate 불변화와 finalize CAS), 028(발송 직전 주소 조회와 스킵).
 
 이 컨텍스트의 상태 전이 aggregate는 불변이다. 전이 메서드는 전이 결과를 새 인스턴스로 반환하고 전이 전 인스턴스는 그대로 남는다.
 전이 가드는 최종 방어선이며, 외부 side effect(Kafka 발행, vendor 호출) 뒤의 결과 확정은 전이 전 인스턴스가 들고 있던 claim을
@@ -26,7 +26,7 @@ _Aggregate Root_
 - `requestId`: upstream 요청 멱등 키
 - `requester`: 요청 주체
 - `channel`: `NotificationChannel` 발송 채널
-- `recipientId`: 수신자 식별자(user-service 사용자 id). 주소가 아니며 주소는 worker가 `(recipientId, channel)`로 조회한다
+- `recipientId`: 수신자 식별자(user-service 사용자 id). 주소가 아니며 주소(`address`)는 worker가 발송 직전에 `(recipientId, channel)`로 조회해 sender에만 넘긴다. 알림에는 남지 않는다 (ADR 028)
 - `message`: 발송 메시지 (null 허용, 빈 문자열 불가)
 - `origin`: `NotificationOrigin` 출처(summaryId, keyword, userId). 요청 계약에 실려 온 알림만 값을 가진다
 - `requestedAt`: 최초 접수 시각
@@ -48,7 +48,7 @@ _Aggregate Root_
 - `markFailed(now, reason)`: 발송 실패. `PROCESSING → FAILED`, 시도 횟수 증가, claim 해제
 - `markRetryWait(now, reason)`: 자동 재시도 대기. `FAILED → RETRY_WAIT`
 - `markDead(now, reason)`: 자동 재시도 종료. `FAILED → DEAD` (멱등)
-- `markSuppressed(now, reason)`: 수신자 바인딩이 유효하지 않아 발송하지 않고 종료. `PROCESSING → SUPPRESSED`
+- `markSuppressed(now, reason)`: 발송하지 않고 종료(스킵). `PROCESSING → SUPPRESSED`, 시도 횟수는 그대로, claim 해제. 사유는 `recipient unavailable: {reason}`(바인딩 없음·PENDING·REVOKED·주소 없음·채널 불일치)과 `already sent`(발송 직전 중복 가드) 두 종류
 - `recoverDeadToRequested(now, reason)`: 운영자 수동 복구. `DEAD → REQUESTED`
 - `canRetry(maxAttempts)`: 시도 횟수가 한도 미만인지 판단한다
 
@@ -89,7 +89,7 @@ _Enum_
 - `FAILED`: sender 호출 실패, `RETRY_WAIT` 또는 `DEAD` 분기 직전
 - `RETRY_WAIT`: retry topic/backoff 후 재시도 가능한 상태
 - `SENT`: 외부 채널 발송 성공
-- `SUPPRESSED`: 수신자의 채널 바인딩이 해지되는 등 주소가 없어 발송하지 않고 종료 (W1)
+- `SUPPRESSED`: 스킵. 수신 주소가 없거나 이미 보낸 알림이라 vendor를 부르지 않고 종료 (ADR 028)
 - `DEAD`: 자동 재시도 종료, 운영자 수동 재처리 대상 (DLT 진입과 함께)
 
 ### 알림 채널(NotificationChannel)

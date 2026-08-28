@@ -220,3 +220,4 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [025. 키워드 구독과 알림 라우팅](./docs/decisions/025-키워드-구독과-알림-라우팅.md) | 구독·채널 바인딩 소유권, 키워드 identity 정규화, notification routing fan-out, 홉별 멱등 키, 주소 참조 |
 | [026. 키워드 identity와 구독, 채널 바인딩](./docs/decisions/026-키워드-identity와-구독-채널-바인딩.md) | canonical 키워드와 구독 분리, 정규화 규칙, 채널 바인딩 생명주기와 주소 암호화, internal API 계약 |
 | [027. 알림 라우팅 서비스](./docs/decisions/027-알림-라우팅.md) | routing을 독립 모듈·프로세스로, `notification.requested` 계약 연결, RoutingJob 멱등, 결정적 requestId, 키워드 격리 알림 수신자 |
+| [028. 발송 직전 주소 조회와 스킵](./docs/decisions/028-발송-직전-주소-조회와-스킵.md) | worker의 `(recipientId, channel)` 주소 조회와 Redis 캐시, 없는 수신자의 스킵(SUPPRESSED), `sent:{requestId}` 발송 직전 가드, 전역 webhook 설정 삭제 |

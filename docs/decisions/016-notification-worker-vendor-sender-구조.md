@@ -150,7 +150,7 @@ kachi.notification.sender.telegram
 현재 구성은 non-secret 값과 secret 값을 분리한다.
 
 - `application.yaml`: sender `enabled`, timeout, buffer, Telegram base URL/path
-- `application-local.yaml`: Slack/Discord webhook URL, Telegram bot token env 연결
+- `application-local.yaml`: Telegram bot token env 연결
 - `.env.example`, `.env`, `.env.local`: 실제 로컬 실행과 real integration test에 필요한 env key
 
 `application.yaml`의 sender 설정은 다음 형태다.
@@ -175,13 +175,11 @@ kachi:
 kachi:
   notification:
     sender:
-      slack:
-        webhook-url: ${KACHI_NOTIFICATION_SLACK_WEBHOOK_URL:}
-      discord:
-        webhook-url: ${KACHI_NOTIFICATION_DISCORD_WEBHOOK_URL:}
       telegram:
         bot-token: ${KACHI_NOTIFICATION_TELEGRAM_BOT_TOKEN:}
 ```
+
+Slack·Discord webhook URL과 Telegram chat id는 sender 설정이 아니다. 수신자의 주소이며 발송마다 `SendNotificationCommand.address`로 들어온다(ADR 028). 처음에는 worker 전역 webhook 설정으로 두었으나 사용자별 주소 조회가 붙으면서 지웠다.
 
 각 real sender bean은 자기 `enabled` 값을 보고 등록된다.
 mock sender가 같은 channel을 포함하고 있어도 real sender가 enabled인 channel은 mock sender 지원 목록에서 제외된다.
