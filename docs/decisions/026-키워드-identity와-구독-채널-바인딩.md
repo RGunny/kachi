@@ -67,7 +67,7 @@ collector·ai의 클라이언트 코드는 바뀌지 않는다(추가 필드는 
 
 ### 채널 바인딩
 
-`ChannelBinding(userId, channel, address, status)`은 사용자·채널당 하나다. 그 id가 ADR 025의 `recipientRef`다.
+`ChannelBinding(userId, channel, address, status)`은 사용자·채널당 하나다. 알림 쪽은 바인딩을 `(userId, channel)`로 가리키므로(ADR 025) 바인딩 id는 밖으로 나가지 않는다.
 
 | 상태 | 뜻 |
 | --- | --- |
@@ -77,7 +77,7 @@ collector·ai의 클라이언트 코드는 바뀌지 않는다(추가 필드는 
 
 - Slack·Discord는 사용자가 자기 incoming webhook URL을 등록한다. URL은 채널별 host prefix(`https://hooks.slack.com/`, `https://discord.com/api/webhooks/`)를 검증한다. worker가 이 URL로 HTTP를 보내므로 임의 host를 받으면 안 된다.
 - Telegram은 사용자가 chat id를 모른다. 연결 토큰(무작위 32바이트, 10분 만료)을 발급해 `https://t.me/{bot}?start={token}` 링크를 돌려주고, 봇이 `/start <token>`을 받으면 `POST /internal/channel-bindings/telegram/link {token, chatId}`로 바인딩이 `ACTIVE`가 된다. 토큰 원문은 `LinkToken`으로 응답에 한 번만 나가고, aggregate와 저장소에는 SHA-256 해시(`LinkTokenHash`)와 만료 시각만 있다. "해시만 저장"을 지키려면 aggregate가 원문을 들 수 없기 때문이다. 봇 업데이트를 받는 쪽은 Telegram API를 호출하는 notification-worker의 관심사라 이 ADR 범위 밖이다.
-- 재등록은 새 행이 아니라 기존 행 갱신이다. `recipientRef`가 바뀌지 않아 진행 중인 알림이 새 주소로 간다.
+- 재등록은 새 행이 아니라 기존 행 갱신이다. `(userId, channel)`이 그대로라 진행 중인 알림이 새 주소로 간다.
 - 해지는 주소를 null로 지운다. 보관할 이유가 없다.
 
 주소는 AES-256-GCM으로 암호화해 저장한다(Spring Security `AesBytesEncryptor`, 키는 env `KACHI_USER_BINDING_KEY`). 암호화마다 무작위 IV(Initialization Vector)를 새로 뽑아 암호문 앞에 붙여 저장하므로 같은 주소도 행마다 암호문이 다르고, 암호문끼리 비교해 같은 주소인지 알아낼 수 없다. 행마다 `key_version`을 두어 키 교체를 행 단위로 진행할 수 있게 하되, 교체 절차 자체는 후속이다. 도메인의 `ChannelAddress`는 `toString()`이 마스킹된 값을 돌려준다. 로그에 주소가 남는 경로를 타입에서 막는다.
@@ -87,8 +87,9 @@ collector·ai의 클라이언트 코드는 바뀌지 않는다(추가 필드는 
 | API | 응답 | 소비자 |
 | --- | --- | --- |
 | `GET /internal/keywords/active` | `[{keywordId, canonicalKey, displayName, name}]` — enabled 구독이 하나 이상인 키워드 | collector, ai |
-| `GET /internal/subscriptions?keyword=` | `[{userId, channel, recipientRef}]` — enabled 구독 x 채널 중 바인딩 ACTIVE만. 없는 키워드는 `[]` | notification routing (R1) |
-| `GET /internal/channel-bindings/{ref}` | `{channel, status, address}` — ACTIVE일 때만 복호화 주소, 아니면 `address: null`. 없는 ref는 404 | notification-worker (W1) |
+| `GET /internal/subscriptions?keyword=` | `[{userId, channel}]` — enabled 구독 x 채널 중 바인딩 ACTIVE만. 없는 키워드는 `[]` | notification-routing |
+| `GET /internal/users?role=` | `[{userId, channels}]` — 그 역할의 ACTIVE 사용자 중 ACTIVE 바인딩이 있는 사용자와 그 채널. 바인딩 없는 사용자는 뺀다 | notification-routing (키워드 격리 알림) |
+| `GET /internal/users/{userId}/channel-bindings/{channel}` | `{channel, status, address}` — ACTIVE일 때만 복호화 주소, 아니면 `address: null`. 바인딩이 없으면 404 | notification-worker (W1) |
 | `POST /internal/channel-bindings/telegram/link` | `{token, chatId}` → 204. 토큰 무효·만료는 400 `LINK_TOKEN_INVALID` | Telegram 봇 수신기 (후속) |
 
 응답은 모두 활성 키워드 API와 같은 `{success, data, error}` 래핑이다.
@@ -116,7 +117,7 @@ internal API는 인증을 두지 않고 `/api/v1/internal/**`를 `permitAll`로 
 - **활성 키워드 API의 `name`을 원문으로 두고 routing이 정규화**
   - normalize 구현이 두 서비스에 생긴다. 하나가 바뀌면 조회가 조용히 빈 결과를 낸다.
 - **바인딩을 채널당 여러 행, 해지 행 보존**
-  - `recipientRef` 교체 규칙과 REVOKED 행 정리가 필요하다. 사용자·채널당 하나면 둘 다 없다.
+  - 알림 쪽이 바인딩 id를 들고 있어야 하고 REVOKED 행 정리가 필요하다. 사용자·채널당 하나면 둘 다 없다.
 - **주소를 평문 저장**
   - webhook URL은 그 자체로 발송 권한이다. DB dump가 곧 발송 권한 유출이다.
 - **KMS·envelope 암호화**
@@ -131,7 +132,7 @@ internal API는 인증을 두지 않고 `/api/v1/internal/**`를 `permitAll`로 
 - 장점:
   - 같은 키워드를 몇 명이 등록해도 canonical 행은 하나라 수집·요약이 한 번이다.
   - `keywordId`가 처음부터 사용자와 무관한 identity다.
-  - 주소가 DB에 평문으로 없고, 이벤트·로그에는 `recipientRef`만 남는다.
+  - 주소가 DB에 평문으로 없고, 이벤트·로그에는 사용자 id와 채널만 남는다.
   - collector·ai 클라이언트는 바뀌지 않는다.
 - 단점:
   - 기존 `Keyword` aggregate의 이름과 역할이 바뀐다. 이름 변경 API가 사라진다.

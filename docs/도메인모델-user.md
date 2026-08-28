@@ -193,7 +193,7 @@ _Value Object_
 _Aggregate Root_
 
 사용자의 채널별 수신처다. 사용자·채널당 하나이며 재등록·해지·재연결은 모두 같은 행의 상태 전이라,
-`id`가 수신처 참조(`recipientRef`)로 알림 쪽에 나가도 주소가 바뀌는 동안 참조가 끊기지 않는다.
+알림 쪽이 `(userId, channel)`로 가리키는 바인딩이 주소가 바뀌는 동안에도 같은 행이다.
 불변이며 전이마다 새 인스턴스를 돌려준다.
 
 ```
@@ -206,7 +206,7 @@ createWithAddress ──▶ ACTIVE ◀── completeLink ── PENDING ◀─�
 
 #### 속성(Attributes)
 
-- `id`: `ChannelBindingId` 바인딩 식별자. 알림 쪽에는 이 값만 `recipientRef`로 나간다
+- `id`: `ChannelBindingId` 바인딩 식별자. 저장소 안에서만 쓰고 알림 쪽에는 나가지 않는다
 - `userId`: `UserId` 소유 사용자
 - `channel`: `SubscriptionChannel`
 - `status`: `ChannelBindingStatus`
