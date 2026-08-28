@@ -52,11 +52,16 @@ class OAuth2ClientRegistrationTest {
         assertEquals("response", naverProvider.userNameAttribute)
     }
 
+    /**
+     * 실제 기동과 같은 우선순위로 local profile이 base 설정을 덮어쓰도록 구성한다.
+     */
     private fun localYamlEnvironment(): StandardEnvironment {
         val environment = StandardEnvironment()
-        YamlPropertySourceLoader()
-            .load("application-local", ClassPathResource("application-local.yaml"))
-            .forEach { environment.propertySources.addLast(it) }
+        val loader = YamlPropertySourceLoader()
+        listOf("application-local", "application").forEach { name ->
+            loader.load(name, ClassPathResource("$name.yaml"))
+                .forEach { environment.propertySources.addLast(it) }
+        }
 
         return environment
     }

@@ -42,3 +42,7 @@ out/
 .env.*
 !.env.example
 !**/.env.example
+
+### Local runtime ###
+.run/
+logs/

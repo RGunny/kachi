@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: notification-routing
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mongodb:
+    representation:
+      uuid: standard
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        acks: all
+
+server:
+  port: 8086
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+kachi:
+  notification:
+    routing:
+      group-id: notification-routing
+      request-topic: notification.requested
+      auto-offset-reset: earliest
+      topics:
+        summary-created: ai.summary.created
+        keyword-quarantined: ai.keyword.quarantined
+      dlt:
+        topic: notification.routing.dlt
+      retry:
+        max-attempts: 3
+        backoff: 1s
+      admin:
+        recipients:
+          slack: admin
+          discord: admin
+          telegram: admin
+      user-service:
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:}
+        subscriptions-path: /api/v1/internal/subscriptions
+        timeout: 3s
+        max-in-memory-size: 262144

@@ -1,6 +1,7 @@
 package me.rgunny.kachi.notification.application.port.inbound.request.model
 
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 /**
  * 외부 알림 요청 접수 입력 모델.
@@ -13,5 +14,6 @@ data class RequestNotificationCommand(
     val requester: String,
     val channel: NotificationChannel,
     val recipient: String,
-    val message: String
+    val message: String,
+    val origin: NotificationOrigin,
 )

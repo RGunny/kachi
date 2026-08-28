@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("worker NotificationDocumentMapper")
 class NotificationDocumentMapperTest {
@@ -17,6 +18,7 @@ class NotificationDocumentMapperTest {
     @Test
     @DisplayName("Notification aggregate와 document를 상호 변환할 때 상태 snapshot을 보존한다")
     fun roundTrip() {
+        val origin = NotificationOrigin(summaryId = "summary-1", keyword = "tesla", userId = "user-1")
         val requestedAt = Instant.parse("2026-06-17T00:00:00Z")
         val publishedAt = Instant.parse("2026-06-17T00:00:10Z")
         val notification = Notification.request(
@@ -25,6 +27,7 @@ class NotificationDocumentMapperTest {
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = "hello",
+            origin = origin,
             now = requestedAt,
         )
             .markPublished(publishedAt)
@@ -38,6 +41,10 @@ class NotificationDocumentMapperTest {
         assertEquals(NotificationChannel.SLACK, restored.channel)
         assertEquals("C123", restored.recipient)
         assertEquals("hello", restored.message)
+        assertEquals("summary-1", document.summaryId)
+        assertEquals("tesla", document.keyword)
+        assertEquals("user-1", document.userId)
+        assertEquals(origin, restored.origin)
         assertEquals(requestedAt, restored.requestedAt)
         assertEquals(NotificationStatus.PUBLISHED, restored.status)
         assertEquals(publishedAt, restored.updatedAt)
@@ -61,6 +68,7 @@ class NotificationDocumentMapperTest {
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = "hello",
+            origin = NotificationOrigin.NONE,
             now = requestedAt,
         )
             .markPublished(publishedAt)
@@ -73,6 +81,7 @@ class NotificationDocumentMapperTest {
         assertEquals("worker-1", document.claimedBy)
         assertEquals(claimedAt, restored.claimedAt)
         assertEquals("worker-1", restored.claimedBy)
+        assertEquals(NotificationOrigin.NONE, restored.origin)
 
         val sent = restored.markSent(Instant.parse("2026-06-17T00:00:30Z"))
         assertNull(sent.claimedAt)

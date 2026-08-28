@@ -14,4 +14,4 @@ kachi:
         enabled: true
     clients:
       user-service:
-        base-url: http://localhost:8080
+        base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8080}

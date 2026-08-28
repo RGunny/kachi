@@ -1,7 +1,9 @@
 package me.rgunny.kachi.notification.service.adapter.inbound.messaging
 
 import me.rgunny.kachi.notification.contract.NotificationRequestedEvent
+import me.rgunny.kachi.notification.contract.NotificationRequestedOrigin
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -28,6 +30,24 @@ class NotificationRequestedEventMapperTest {
         assertEquals(NotificationChannel.SLACK, command.channel)
         assertEquals("C123", command.recipient)
         assertEquals("hello", command.message)
+        assertEquals(NotificationOrigin.NONE, command.origin)
+    }
+
+    @Test
+    @DisplayName("계약의 origin을 NotificationOrigin으로 옮긴다")
+    fun toCommandWithOrigin() {
+        val event = NotificationRequestedEvent(
+            requestId = "sum:summary-1:u:user-1:c:SLACK",
+            requester = "notification-routing",
+            channel = me.rgunny.kachi.notification.contract.NotificationChannel.SLACK,
+            recipient = "ref-1",
+            message = "hello",
+            origin = NotificationRequestedOrigin(summaryId = "summary-1", keyword = "tesla", userId = "user-1"),
+        )
+
+        val command = NotificationRequestedEventMapper.toCommand(event)
+
+        assertEquals(NotificationOrigin("summary-1", "tesla", "user-1"), command.origin)
     }
 
     @Test

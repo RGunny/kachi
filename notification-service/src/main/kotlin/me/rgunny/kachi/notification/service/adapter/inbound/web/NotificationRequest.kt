@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationCommand
 import me.rgunny.kachi.notification.domain.NotificationChannel
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 data class NotificationRequest(
     @field:NotBlank(message = "requestId는 필수입니다")
@@ -31,6 +32,7 @@ data class NotificationRequest(
             channel = channel,
             recipient = recipient,
             message = message,
+            origin = NotificationOrigin.NONE,
         )
     }
 }

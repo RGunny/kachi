@@ -10,6 +10,7 @@ class Notification private constructor(
     val channel: NotificationChannel,
     val recipient: String,
     val message: String?,
+    val origin: NotificationOrigin,
     /**
      * 외부 요청을 알림으로 최초 접수한 시각.
      */
@@ -44,6 +45,7 @@ class Notification private constructor(
             channel: NotificationChannel,
             recipient: String,
             message: String?,
+            origin: NotificationOrigin,
             now: Instant
         ): Notification {
             require(requestId.isNotBlank()) { "requestId must not be blank" }
@@ -58,6 +60,7 @@ class Notification private constructor(
                 channel = channel,
                 recipient = recipient,
                 message = message,
+                origin = origin,
                 requestedAt = now,
                 status = NotificationStatus.REQUESTED,
                 failureReason = null,
@@ -80,6 +83,7 @@ class Notification private constructor(
             channel: NotificationChannel,
             recipient: String,
             message: String?,
+            origin: NotificationOrigin,
             requestedAt: Instant,
             status: NotificationStatus,
             failureReason: String?,
@@ -116,6 +120,7 @@ class Notification private constructor(
                 channel = channel,
                 recipient = recipient,
                 message = message,
+                origin = origin,
                 requestedAt = requestedAt,
                 status = status,
                 failureReason = failureReason,
@@ -197,6 +202,17 @@ class Notification private constructor(
 
         return transition(NotificationStatus.PROCESSING, NotificationStatus.FAILED, now, reason)
             .copy(dispatchAttempts = dispatchAttempts + 1, claimedAt = null, claimedBy = null)
+    }
+
+    /**
+     * 수신처가 더 이상 유효하지 않아 발송하지 않고 끝내는 처리.
+     * NotificationStatus: [PROCESSING --> SUPPRESSED]
+     */
+    fun markSuppressed(now: Instant, reason: String): Notification {
+        require(reason.isNotBlank()) { "reason must not be blank" }
+
+        return transition(NotificationStatus.PROCESSING, NotificationStatus.SUPPRESSED, now, reason)
+            .copy(claimedAt = null, claimedBy = null)
     }
 
     /**
@@ -308,6 +324,7 @@ class Notification private constructor(
             channel = channel,
             recipient = recipient,
             message = message,
+            origin = origin,
             requestedAt = requestedAt,
             status = status,
             failureReason = failureReason,

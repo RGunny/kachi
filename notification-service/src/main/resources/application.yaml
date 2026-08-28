@@ -32,6 +32,7 @@ kachi:
     request:
       topic: notification.requested
       group-id: notification-service
+      auto-offset-reset: earliest
       dedupe-ttl: PT24H
       dlt:
         topic: notification.requested.dlt
@@ -41,7 +42,7 @@ kachi:
     dispatch:
       topic: notification.dispatch
     outbox:
-      publisher-id: notification-service-local
+      publisher-id: ${HOSTNAME:notification-service-${random.uuid}}
       batch-size: 100
       poll-interval: PT1S
       publishing-visibility-timeout: PT30S

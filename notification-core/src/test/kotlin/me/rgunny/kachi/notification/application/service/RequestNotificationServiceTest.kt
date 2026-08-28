@@ -24,6 +24,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import me.rgunny.kachi.notification.domain.NotificationOrigin
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.ORIGIN
 
 @DisplayName("RequestNotificationService")
 class RequestNotificationServiceTest {
@@ -45,6 +47,7 @@ class RequestNotificationServiceTest {
         assertFalse(result.duplicated)
         assertEquals(now, result.acceptedAt)
         assertEquals(1, notificationPersistence.saved.size)
+        assertEquals(ORIGIN, notificationPersistence.saved.single().origin)
         assertEquals(1, outboxPersistence.saved.size)
         assertEquals(DISPATCH_TOPIC, outboxPersistence.saved.first().topic)
         assertEquals(RECIPIENT, outboxPersistence.saved.first().partitionKey)
@@ -61,6 +64,7 @@ class RequestNotificationServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = RECIPIENT,
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = now.minusSeconds(10),
         )
         val notificationPersistence = FakeNotificationPersistencePort().also {
@@ -134,6 +138,7 @@ class RequestNotificationServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = RECIPIENT,
             message = MESSAGE,
+            origin = ORIGIN,
         )
     }
 }

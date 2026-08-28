@@ -27,6 +27,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 /**
  * notification-worker dispatch 통합 테스트용 조립 fixture.
@@ -96,6 +97,7 @@ class NotificationWorkerDispatchFixture(
             channel = channel,
             recipient = recipient,
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = clock.instant().minusSeconds(10),
         )
             .markPublished(clock.instant().minusSeconds(5))

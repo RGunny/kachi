@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 /**
- * LLM provider 호출에 적용할 circuit breaker 설정과 registry를 구성한다.
+ * LLM provider 호출에 적용할 서킷 브레이커 설정과 registry를 구성한다.
  *
  * 설정 하나를 provider 전체가 공유하고 집계 window만 provider별로 갈린다.
  * registry를 쓰는 이유는 이름으로 인스턴스를 꺼내 쓸 수 있고, metric 수집을 붙일 때의 진입점이기 때문이다.

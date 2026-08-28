@@ -113,12 +113,12 @@ HTTP 401/403, 429, 5xx, timeout, invalid response를 세분화하는 작업은 �
 
 ## 제외한 것
 
-현재는 provider별 retry, circuit breaker, rate limit backoff, 상세 실패 사유 매핑을 구현하지 않는다.
+현재는 provider별 retry, 서킷 브레이커, rate limit backoff, 상세 실패 사유 매핑을 구현하지 않는다.
 kachi 프로젝트 전체 파이프라인 구성 이후 개별 서비스별 고도화 단계에서 진행한다.
 외부 provider 호출 정책이 실제 운영 데이터로 확인되면 다음 항목을 별도 결정으로 추가한다.
 
 - provider별 retry 조건
 - HTTP status별 `ProviderFailureReason` 매핑
 - 429 대응 scheduler interval 또는 backoff
-- provider별 circuit breaker
+- provider별 서킷 브레이커
 - provider 응답 품질 평가와 우선순위

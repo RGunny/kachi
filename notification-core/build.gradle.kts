@@ -19,6 +19,7 @@ dependencies {
 
     // Test
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.2")
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
 }
 

@@ -30,6 +30,7 @@ class NotificationRequestedKafkaListener(
         topics = ["\${kachi.notification.request.topic}"],
         groupId = "\${kachi.notification.request.group-id}",
         containerFactory = "notificationRequestedKafkaListenerContainerFactory",
+        properties = ["auto.offset.reset=\${kachi.notification.request.auto-offset-reset}"],
     )
     fun consume(@Payload payload: String) = runBlocking {
         val startedAt = System.nanoTime()

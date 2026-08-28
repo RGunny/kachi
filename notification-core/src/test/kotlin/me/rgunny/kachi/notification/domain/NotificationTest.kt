@@ -12,6 +12,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import me.rgunny.kachi.notification.domain.NotificationOrigin
+import me.rgunny.kachi.notification.fixture.NotificationTestFixture.ORIGIN
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 
 @DisplayName("Notification")
 class NotificationTest {
@@ -30,16 +34,16 @@ class NotificationTest {
         assertTrue(notification.uncommittedHistories.isEmpty())
 
         assertFailsWith<IllegalArgumentException> {
-            Notification.request("", "api", NotificationChannel.SLACK, "user", "message", now)
+            Notification.request("", "api", NotificationChannel.SLACK, "user", "message", NotificationOrigin.NONE, now)
         }
         assertFailsWith<IllegalArgumentException> {
-            Notification.request(REQUEST_ID, " ", NotificationChannel.SLACK, "user", "message", now)
+            Notification.request(REQUEST_ID, " ", NotificationChannel.SLACK, "user", "message", NotificationOrigin.NONE, now)
         }
         assertFailsWith<IllegalArgumentException> {
-            Notification.request(REQUEST_ID, REQUESTER, NotificationChannel.SLACK, "", "message", now)
+            Notification.request(REQUEST_ID, REQUESTER, NotificationChannel.SLACK, "", "message", NotificationOrigin.NONE, now)
         }
         assertFailsWith<IllegalArgumentException> {
-            Notification.request(REQUEST_ID, REQUESTER, NotificationChannel.SLACK, "user", " ", now)
+            Notification.request(REQUEST_ID, REQUESTER, NotificationChannel.SLACK, "user", " ", NotificationOrigin.NONE, now)
         }
     }
 
@@ -199,6 +203,68 @@ class NotificationTest {
         }
     }
 
+    @Test
+    @DisplayName("요청 출처를 보존한다")
+    fun keepsOrigin() {
+        val notification = Notification.request(
+            requestId = REQUEST_ID,
+            requester = REQUESTER,
+            channel = NotificationChannel.SLACK,
+            recipient = "user-1",
+            message = MESSAGE,
+            origin = ORIGIN,
+            now = now,
+        )
+
+        assertEquals(ORIGIN, notification.origin)
+        assertEquals(ORIGIN, notification.markPublished(now.plusSeconds(1)).origin)
+    }
+
+    @Test
+    @DisplayName("수신처가 유효하지 않으면 PROCESSING에서 SUPPRESSED로 전이하고 이력을 남긴다")
+    fun suppressedTransition() {
+        val suppressedAt = now.plusSeconds(3)
+        val processing = publishedNotification().markProcessing(now.plusSeconds(2), "worker-1")
+
+        val suppressed = processing.markSuppressed(suppressedAt, "binding revoked")
+
+        assertEquals(NotificationStatus.SUPPRESSED, suppressed.status)
+        assertEquals("binding revoked", suppressed.failureReason)
+        assertEquals(suppressedAt, suppressed.lastTransitionAt)
+        assertNull(suppressed.claimedAt)
+        assertNull(suppressed.claimedBy)
+        assertEquals(0, suppressed.dispatchAttempts)
+        val history = suppressed.uncommittedHistories.last()
+        assertEquals(NotificationStatus.PROCESSING, history.fromStatus)
+        assertEquals(NotificationStatus.SUPPRESSED, history.toStatus)
+        assertFailsWith<IllegalArgumentException> { processing.markSuppressed(suppressedAt, " ") }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = NotificationStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["PROCESSING"])
+    @DisplayName("PROCESSING이 아니면 SUPPRESSED로 전이할 수 없다")
+    fun rejectSuppressedFromOtherStatus(status: NotificationStatus) {
+        val notification = Notification.restore(
+            id = NotificationId.newId(),
+            requestId = REQUEST_ID,
+            requester = REQUESTER,
+            channel = NotificationChannel.SLACK,
+            recipient = "user-1",
+            message = MESSAGE,
+            origin = NotificationOrigin.NONE,
+            requestedAt = now,
+            status = status,
+            failureReason = null,
+            updatedAt = now,
+            lastTransitionAt = now,
+            dispatchAttempts = 0,
+            claimedAt = null,
+            claimedBy = null,
+        )
+
+        assertFailsWith<IllegalStateException> { notification.markSuppressed(now.plusSeconds(1), "binding revoked") }
+    }
+
     private fun publishedNotification(): Notification {
         return notification().markPublished(now.plusSeconds(1))
     }
@@ -210,6 +276,7 @@ class NotificationTest {
             channel = NotificationChannel.SLACK,
             recipient = "user-1",
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = now,
         )
     }

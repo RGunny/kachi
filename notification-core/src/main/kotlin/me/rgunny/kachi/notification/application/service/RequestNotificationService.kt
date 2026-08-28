@@ -54,6 +54,7 @@ class RequestNotificationService(
                 channel = command.channel,
                 recipient = command.recipient,
                 message = command.message,
+                origin = command.origin,
                 now = now,
             )
 

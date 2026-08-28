@@ -25,6 +25,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("NotificationMongoPublishPersistenceAdapter 통합 테스트")
 class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -223,6 +224,7 @@ class NotificationMongoPublishPersistenceAdapterIntegrationTest : PersistenceAda
             channel = NotificationChannel.SLACK,
             recipient = "C123",
             message = "hello",
+            origin = NotificationOrigin.NONE,
             now = requestedAt,
         )
     }

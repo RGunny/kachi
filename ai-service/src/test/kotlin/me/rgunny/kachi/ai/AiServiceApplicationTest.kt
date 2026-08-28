@@ -165,7 +165,7 @@ class AiServiceApplicationTest {
     }
 
     @Test
-    @DisplayName("provider마다 circuit breaker 인스턴스가 등록된다")
+    @DisplayName("provider마다 서킷 브레이커 인스턴스가 등록된다")
     fun registerCircuitBreakerPerProvider() {
         val names = circuitBreakerRegistry.allCircuitBreakers.map { it.name }.toSet()
 
@@ -173,7 +173,7 @@ class AiServiceApplicationTest {
     }
 
     @Test
-    @DisplayName("컨텍스트의 circuit breaker 설정은 운영 yaml 값과 같다")
+    @DisplayName("컨텍스트의 서킷 브레이커 설정은 운영 yaml 값과 같다")
     fun bindProductionCircuitBreakerConfig() {
         val config = circuitBreakerRegistry.circuitBreaker("groq").circuitBreakerConfig
 

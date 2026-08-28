@@ -20,6 +20,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.test.assertEquals
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 
 @DisplayName("RecoverStaleProcessingDispatchService")
 class RecoverStaleProcessingDispatchServiceTest {
@@ -141,6 +142,7 @@ class RecoverStaleProcessingDispatchServiceTest {
             channel = NotificationChannel.SLACK,
             recipient = RECIPIENT,
             message = MESSAGE,
+            origin = NotificationOrigin.NONE,
             now = NOW.minusSeconds(120),
         )
             .markPublished(NOW.minusSeconds(90))

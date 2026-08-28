@@ -1,4 +1,4 @@
-# 021. ai-service LLM 실패 분류와 provider circuit breaker
+# 021. ai-service LLM 실패 분류와 provider 서킷 브레이커
 
 ## 배경
 
@@ -196,7 +196,7 @@ PROVIDER_UNAVAILABLE 전역 장애로 호출 중단   -> 조기 중단을 유발
 
 `succeededCount`, `failureCount`, `skippedCount`가 분리되어 있으므로 운영자는 "20개 중 3개 성공, 1개 실패, 16개는 rate limit으로 시도조차 안 함"을 실행 기록에서 읽을 수 있다.
 
-### provider circuit breaker
+### provider 서킷 브레이커
 
 provider마다 `CircuitBreaker` 인스턴스를 둔다. `resilience4j-reactor`가 `resilience4j-circuitbreaker`를 transitive로 포함하므로 의존성 추가는 없다.
 
@@ -265,7 +265,7 @@ notification은 `RetryableException`/`NonRetryableException`을 나눴다. Kafka
 
 **HTTP 오류를 Mono 체인 안에서 `LlmProviderException`으로 만들기 위해서다.**
 
-circuit breaker는 체인을 통과하는 예외만 본다.
+서킷 브레이커는 체인을 통과하는 예외만 본다.
 체인이 프레임워크 예외로 끝나면 CB는 그것을 기록하고, 체인 바깥 `catch`에서 우리 예외로 바꿔 던져도 이미 늦다.
 아래 설정은 체인 안에서 분류가 끝나 있어야 성립한다.
 
@@ -276,7 +276,7 @@ circuit breaker는 체인을 통과하는 예외만 본다.
 `exchangeToMono`는 응답을 받은 자리에서 status를 보고 예외를 만들 수 있어 이 조건을 만족한다.
 
 `retrieve()`는 오류를 `WebClientResponseException`으로 던지므로 CB가 429/5xx/4xx를 status로 다시 판단해야 한다.
-분류 규칙이 두 벌이 되고, 한쪽만 고치면 격리는 하지 않는데 circuit breaker는 열리는 상태가 된다.
+분류 규칙이 두 벌이 되고, 한쪽만 고치면 격리는 하지 않는데 서킷 브레이커는 열리는 상태가 된다.
 `retrieve()` + `onStatus`는 체인 안에서 분류할 수 있지만 성공 경로와 오류 경로가 갈라진다.
 
 트레이드오프는 body 소비 책임이다.

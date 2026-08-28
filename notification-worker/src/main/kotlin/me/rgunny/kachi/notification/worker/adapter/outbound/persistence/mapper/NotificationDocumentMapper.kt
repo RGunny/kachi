@@ -4,6 +4,7 @@ import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationHistory
 import me.rgunny.kachi.notification.domain.NotificationId
+import me.rgunny.kachi.notification.domain.NotificationOrigin
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationDocument
 import me.rgunny.kachi.notification.worker.adapter.outbound.persistence.document.NotificationHistoryDocument
@@ -24,6 +25,9 @@ class NotificationDocumentMapper {
             channel = notification.channel.name,
             recipient = notification.recipient,
             message = notification.message,
+            summaryId = notification.origin.summaryId,
+            keyword = notification.origin.keyword,
+            userId = notification.origin.userId,
             requestedAt = notification.requestedAt,
             status = notification.status.name,
             failureReason = notification.failureReason,
@@ -43,6 +47,11 @@ class NotificationDocumentMapper {
             channel = NotificationChannel.valueOf(document.channel),
             recipient = document.recipient,
             message = document.message,
+            origin = NotificationOrigin(
+                summaryId = document.summaryId,
+                keyword = document.keyword,
+                userId = document.userId,
+            ),
             requestedAt = document.requestedAt,
             status = NotificationStatus.valueOf(document.status),
             failureReason = document.failureReason,
