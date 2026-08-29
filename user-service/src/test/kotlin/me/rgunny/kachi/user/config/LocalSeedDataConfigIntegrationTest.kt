@@ -61,6 +61,19 @@ class LocalSeedDataConfigIntegrationTest : PersistenceAdapterIntegrationTest() {
     }
 
     @Test
+    @DisplayName("관리자는 시드 키워드 전부를 세 채널로 구독하고 다시 실행해도 늘지 않는다")
+    fun seedAdminSubscriptions() {
+        runSeed(configured(), UserTestFixture.CLOCK)
+        runSeed(configured(), UserTestFixture.CLOCK)
+
+        val admin = userJpaRepository.findAllByRole(UserRole.ADMIN).single()
+        val subscriptions = subscriptionJpaRepository.findAllByUserId(admin.id).map { it.toDomain() }
+
+        assertEquals(keywordJpaRepository.findAll().size, subscriptions.size)
+        assertTrue(subscriptions.all { it.enabled && it.channels == SubscriptionChannel.entries.toSet() })
+    }
+
+    @Test
     @DisplayName("설정이 비어 있으면 자리표시 주소로 심는다")
     fun fallbackToPlaceholderWhenBlank() {
         runSeed(UserSeedProperties(), UserTestFixture.CLOCK)
