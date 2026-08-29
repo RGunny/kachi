@@ -525,6 +525,27 @@ class DispatchNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("claim에 실패했는데 상태가 여전히 PUBLISHED면 중복이 아니라 재시도 신호를 낸다")
+    fun claimMissOnPublishedNotificationIsNotReady() {
+        // 발행 완료 반영 transaction이 커밋되기 전에 dispatch 레코드가 먼저 닿으면 claim은 실패하고 재조회는 PUBLISHED를 본다.
+        // 이를 중복으로 보고 ack하면 알림이 PUBLISHED에 영구히 남는다(e2e에서 드러난 결함, ADR 029).
+        val notification = publishedNotification()
+        val persistence = FakeNotificationPersistencePort().also {
+            it.put(notification)
+            it.claimPublishedEnabled = false
+        }
+        val deduplication = FakeDeduplicationPort()
+        val service = service(persistence, deduplication, FakeIdempotencyKeyPort(), FakeSender())
+
+        assertFailsWith<DispatchNotReadyException> {
+            runSuspend { service.dispatch(command(notification.id)) }
+        }
+
+        assertEquals(listOf("notification:dispatch:${notification.id.id}"), deduplication.releasedKeys)
+        assertEquals(emptyList(), persistence.saved)
+    }
+
+    @Test
     @DisplayName("sender 호출 중 예외가 발생하면 dedupe를 해제하고 예외를 전파한다")
     fun senderException() {
         val notification = publishedNotification()

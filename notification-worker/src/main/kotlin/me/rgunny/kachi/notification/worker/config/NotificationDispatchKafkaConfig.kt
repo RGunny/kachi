@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.KafkaOperations
+import org.springframework.kafka.listener.ContainerProperties
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer
 import org.springframework.kafka.listener.DefaultErrorHandler
 import org.springframework.util.backoff.FixedBackOff
@@ -34,6 +35,9 @@ class NotificationDispatchKafkaConfig {
         return ConcurrentKafkaListenerContainerFactory<String, String>().apply {
             setConsumerFactory(consumerFactory)
             setCommonErrorHandler(notificationDispatchErrorHandler)
+            // listener가 결과를 보고 직접 acknowledge()하므로 이 factory는 MANUAL이어야 한다.
+            // `spring.kafka.listener.ack-mode`는 Boot가 만드는 기본 factory에만 적용되고 직접 만든 factory에는 닿지 않는다.
+            containerProperties.ackMode = ContainerProperties.AckMode.MANUAL
         }
     }
 
