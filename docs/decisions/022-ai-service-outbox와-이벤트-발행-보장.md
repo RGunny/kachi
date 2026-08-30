@@ -1,5 +1,7 @@
 # 022. ai-service outbox와 이벤트 발행 보장
 
+이 outbox가 실제 broker까지 발행하는 계약은 ai-service의 `AiSummaryCycleIntegrationTest`가 검증한다(ADR 029).
+
 ## 배경
 
 ai-service는 뉴스 요약을 만들고, 반복해서 실패하는 키워드를 격리한다. 

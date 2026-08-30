@@ -147,6 +147,17 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 ./scripts/app.sh all stop
 ```
 
+전체 사이클을 한 번에 띄워 실제 LLM·채널로 확인할 때는 `cycle.sh`를 쓴다.
+
+- 인프라 → Mongo index → user-service → 나머지 순으로 띄우고 ai-service의 이벤트 발행·relay를 켠다.
+- 확인 절차는 [docs/전체-사이클-스모크.md](./docs/전체-사이클-스모크.md)에 있다.
+
+```sh
+./scripts/cycle.sh start
+./scripts/cycle.sh status
+./scripts/cycle.sh stop
+```
+
 인프라는 컴포넌트 하나 또는 애플리케이션별 그룹으로 관리한다.
 
 ```sh
@@ -221,3 +232,4 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [026. 키워드 identity와 구독, 채널 바인딩](./docs/decisions/026-키워드-identity와-구독-채널-바인딩.md) | canonical 키워드와 구독 분리, 정규화 규칙, 채널 바인딩 생명주기와 주소 암호화, internal API 계약 |
 | [027. 알림 라우팅 서비스](./docs/decisions/027-알림-라우팅.md) | routing을 독립 모듈·프로세스로, `notification.requested` 계약 연결, RoutingJob 멱등, 결정적 requestId, 키워드 격리 알림 수신자 |
 | [028. 발송 직전 주소 조회와 스킵](./docs/decisions/028-발송-직전-주소-조회와-스킵.md) | worker의 `(recipientId, channel)` 주소 조회와 Redis 캐시, 없는 수신자의 스킵(SUPPRESSED), `sent:{requestId}` 발송 직전 가드, 전역 webhook 설정 삭제 |
+| [029. 전체 사이클 검증과 e2e-test 모듈](./docs/decisions/029-전체-사이클-검증과-e2e-test-모듈.md) | 모듈별 Kafka 계약 통합 테스트, 서비스 다섯 개를 컨테이너로 띄우는 `e2e-test` 모듈과 별도 task, skip/실패 규칙, 스모크 절차 |
