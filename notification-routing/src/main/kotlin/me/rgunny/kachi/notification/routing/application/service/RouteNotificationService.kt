@@ -19,7 +19,7 @@ import me.rgunny.kachi.notification.routing.exception.routing.RoutingJobConflict
 import java.time.Clock
 
 /**
- * 이벤트 1건을 대상마다 알림 요청으로 펼쳐 발행한다.
+ * 이벤트 1건을 대상마다 알림 요청으로 fan-out해 발행한다.
  *
  * 예외를 잡지 않는다. 대상 중 하나라도 발행에 실패하면 그대로 전파되어 job은 STARTED로 남고,
  * 같은 이벤트가 다시 오면 처음부터 다시 발행한다. 이미 발행된 대상은 접수 쪽 requestId 멱등이 거른다.

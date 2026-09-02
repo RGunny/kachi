@@ -56,7 +56,7 @@ user-service
   └─ 키워드 구독·채널 바인딩 등록/관리
       -> collector-service ── 활성 키워드 조회(HTTP internal) 후 뉴스 수집
           -> ai-service ── 수집 뉴스를 키워드별로 LLM 요약 (newsHash 중복 방지), `ai.summary.created`·`ai.keyword.quarantined` 발행
-              -> notification-routing ── ai 이벤트를 구독자·관리자 x 채널로 펼쳐 `notification.requested` 발행
+              -> notification-routing ── ai 이벤트를 구독자·관리자 x 채널로 fan-out해 `notification.requested` 발행
               -> notification-service ── 알림 접수, outbox 발행
                   -> notification-worker ── Slack/Discord/Telegram 발송
                       -> history-service ── 이력 적재 / 통계 집계 (미구현)
