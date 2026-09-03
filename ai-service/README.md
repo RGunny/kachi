@@ -114,6 +114,7 @@ GET /api/v1/internal/providers/llm/health?keyword=NVIDIA
 - `together`
 - `cerebras`
 - `mistral`
+- `ollama` (같은 머신의 Ollama. 인증 없음, 기본 모델 `qwen3.8:27b`, `reasoning-effort: none`으로 추론 토큰을 끈다)
 
 `gemini`는 설정 항목은 있지만 별도 `generateContent` adapter 구현 전까지 `enabled=true`로 사용할 수 없다.
 

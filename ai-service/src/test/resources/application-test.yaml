@@ -88,6 +88,18 @@ kachi:
         read-timeout: 10s
         write-timeout: 10s
         max-in-memory-size: 524288
+      ollama:
+        enabled: false
+        api-key: ollama
+        base-url: http://localhost:11434/v1
+        chat-completions-path: /chat/completions
+        model: test-ollama-model
+        reasoning-effort: none
+        connect-timeout: 2s
+        response-timeout: 180s
+        read-timeout: 180s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       gemini:
         enabled: false
         api-key: test-gemini-key

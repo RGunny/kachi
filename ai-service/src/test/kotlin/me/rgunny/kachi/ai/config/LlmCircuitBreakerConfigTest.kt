@@ -140,6 +140,7 @@ class LlmCircuitBreakerConfigTest {
             together = openAiProviderProperties(),
             cerebras = openAiProviderProperties(),
             mistral = openAiProviderProperties(),
+            ollama = openAiProviderProperties(),
             gemini = GeminiProviderProperties(
                 enabled = false,
                 apiKey = "test-key",

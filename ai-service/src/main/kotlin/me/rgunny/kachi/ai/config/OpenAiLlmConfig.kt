@@ -179,6 +179,25 @@ class OpenAiLlmConfig {
         )
     }
 
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "kachi.ai.providers.ollama",
+        name = ["enabled"],
+        havingValue = "true"
+    )
+    fun ollamaLlmProvider(
+        properties: LlmProviderProperties,
+        promptVersions: LlmPromptVersions,
+        jsonMapper: JsonMapper
+    ): OpenAiLlmProvider {
+        return openAiLlmProvider(
+            providerType = OpenAiProviderType.OLLAMA,
+            providerProperties = properties.ollama,
+            promptVersions = promptVersions,
+            jsonMapper = jsonMapper
+        )
+    }
+
     private fun openAiLlmProvider(
         providerType: OpenAiProviderType,
         providerProperties: OpenAiProviderProperties,
