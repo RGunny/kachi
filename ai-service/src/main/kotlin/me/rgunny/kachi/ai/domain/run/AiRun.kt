@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.domain.run
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import java.time.Instant
 
@@ -28,8 +27,8 @@ class AiRun private constructor(
     val skippedCount: Int,
     val failureReason: AiFailureReason?,
     val skipReason: AiSkipReason?,
-    val provider: LlmProviderName?,
-    val model: LlmModelName?,
+    val provider: LlmProvider?,
+    val model: String?,
     val promptVersion: PromptVersion?,
     val windowFrom: Instant?,
     val windowTo: Instant?,
@@ -83,8 +82,8 @@ class AiRun private constructor(
             skippedCount: Int,
             failureReason: AiFailureReason?,
             skipReason: AiSkipReason?,
-            provider: LlmProviderName?,
-            model: LlmModelName?,
+            provider: LlmProvider?,
+            model: String?,
             promptVersion: PromptVersion?,
             windowFrom: Instant?,
             windowTo: Instant?,
@@ -116,8 +115,8 @@ class AiRun private constructor(
         succeededCount: Int,
         failureCount: Int,
         failureReason: AiFailureReason?,
-        provider: LlmProviderName?,
-        model: LlmModelName?,
+        provider: LlmProvider?,
+        model: String?,
         promptVersion: PromptVersion?,
         finishedAt: Instant,
         skippedCount: Int = 0,

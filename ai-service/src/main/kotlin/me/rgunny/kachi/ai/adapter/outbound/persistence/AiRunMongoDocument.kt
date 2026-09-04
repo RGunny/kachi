@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.adapter.outbound.persistence
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
@@ -53,8 +52,8 @@ data class AiRunMongoDocument(
             skippedCount = skippedCount,
             failureReason = failureReason,
             skipReason = skipReason,
-            provider = provider?.let(LlmProviderName::of),
-            model = model?.let(LlmModelName::of),
+            provider = provider?.let(LlmProvider::ofCode),
+            model = model,
             promptVersion = promptVersion?.let(PromptVersion::of),
             windowFrom = windowFrom,
             windowTo = windowTo,
@@ -74,8 +73,8 @@ data class AiRunMongoDocument(
                 succeededCount = aiRun.succeededCount,
                 failureCount = aiRun.failureCount,
                 failureReason = aiRun.failureReason,
-                provider = aiRun.provider?.value,
-                model = aiRun.model?.value,
+                provider = aiRun.provider?.code,
+                model = aiRun.model,
                 promptVersion = aiRun.promptVersion?.value,
                 windowFrom = aiRun.windowFrom,
                 windowTo = aiRun.windowTo,

@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.domain.keyword
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -49,8 +48,8 @@ class KeywordExpansionTest {
     }
 
     private companion object {
-        val provider = LlmProviderName.of("openai")
-        val model = LlmModelName.of("gpt-4.1-mini")
+        val provider = LlmProvider.GROQ
+        const val model = "gpt-4.1-mini"
         val promptVersion = PromptVersion.of("keyword-expansion-v1")
         val now = AiTestFixture.NOW.minus(Duration.ofDays(1))
     }

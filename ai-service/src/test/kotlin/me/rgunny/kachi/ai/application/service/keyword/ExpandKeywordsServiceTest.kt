@@ -4,8 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.config.LlmPromptVersions
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
 import me.rgunny.kachi.ai.fake.FakeAiRunPersistencePort
 import me.rgunny.kachi.ai.fake.FakeKeywordExpansionPersistencePort
@@ -75,8 +74,8 @@ class ExpandKeywordsServiceTest {
         // 선조회 키에 model이 없으므로 다른 provider가 만든 확장도 같은 키로 걸린다.
         keywordExpansionPersistence.existingExpansions += AiTestFixture.keywordExpansion(
             keyword = keyword,
-            provider = LlmProviderName.of("groq"),
-            model = LlmModelName.of("llama-3.3-70b")
+            provider = LlmProvider.MISTRAL,
+            model = "mistral-small-2603"
         )
         val service = service()
 
@@ -87,8 +86,8 @@ class ExpandKeywordsServiceTest {
         assertEquals(0, result.failureCount)
         assertEquals(0, llmProvider.expandCallCount)
         assertEquals(0, keywordExpansionPersistence.savedExpansions.size)
-        assertEquals(LlmProviderName.of("groq"), aiRunPersistence.savedRuns.last().provider)
-        assertEquals(LlmModelName.of("llama-3.3-70b"), aiRunPersistence.savedRuns.last().model)
+        assertEquals(LlmProvider.MISTRAL, aiRunPersistence.savedRuns.last().provider)
+        assertEquals("mistral-small-2603", aiRunPersistence.savedRuns.last().model)
     }
 
     @Test

@@ -12,7 +12,8 @@ package me.rgunny.kachi.ai.domain.llm
  */
 data class LlmFailure(
     val code: LlmFailureCode,
-    val provider: LlmProviderName,
+    /** 실패를 낸 제공자. 호출이 나가기 전에 차단된 실패는 어느 제공자의 것도 아니므로 null이다. */
+    val provider: LlmProvider?,
     val message: String = code.defaultMessage,
     val statusCode: Int? = null,
     val retryAfterMillis: Long? = null
@@ -21,6 +22,10 @@ data class LlmFailure(
         require(message.isNotBlank()) { "LLM 실패 메시지는 빈 값일 수 없습니다" }
         require(retryAfterMillis == null || retryAfterMillis >= 0) { "Retry-After는 음수일 수 없습니다" }
     }
+
+    /** 로그와 메시지에 쓰는 제공자 code. 호출이 나가지 않은 실패는 [NO_PROVIDER]다. */
+    val providerCode: String
+        get() = provider?.code ?: NO_PROVIDER
 
     /**
      * 원천과 분류는 [code]에서 파생한다. 분류 축이 코드와 어긋난 실패를 만들 수 없게 하려는 것이다.
@@ -57,14 +62,16 @@ data class LlmFailure(
     val keywordBound: Boolean
         get() = category in KEYWORD_BOUND_CATEGORIES
 
-    private companion object {
-        val RETRYABLE_CATEGORIES = setOf(
+    companion object {
+        const val NO_PROVIDER = "none"
+
+        private val RETRYABLE_CATEGORIES = setOf(
             LlmFailureCategory.TIMEOUT,
             LlmFailureCategory.RATE_LIMITED,
             LlmFailureCategory.TRANSIENT_ERROR,
             LlmFailureCategory.UNAVAILABLE
         )
-        val KEYWORD_BOUND_CATEGORIES = setOf(
+        private val KEYWORD_BOUND_CATEGORIES = setOf(
             LlmFailureCategory.INVALID_RESPONSE,
             LlmFailureCategory.VALIDATION_ERROR
         )

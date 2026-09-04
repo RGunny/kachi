@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 /**
  * 내부 운영용 LLM provider 연결 확인 API.
  *
- * 현재 LLM provider mode에 따라 실제 키워드 확장 요청을 보내고 응답 파싱까지 확인한다.
+ * 라우터를 통해 실제 키워드 확장 요청을 보내고 응답 파싱까지 확인한다.
  */
 @RestController
 class LlmProviderHealthController(
@@ -35,8 +35,8 @@ class LlmProviderHealthController(
             ResponseEntity.ok<ApiResponse<*>>(
                 ApiResponse.success(
                     LlmProviderHealthResponse(
-                        provider = result.metadata.provider.value,
-                        model = result.metadata.model.value,
+                        provider = result.metadata.provider.code,
+                        model = result.metadata.model,
                         promptVersion = result.metadata.promptVersion.value,
                         expandedKeywords = result.expandedKeywords.map { it.value },
                         inputTokens = result.metadata.tokenUsage.inputTokens,

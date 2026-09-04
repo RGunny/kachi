@@ -13,8 +13,7 @@ import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuaranti
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantineStatus
@@ -153,8 +152,8 @@ class SummarizeNewsServiceTest {
             keyword = keyword,
             sourceNewsIds = listOf(article.id),
             newsHash = NewsHash.calculate(keyword = keyword, sourceNewsIds = listOf(article.id)),
-            provider = LlmProviderName.of("groq"),
-            model = LlmModelName.of("llama-3.3-70b")
+            provider = LlmProvider.MISTRAL,
+            model = "mistral-small-2603"
         )
         val service = service()
 
@@ -165,8 +164,8 @@ class SummarizeNewsServiceTest {
         assertEquals(true, result.summaries.single().reused)
         assertEquals(0, llmProvider.summarizeCallCount)
         assertEquals(0, newsSummaryPersistence.savedSummaries.size)
-        assertEquals(LlmProviderName.of("groq"), aiRunPersistence.savedRuns.last().provider)
-        assertEquals(LlmModelName.of("llama-3.3-70b"), aiRunPersistence.savedRuns.last().model)
+        assertEquals(LlmProvider.MISTRAL, aiRunPersistence.savedRuns.last().provider)
+        assertEquals("mistral-small-2603", aiRunPersistence.savedRuns.last().model)
     }
 
     @Test

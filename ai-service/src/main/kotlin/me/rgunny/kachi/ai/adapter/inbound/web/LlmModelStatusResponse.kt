@@ -1,9 +1,14 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
-import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProviderStatus
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import java.time.Instant
 
-data class LlmProviderStatusResponse(
+/**
+ * 모델 하나의 차단 상태 응답.
+ * [model]은 상수명, [provider]는 제공자 code.
+ */
+data class LlmModelStatusResponse(
+    val model: String,
     val provider: String,
     val circuitBreakerState: String,
     val cooldownUntil: Instant?,
@@ -16,9 +21,10 @@ data class LlmProviderStatusResponse(
 ) {
     companion object {
 
-        fun from(status: LlmProviderStatus): LlmProviderStatusResponse {
-            return LlmProviderStatusResponse(
-                provider = status.provider.value,
+        fun from(status: LlmModelStatus): LlmModelStatusResponse {
+            return LlmModelStatusResponse(
+                model = status.model.name,
+                provider = status.model.provider.code,
                 circuitBreakerState = status.circuitBreakerState,
                 cooldownUntil = status.cooldownUntil,
                 failureRate = status.failureRate,

@@ -51,8 +51,8 @@ class LlmProviderHealthControllerTest {
         val data = json.get("data")
 
         assertEquals(true, json.get("success").asBoolean())
-        assertEquals(AiTestFixture.PROVIDER.value, data.get("provider").asString())
-        assertEquals(AiTestFixture.MODEL.value, data.get("model").asString())
+        assertEquals(AiTestFixture.PROVIDER.code, data.get("provider").asString())
+        assertEquals(AiTestFixture.MODEL, data.get("model").asString())
         assertEquals(1, llmProvider.expandCallCount)
     }
 

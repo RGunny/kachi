@@ -2,7 +2,7 @@ package me.rgunny.kachi.ai.adapter.outbound.llm
 
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import java.time.Instant
 
 /**
@@ -14,9 +14,9 @@ import java.time.Instant
  */
 interface LlmProviderCandidate : LlmProviderPort {
 
-    val provider: LlmProviderName
+    val model: LlmModel
 
-    /** 지금 호출해 볼 만한 후보인지에 대한 힌트. 후보 순서를 정하는 데만 쓴다. */
+    /** 지금 호출해 볼 만한 후보인지에 대한 힌트. 운영 조회에만 쓴다. */
     fun isLikelyAvailable(now: Instant): Boolean
 
     /** 호출되지 못한 이유. 후보가 전부 빠졌을 때 운영자에게 보여 줄 문자열이다. */

@@ -1,8 +1,7 @@
 package me.rgunny.kachi.ai.adapter.outbound.persistence
 
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
@@ -51,8 +50,8 @@ class AiRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest
                 succeededCount = 1,
                 failureCount = 1,
                 failureReason = AiFailureReason.INVALID_RESPONSE,
-                provider = LlmProviderName.of("openrouter"),
-                model = LlmModelName.of("openai/gpt-4o-mini"),
+                provider = LlmProvider.OPENROUTER,
+                model = "openai/gpt-4o-mini",
                 promptVersion = PromptVersion.of("keyword-expansion-v1"),
                 finishedAt = finishedAt
             )
@@ -68,8 +67,8 @@ class AiRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest
             assertEquals(1, found.succeededCount)
             assertEquals(1, found.failureCount)
             assertEquals(AiFailureReason.INVALID_RESPONSE, found.failureReason)
-            assertEquals(LlmProviderName.of("openrouter"), found.provider)
-            assertEquals(LlmModelName.of("openai/gpt-4o-mini"), found.model)
+            assertEquals(LlmProvider.OPENROUTER, found.provider)
+            assertEquals("openai/gpt-4o-mini", found.model)
             assertEquals(PromptVersion.of("keyword-expansion-v1"), found.promptVersion)
         }
 

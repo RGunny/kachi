@@ -74,93 +74,47 @@ kachi:
         news-path: /api/v1/internal/news
         timeout: 3s
         max-in-memory-size: 262144
-    providers:
-      mode: single-random
-      keyword-expansion-prompt-version: keyword-expansion-v1
-      news-summary-prompt-version: news-summary-v1
-      openrouter:
-        enabled: false
-        api-key: ${OPENROUTER_API_KEY:}
-        base-url: https://openrouter.ai/api/v1
-        chat-completions-path: /chat/completions
-        model: openai/gpt-4o-mini
-        connect-timeout: 2s
-        response-timeout: 10s
-        read-timeout: 10s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      groq:
-        enabled: false
-        api-key: ${GROQ_API_KEY:}
-        base-url: https://api.groq.com/openai/v1
-        chat-completions-path: /chat/completions
-        model: llama-3.3-70b-versatile
-        connect-timeout: 2s
-        response-timeout: 10s
-        read-timeout: 10s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      together:
-        enabled: false
-        api-key: ${TOGETHER_API_KEY:}
-        base-url: https://api.together.xyz/v1
-        chat-completions-path: /chat/completions
-        model: meta-llama/Llama-3.3-70B-Instruct-Turbo
-        connect-timeout: 2s
-        response-timeout: 10s
-        read-timeout: 10s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      cerebras:
-        enabled: false
-        api-key: ${CEREBRAS_API_KEY:}
-        base-url: https://api.cerebras.ai/v1
-        chat-completions-path: /chat/completions
-        model: gpt-oss-120b
-        connect-timeout: 2s
-        response-timeout: 10s
-        read-timeout: 10s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      mistral:
-        enabled: false
-        api-key: ${MISTRAL_API_KEY:}
-        base-url: https://api.mistral.ai/v1
-        chat-completions-path: /chat/completions
-        model: mistral-small-latest
-        connect-timeout: 2s
-        response-timeout: 10s
-        read-timeout: 10s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      # 같은 머신의 Ollama. 인증이 없어 api-key는 자리표시 값이고, 로컬 모델은 응답이 수십 초라 timeout을 길게 둔다.
-      # 서킷 브레이커의 slow-call 판정(8s)은 전역 설정이라 local llm 과 분류체계가 필요할 지 이후 재설계한다.
-      ollama:
-        enabled: false
-        api-key: ollama
-        base-url: http://localhost:11434/v1
-        chat-completions-path: /chat/completions
-        model: qwen3.8:27b
-        reasoning-effort: none
-        connect-timeout: 2s
-        response-timeout: 180s
-        read-timeout: 180s
-        write-timeout: 10s
-        max-in-memory-size: 524288
-      gemini:
-        enabled: false
-        api-key: ${GEMINI_API_KEY:}
-        base-url: https://generativelanguage.googleapis.com
-        generate-content-path: /v1beta/models/{model}:generateContent
-        model: gemini-2.0-flash
-      circuit-breaker:
-        sliding-window-size: 6
-        minimum-number-of-calls: 3
-        failure-rate-threshold: 50
-        slow-call-duration-threshold: 8s
-        slow-call-rate-threshold: 80
-        wait-duration-in-open-state: 60s
-        permitted-number-of-calls-in-half-open-state: 2
-      failover:
-        default-cooldown: 60s
-        max-cooldown: 10m
+    llm:
+      providers:
+        GROQ:
+          base-url: https://api.groq.com/openai/v1
+          api-key: ${GROQ_API_KEY:}
+          billing: free-tier
+          connect-timeout: 2s
+        MISTRAL:
+          base-url: https://api.mistral.ai/v1
+          api-key: ${MISTRAL_API_KEY:}
+          billing: free-tier
+          connect-timeout: 2s
+        # 같은 머신의 Ollama. 인증이 없어 api-key도 없다.
+        OLLAMA:
+          base-url: http://localhost:11434/v1
+          billing: self-hosted
+          connect-timeout: 2s
+      # 시간은 모델의 속성이다. 같은 모델도 호스팅에 따라 수십 배 다르다. slow-after는 timeout보다 짧아야 한다.
+      models:
+        GROQ_QWEN3_27B: { timeout: 10s, slow-after: 8s }
+        MISTRAL_SMALL_2603: { timeout: 10s, slow-after: 8s }
+        OLLAMA_QWEN3_27B: { timeout: 150s, slow-after: 120s }
+      # 용도마다 시도할 모델의 순서. 여기 없는 모델은 클라이언트도 서킷도 만들지 않는다.
+      uses:
+        NEWS_SUMMARY:
+          candidates: [GROQ_QWEN3_27B, MISTRAL_SMALL_2603]
+        KEYWORD_EXPANSION:
+          candidates: [GROQ_QWEN3_27B, MISTRAL_SMALL_2603]
+      prompts:
+        news-summary-version: news-summary-v1
+        keyword-expansion-version: keyword-expansion-v1
+      guard:
+        # failure rate·slow call rate·wait duration은 모델 전체가 공유한다. slow call duration threshold는 models.*.slow-after다.
+        circuit-breaker:
+          sliding-window-size: 6
+          minimum-number-of-calls: 3
+          failure-rate-threshold: 50
+          slow-call-rate-threshold: 80
+          wait-duration-in-open-state: 60s
+          permitted-number-of-calls-in-half-open-state: 2
+        # 429를 받은 모델이 대기 시간. Retry-After가 있으면 그 값(상한 max), 없으면 default.
+        cooldown:
+          default: 60s
+          max: 10m

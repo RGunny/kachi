@@ -11,14 +11,13 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResu
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
-import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.domain.llm.ReasoningEffort
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import org.springframework.http.HttpHeaders
 import org.springframework.web.reactive.function.client.ClientResponse
@@ -31,10 +30,14 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * OpenAI 계열 chat completions API를 사용하는 LLM provider adapter.
+ * OpenAI chat completions 규격으로 모델 하나를 부르는 adapter.
  *
- * OpenRouter, Groq, Together, Cerebras, Mistral, Ollama처럼 같은 `/chat/completions`
- * 계약을 제공하는 provider를 하나의 adapter로 연결한다.
+ * [LlmProviderPort]를 전략 패턴으로 구현한 것 중 [me.rgunny.kachi.ai.domain.llm.LlmApi.OPENAI_CHAT_COMPLETIONS] 규격 담당이다.
+ * 요청 body를 만들고, 옵션을 이 규격의 철자로 싣고, 응답에서 content와 모델 이름을 꺼내고, HTTP status를 실패 코드로 옮기는
+ * 것까지가 이 전략의 책임이다. 다른 규격은 다른 adapter가 같은 포트로 구현하므로 가드와 라우터는 어느 쪽이든 같은 방식으로 다룬다.
+ *
+ * 이 규격을 내는 제공자는 여럿이지만 요청·응답의 모양은 하나라 adapter도 하나다.
+ * 어느 제공자의 어느 모델을 부르는지는 [model]이 정하고, 주소와 timeout은 [webClient]에 이미 들어 있다.
  *
  * 호출 실패는 모두 [LlmProviderException]으로 변환해 원천과 성격을 application 계층에 전달한다.
  * 여기서 재시도하지 않는다. 재시도 구동은 scheduler tick이 맡는다(ADR 021).
@@ -42,18 +45,16 @@ import tools.jackson.databind.json.JsonMapper
 class OpenAiLlmProvider(
     private val webClient: WebClient,
     private val jsonMapper: JsonMapper,
-    private val providerType: OpenAiProviderType,
-    private val properties: OpenAiProviderProperties,
+    private val model: LlmModel,
+    private val apiKey: String,
     private val keywordExpansionPromptVersion: PromptVersion,
     private val newsSummaryPromptVersion: PromptVersion
 ) : LlmProviderPort {
 
-    val providerName: LlmProviderName = LlmProviderName.of(providerType.value)
-
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
         return OpenAiPreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
-                provider = providerName,
+                provider = model.provider,
                 promptVersion = newsSummaryPromptVersion
             ),
             provider = this
@@ -86,7 +87,7 @@ class OpenAiLlmProvider(
 
         return LlmKeywordExpansionResult(
             expandedKeywords = expandedKeywords,
-            // 3. 결과가 어떤 provider/model/prompt에서 나왔는지 application 계층으로 전달한다.
+            // 3. 결과가 어떤 제공자/모델/prompt에서 나왔는지 application 계층으로 전달한다.
             metadata = metadata(response, keywordExpansionPromptVersion)
         )
     }
@@ -119,17 +120,18 @@ class OpenAiLlmProvider(
     ): OpenAiChatResponse {
         return try {
             webClient.post()
-                .uri(properties.chatCompletionsPath)
-                .header(AUTHORIZATION_HEADER, "Bearer ${properties.apiKey}")
+                .uri(CHAT_COMPLETIONS_PATH)
+                // 인증이 없는 제공자(self-hosted)에는 헤더를 싣지 않는다.
+                .headers { headers -> if (apiKey.isNotBlank()) headers.setBearerAuth(apiKey) }
                 .bodyValue(
                     OpenAiChatRequest(
-                        model = properties.model,
+                        model = model.code,
                         messages = listOf(
                             OpenAiChatMessage(role = "system", content = systemPrompt),
                             OpenAiChatMessage(role = "user", content = userPrompt)
                         ),
                         max_tokens = maxTokens,
-                        reasoning_effort = properties.reasoningEffort
+                        reasoning_effort = reasoningEffort(model.options.reasoningEffort)
                     )
                 )
                 // status와 Retry-After를 함께 봐야 rate limit을 분류할 수 있어 retrieve() 대신 exchangeToMono를 쓴다.
@@ -211,6 +213,21 @@ class OpenAiLlmProvider(
         )
     }
 
+    /**
+     * 이 규격의 `reasoning_effort` 철자.
+     * 값 이름을 소문자로 싣고, [ReasoningEffort.OMIT]은 필드를 빼서 모델 기본값에 맡긴다.
+     */
+    private fun reasoningEffort(effort: ReasoningEffort): String? {
+        return when (effort) {
+            ReasoningEffort.OMIT -> null
+            ReasoningEffort.NONE,
+            ReasoningEffort.LOW,
+            ReasoningEffort.MEDIUM,
+            ReasoningEffort.HIGH,
+            ReasoningEffort.MAX -> effort.name.lowercase()
+        }
+    }
+
     private fun retryAfterMillis(headers: HttpHeaders): Long? {
         return headers.getFirst(HttpHeaders.RETRY_AFTER)
             ?.toLongOrNull()
@@ -226,7 +243,7 @@ class OpenAiLlmProvider(
     ): LlmFailure {
         return LlmFailure(
             code = code,
-            provider = providerName,
+            provider = model.provider,
             message = message,
             statusCode = statusCode,
             retryAfterMillis = retryAfterMillis
@@ -339,8 +356,9 @@ class OpenAiLlmProvider(
         promptVersion: PromptVersion
     ): LlmGenerationMetadata {
         return LlmGenerationMetadata(
-            provider = providerName,
-            model = LlmModelName.of(response.model?.takeIf { it.isNotBlank() } ?: properties.model),
+            provider = model.provider,
+            // 응답이 보고한 모델을 우선한다. 요청한 code와 다를 수 있고, 그 사실이 기록에 남아야 한다.
+            model = response.model?.takeIf { it.isNotBlank() } ?: model.code,
             promptVersion = promptVersion,
             tokenUsage = TokenUsage(
                 inputTokens = response.usage?.prompt_tokens ?: 0,
@@ -349,19 +367,24 @@ class OpenAiLlmProvider(
         )
     }
 
-    private companion object {
-        const val AUTHORIZATION_HEADER = "Authorization"
-        const val HTTP_TOO_MANY_REQUESTS = 429
-        const val HTTP_UNAUTHORIZED = 401
-        const val HTTP_FORBIDDEN = 403
-        val HTTP_CLIENT_ERROR_RANGE = 400..499
-        const val MAX_ERROR_BODY_LENGTH = 500
-        const val MILLIS_PER_SECOND = 1_000L
-        const val KEYWORD_EXPANSION_SYSTEM_PROMPT =
+    companion object {
+        /** 이 규격의 생성 endpoint. 제공자마다 다르지 않으므로 설정이 아니라 상수다. */
+        const val CHAT_COMPLETIONS_PATH = "/chat/completions"
+
+        /** 응답 body를 메모리에 받는 상한. 요약 응답은 수 KB라 넉넉하다. */
+        const val MAX_IN_MEMORY_SIZE = 512 * 1024
+
+        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_FORBIDDEN = 403
+        private val HTTP_CLIENT_ERROR_RANGE = 400..499
+        private const val MAX_ERROR_BODY_LENGTH = 500
+        private const val MILLIS_PER_SECOND = 1_000L
+        private const val KEYWORD_EXPANSION_SYSTEM_PROMPT =
             "너는 뉴스 검색 키워드 확장기다. 응답은 한국어 또는 영어 키워드 문자열 JSON 배열만 반환한다."
-        const val NEWS_SUMMARY_SYSTEM_PROMPT =
+        private const val NEWS_SUMMARY_SYSTEM_PROMPT =
             "너는 뉴스 요약기다. 응답은 title, content, sentiment 필드를 가진 JSON 객체만 반환한다."
-        const val NEWS_SUMMARY_MAX_TOKENS = 768
-        val STRING_LIST_TYPE = object : TypeReference<List<String>>() {}
+        private const val NEWS_SUMMARY_MAX_TOKENS = 768
+        private val STRING_LIST_TYPE = object : TypeReference<List<String>>() {}
     }
 }

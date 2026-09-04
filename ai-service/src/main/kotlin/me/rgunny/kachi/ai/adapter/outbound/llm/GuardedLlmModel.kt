@@ -5,16 +5,16 @@ import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
-import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProviderStatus
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
-import me.rgunny.kachi.ai.config.LlmFailoverProperties
+import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Duration
@@ -22,7 +22,10 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * provider 하나의 호출 가능 여부를 관리하는 데코레이터.
+ * 모델 하나의 호출 가능 여부를 관리하는 데코레이터.
+ *
+ * [LlmProviderPort] 구현을 같은 포트로 감싸는 데코레이터 패턴이다. 위임 대상은 자기가 차단될 수 있다는 사실을 모르고,
+ * 라우터는 후보가 감싸였는지 모른다. 차단 장치를 더하거나 상태 저장소를 바꿔도 이 클래스 안에서 끝난다.
  *
  * 차단 장치는 둘이다. 연속 실패로 열리는 서킷 브레이커와, rate limit 응답이 지시한 cooldown이다.
  * 하나라도 걸리면 위임 대상을 호출하지 않고 [LlmFailureCode.LLM_PROVIDER_UNAVAILABLE]로 실패한다.
@@ -30,11 +33,11 @@ import java.util.concurrent.atomic.AtomicReference
  * 실패 분류는 위임 대상이 끝냈으므로 여기서 다시 하지 않고 [LlmFailure]를 그대로 소비한다.
  * 재시도도 하지 않는다. 재시도 구동은 다음 tick의 몫이다(ADR 021).
  */
-class GuardedLlmProvider(
+class GuardedLlmModel(
     private val delegate: LlmProviderPort,
-    override val provider: LlmProviderName,
+    override val model: LlmModel,
     private val circuitBreaker: CircuitBreaker,
-    private val failover: LlmFailoverProperties,
+    private val cooldown: LlmCooldownProperties,
     private val clock: Clock
 ) : LlmProviderCandidate {
 
@@ -42,14 +45,14 @@ class GuardedLlmProvider(
     private val cooldownUntil = AtomicReference<Instant?>(null)
 
     init {
-        // 상태 전이를 남기지 않으면 특정 provider가 한동안 호출되지 않은 이유를 운영자가 알 수 없다.
+        // 상태 전이를 남기지 않으면 특정 모델이 한동안 호출되지 않은 이유를 운영자가 알 수 없다.
         circuitBreaker.eventPublisher.onStateTransition { event ->
             val transition = "${event.stateTransition.fromState} -> ${event.stateTransition.toState}"
 
             if (event.stateTransition.toState == CircuitBreaker.State.OPEN) {
-                log.warn("LLM provider circuit breaker opened: provider={}, transition={}", provider.value, transition)
+                log.warn("LLM model circuit breaker opened: model={}, transition={}", model.qualifiedCode, transition)
             } else {
-                log.info("LLM provider circuit breaker changed: provider={}, transition={}", provider.value, transition)
+                log.info("LLM model circuit breaker changed: model={}, transition={}", model.qualifiedCode, transition)
             }
         }
     }
@@ -58,7 +61,7 @@ class GuardedLlmProvider(
      * 위임 대상의 실행 단위를 그대로 넘기면 그 객체의 호출이 차단을 우회하므로 감싼 것으로 바꿔 돌려준다.
      */
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
-        return GuardedPreparedNewsSummary(plan = delegate.prepareNewsSummary().plan, provider = this)
+        return GuardedPreparedNewsSummary(plan = delegate.prepareNewsSummary().plan, model = this)
     }
 
     override suspend fun expandKeyword(
@@ -79,15 +82,15 @@ class GuardedLlmProvider(
     override fun isLikelyAvailable(now: Instant): Boolean = exclusionReason(now) == null
 
     /**
-     * 지금 이 provider가 어떤 상태인지의 스냅샷.
+     * 지금 이 모델이 어떤 상태인지의 스냅샷.
      *
      * cooldown 종료 시각은 쉬는 중일 때만 담는다. 지나간 시각은 호출을 막는 이유가 아니다.
      */
-    fun status(now: Instant): LlmProviderStatus {
+    fun status(now: Instant): LlmModelStatus {
         val metrics = circuitBreaker.metrics
 
-        return LlmProviderStatus(
-            provider = provider,
+        return LlmModelStatus(
+            model = model,
             circuitBreakerState = circuitBreaker.state.name,
             cooldownUntil = coolingDownUntil(now),
             failureRate = metrics.failureRate,
@@ -139,7 +142,7 @@ class GuardedLlmProvider(
     private suspend fun <T : Any> guarded(call: suspend () -> T): T {
         val now = Instant.now(clock)
 
-        // 1. 쉬는 중인 provider는 회로에 닿기 전에 막는다. 이 차단은 집계에 넣지 않는다.
+        // 1. 쉬는 중인 모델은 회로에 닿기 전에 막는다. 이 차단은 집계에 넣지 않는다.
         coolingDownUntil(now)?.let { throw unavailable(cooldownReason(it)) }
 
         // 2. permission 획득이 곧 OPEN에서 HALF_OPEN으로 넘어가는 계기다. 상태만 읽어서는 전이가 없다.
@@ -173,9 +176,9 @@ class GuardedLlmProvider(
     private fun cooldownReason(until: Instant): String = "cooldown(until=$until)"
 
     /**
-     * rate limit 응답을 받으면 provider가 지시한 시간만큼 쉰다.
+     * rate limit 응답을 받으면 제공자가 지시한 시간만큼 쉰다.
      *
-     * 헤더가 없어도 기본값만큼은 쉰다. 0으로 두면 같은 실행에서 같은 provider를 다시 골라 같은 응답을 받는다.
+     * 헤더가 없어도 기본값만큼은 쉰다. 0으로 두면 같은 실행에서 같은 모델을 다시 골라 같은 응답을 받는다.
      * 이미 쉬는 중이면 더 늦은 시각만 반영한다. 짧은 지시로 대기를 앞당기면 앞선 지시를 어기는 것이 된다.
      */
     private fun holdIfRateLimited(failure: LlmFailure) {
@@ -183,17 +186,17 @@ class GuardedLlmProvider(
             return
         }
 
-        val cooldown = failure.retryAfterMillis
-            ?.let { minOf(Duration.ofMillis(it), failover.maxCooldown) }
-            ?: failover.defaultCooldown
-        val until = Instant.now(clock).plus(cooldown)
+        val duration = failure.retryAfterMillis
+            ?.let { minOf(Duration.ofMillis(it), cooldown.max) }
+            ?: cooldown.default
+        val until = Instant.now(clock).plus(duration)
         val applied = cooldownUntil.updateAndGet { current ->
             if (current == null || until.isAfter(current)) until else current
         }
 
         log.warn(
-            "LLM provider is cooling down after rate limit: provider={}, until={}, source={}",
-            provider.value,
+            "LLM model is cooling down after rate limit: model={}, until={}, source={}",
+            model.qualifiedCode,
             applied,
             if (failure.retryAfterMillis == null) "default" else "retry-after"
         )
@@ -203,14 +206,14 @@ class GuardedLlmProvider(
         return LlmProviderException(
             LlmFailure(
                 code = LlmFailureCode.LLM_PROVIDER_UNAVAILABLE,
-                provider = provider,
+                provider = model.provider,
                 message = "${LlmFailureCode.LLM_PROVIDER_UNAVAILABLE.defaultMessage}: $reason"
             )
         )
     }
 
     private companion object {
-        val log = LoggerFactory.getLogger(GuardedLlmProvider::class.java)
+        val log = LoggerFactory.getLogger(GuardedLlmModel::class.java)
         const val NOT_PERMITTED = "not-permitted"
     }
 }

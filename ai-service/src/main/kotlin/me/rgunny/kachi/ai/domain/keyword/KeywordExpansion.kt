@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.domain.keyword
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import java.time.Instant
 
@@ -9,8 +8,9 @@ class KeywordExpansion private constructor(
     val id: KeywordExpansionId,
     val keyword: AiKeyword,
     val expandedKeywords: List<ExpandedKeyword>,
-    val provider: LlmProviderName,
-    val model: LlmModelName,
+    val provider: LlmProvider,
+    /** 확장을 만든 모델. */
+    val model: String,
     val promptVersion: PromptVersion,
     val createdAt: Instant
 ) {
@@ -19,11 +19,13 @@ class KeywordExpansion private constructor(
         fun create(
             keyword: AiKeyword,
             expandedKeywords: List<ExpandedKeyword>,
-            provider: LlmProviderName,
-            model: LlmModelName,
+            provider: LlmProvider,
+            model: String,
             promptVersion: PromptVersion,
             createdAt: Instant
         ): KeywordExpansion {
+            require(model.isNotBlank()) { "확장 모델은 빈 값일 수 없습니다" }
+
             val normalizedExpandedKeywords = expandedKeywords
                 .filterNot { it.value.equals(keyword.value, ignoreCase = true) }
                 .distinctBy { it.value.lowercase() }
@@ -45,8 +47,8 @@ class KeywordExpansion private constructor(
             id: KeywordExpansionId,
             keyword: AiKeyword,
             expandedKeywords: List<ExpandedKeyword>,
-            provider: LlmProviderName,
-            model: LlmModelName,
+            provider: LlmProvider,
+            model: String,
             promptVersion: PromptVersion,
             createdAt: Instant
         ): KeywordExpansion {

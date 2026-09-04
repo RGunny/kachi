@@ -11,7 +11,7 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSum
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
@@ -19,16 +19,18 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import java.time.Duration
 
 /**
- * 어느 provider가 호출됐는지 이름으로 식별할 수 있는 LLM provider fake.
+ * 어느 후보가 호출됐는지 이름으로 식별할 수 있는 LLM 호출 fake.
  *
  * 라우팅과 failover 테스트는 "몇 번 호출됐는가"가 아니라 "누가 호출됐는가"를 확인해야 한다.
+ * 응답 metadata의 model에 [name]을 실어 결과만 보고도 누가 답했는지 알 수 있게 한다.
  *
  * [failures]에 넣은 예외를 호출 순서대로 하나씩 던진다. 비면 성공한다.
  * [callDelay]는 느린 호출 판정을, [gate]는 여러 호출이 동시에 진행되는 상황을 만드는 데 쓴다.
- * [callLog]를 여러 fake가 공유하면 provider 사이의 호출 순서를 볼 수 있다.
+ * [callLog]를 여러 fake가 공유하면 후보 사이의 호출 순서를 볼 수 있다.
  */
 open class NamedLlmProviderPort(
-    val name: String
+    val name: String,
+    private val provider: LlmProvider = AiTestFixture.PROVIDER
 ) : LlmProviderPort {
     var expandCallCount: Int = 0
     var summarizeCallCount: Int = 0
@@ -43,7 +45,7 @@ open class NamedLlmProviderPort(
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
         return FakePreparedNewsSummary(
             plan = LlmNewsSummaryPlan(
-                provider = LlmProviderName.of(name),
+                provider = provider,
                 promptVersion = AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION
             ),
             provider = this
@@ -91,8 +93,8 @@ open class NamedLlmProviderPort(
 
     private fun metadata(promptVersion: PromptVersion): LlmGenerationMetadata {
         return LlmGenerationMetadata(
-            provider = LlmProviderName.of(name),
-            model = AiTestFixture.MODEL,
+            provider = provider,
+            model = name,
             promptVersion = promptVersion,
             tokenUsage = TokenUsage(inputTokens = 1, outputTokens = 1)
         )

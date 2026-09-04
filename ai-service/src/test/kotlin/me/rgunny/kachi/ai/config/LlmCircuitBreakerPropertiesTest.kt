@@ -17,7 +17,6 @@ class LlmCircuitBreakerPropertiesTest {
         assertEquals(6, properties.slidingWindowSize)
         assertEquals(3, properties.minimumNumberOfCalls)
         assertEquals(50f, properties.failureRateThreshold)
-        assertEquals(Duration.ofSeconds(8), properties.slowCallDurationThreshold)
         assertEquals(80f, properties.slowCallRateThreshold)
         assertEquals(Duration.ofSeconds(60), properties.waitDurationInOpenState)
         assertEquals(2, properties.permittedNumberOfCallsInHalfOpenState)
@@ -75,20 +74,10 @@ class LlmCircuitBreakerPropertiesTest {
         }
     }
 
-    @Test
-    @DisplayName("느린 호출 판정 시간은 양수여야 한다")
-    fun rejectNonPositiveSlowCallDuration() {
-        assertFailsWith<IllegalArgumentException> { properties(slowCallDurationThreshold = Duration.ZERO) }
-        assertFailsWith<IllegalArgumentException> {
-            properties(slowCallDurationThreshold = Duration.ofSeconds(-1))
-        }
-    }
-
     private fun properties(
         slidingWindowSize: Int = 6,
         minimumNumberOfCalls: Int = 3,
         failureRateThreshold: Float = 50f,
-        slowCallDurationThreshold: Duration = Duration.ofSeconds(8),
         slowCallRateThreshold: Float = 80f,
         waitDurationInOpenState: Duration = Duration.ofSeconds(60),
         permittedNumberOfCallsInHalfOpenState: Int = 2
@@ -97,7 +86,6 @@ class LlmCircuitBreakerPropertiesTest {
             slidingWindowSize = slidingWindowSize,
             minimumNumberOfCalls = minimumNumberOfCalls,
             failureRateThreshold = failureRateThreshold,
-            slowCallDurationThreshold = slowCallDurationThreshold,
             slowCallRateThreshold = slowCallRateThreshold,
             waitDurationInOpenState = waitDurationInOpenState,
             permittedNumberOfCallsInHalfOpenState = permittedNumberOfCallsInHalfOpenState

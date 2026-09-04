@@ -11,13 +11,13 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
  */
 internal class GuardedPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,
-    private val provider: GuardedLlmProvider
+    private val model: GuardedLlmModel
 ) : PreparedLlmNewsSummary {
 
     override suspend fun summarize(
         keyword: AiKeyword,
         articles: List<NewsArticle>
     ): LlmNewsSummaryResult {
-        return provider.summarizeNews(keyword, articles)
+        return model.summarizeNews(keyword, articles)
     }
 }

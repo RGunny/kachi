@@ -1,9 +1,9 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
-import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProviderStatus
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.config.ApiVersionConfig
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.fake.FakeLlmProviderAdminPort
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.JsonBody
@@ -34,13 +34,13 @@ class InternalLlmProviderControllerTest {
     fun resetAdminPort() {
         // 컨트롤러 슬라이스 컨텍스트는 테스트끼리 공유되므로 호출 기록을 되돌린다.
         adminPort.statuses = emptyList()
-        adminPort.resetNames.clear()
+        adminPort.resetModels.clear()
     }
 
     @Test
-    @DisplayName("provider별 차단 상태를 응답한다")
-    fun findProviderStatuses() {
-        adminPort.statuses = listOf(status(PROVIDER, state = "OPEN"))
+    @DisplayName("모델별 차단 상태를 모델 상수명과 제공자 code로 응답한다")
+    fun findModelStatuses() {
+        adminPort.statuses = listOf(status(MODEL, state = "OPEN"))
 
         val body = webTestClient.get()
             .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDERS)
@@ -53,20 +53,21 @@ class InternalLlmProviderControllerTest {
         val json = JsonBody.parse(body)
         assertTrue(json.get("success").asBoolean())
 
-        val provider = json.get("data").get(0)
-        assertEquals(PROVIDER, provider.get("provider").asString())
-        assertEquals("OPEN", provider.get("circuitBreakerState").asString())
-        assertEquals(AiTestFixture.NOW.toString(), provider.get("cooldownUntil").asString())
-        assertEquals(2, provider.get("failedCalls").asInt())
+        val model = json.get("data").get(0)
+        assertEquals(MODEL.name, model.get("model").asString())
+        assertEquals(MODEL.provider.code, model.get("provider").asString())
+        assertEquals("OPEN", model.get("circuitBreakerState").asString())
+        assertEquals(AiTestFixture.NOW.toString(), model.get("cooldownUntil").asString())
+        assertEquals(2, model.get("failedCalls").asInt())
     }
 
     @Test
     @DisplayName("차단을 되돌리면 되돌린 뒤 상태를 응답한다")
-    fun resetProvider() {
-        adminPort.statuses = listOf(status(PROVIDER, state = "CLOSED"))
+    fun resetModel() {
+        adminPort.statuses = listOf(status(MODEL, state = "CLOSED"))
 
         val body = webTestClient.post()
-            .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDER_RESET, PROVIDER)
+            .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDER_RESET, MODEL.name)
             .exchange()
             .expectStatus().isOk
             .expectBody(String::class.java)
@@ -76,12 +77,12 @@ class InternalLlmProviderControllerTest {
         val json = JsonBody.parse(body)
         assertTrue(json.get("success").asBoolean())
         assertEquals("CLOSED", json.get("data").get("circuitBreakerState").asString())
-        assertEquals(listOf(LlmProviderName.of(PROVIDER)), adminPort.resetNames)
+        assertEquals(listOf(MODEL), adminPort.resetModels)
     }
 
     @Test
-    @DisplayName("없는 provider 이름은 404로 응답한다")
-    fun rejectUnknownProvider() {
+    @DisplayName("모델 상수가 아닌 이름은 404로 응답한다")
+    fun rejectUnknownModelName() {
         val body = webTestClient.post()
             .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDER_RESET, "unknown")
             .exchange()
@@ -93,11 +94,25 @@ class InternalLlmProviderControllerTest {
         val json = JsonBody.parse(body)
         assertEquals(false, json.get("success").asBoolean())
         assertEquals(ErrorCode.LLM_PROVIDER_NOT_FOUND.name, json.get("error").get("code").asString())
+        assertTrue(adminPort.resetModels.isEmpty())
     }
 
-    private fun status(provider: String, state: String): LlmProviderStatus {
-        return LlmProviderStatus(
-            provider = LlmProviderName.of(provider),
+    @Test
+    @DisplayName("후보에 없는 모델 상수는 404로 응답한다")
+    fun rejectModelOutsideCandidates() {
+        adminPort.statuses = listOf(status(MODEL, state = "CLOSED"))
+
+        webTestClient.post()
+            .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDER_RESET, LlmModel.OLLAMA_QWEN3_27B.name)
+            .exchange()
+            .expectStatus().isEqualTo(ErrorCode.LLM_PROVIDER_NOT_FOUND.status)
+
+        assertEquals(listOf(LlmModel.OLLAMA_QWEN3_27B), adminPort.resetModels)
+    }
+
+    private fun status(model: LlmModel, state: String): LlmModelStatus {
+        return LlmModelStatus(
+            model = model,
             circuitBreakerState = state,
             cooldownUntil = AiTestFixture.NOW,
             failureRate = 50f,
@@ -117,6 +132,6 @@ class InternalLlmProviderControllerTest {
     }
 
     private companion object {
-        const val PROVIDER = "groq"
+        val MODEL: LlmModel = AiTestFixture.LLM_MODEL
     }
 }

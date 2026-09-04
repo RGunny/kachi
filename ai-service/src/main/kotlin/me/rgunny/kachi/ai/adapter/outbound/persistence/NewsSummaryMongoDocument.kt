@@ -1,8 +1,7 @@
 package me.rgunny.kachi.ai.adapter.outbound.persistence
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
@@ -51,8 +50,8 @@ data class NewsSummaryMongoDocument(
             title = title,
             content = content,
             sentiment = sentiment,
-            provider = LlmProviderName.of(provider),
-            model = LlmModelName.of(model),
+            provider = LlmProvider.ofCode(provider),
+            model = model,
             promptVersion = PromptVersion.of(promptVersion),
             tokenUsage = TokenUsage(inputTokens = inputTokens, outputTokens = outputTokens),
             createdAt = createdAt
@@ -69,8 +68,8 @@ data class NewsSummaryMongoDocument(
                 title = newsSummary.title,
                 content = newsSummary.content,
                 sentiment = newsSummary.sentiment,
-                provider = newsSummary.provider.value,
-                model = newsSummary.model.value,
+                provider = newsSummary.provider.code,
+                model = newsSummary.model,
                 promptVersion = newsSummary.promptVersion.value,
                 inputTokens = newsSummary.tokenUsage.inputTokens,
                 outputTokens = newsSummary.tokenUsage.outputTokens,

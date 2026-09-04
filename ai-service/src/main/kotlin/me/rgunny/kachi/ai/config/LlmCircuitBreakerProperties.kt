@@ -3,16 +3,14 @@ package me.rgunny.kachi.ai.config
 import java.time.Duration
 
 /**
- * provider별 서킷 브레이커 설정.
+ * 모델별 서킷 브레이커가 공유하는 failure rate·slow call rate·wait duration 정책.
  *
- * [slowCallDurationThreshold]는 provider의 `response-timeout`보다 짧아야 timeout 전에 느려짐을 잡는다.
- * provider마다 timeout이 달라 여기서는 검증하지 않는다.
+ * slow call duration threshold는 모델마다 다르므로 여기 없다. 모델 설정의 `slow-after`가 그 값이다.
  */
 data class LlmCircuitBreakerProperties(
     val slidingWindowSize: Int,
     val minimumNumberOfCalls: Int,
     val failureRateThreshold: Float,
-    val slowCallDurationThreshold: Duration,
     val slowCallRateThreshold: Float,
     val waitDurationInOpenState: Duration,
     val permittedNumberOfCallsInHalfOpenState: Int
@@ -29,9 +27,6 @@ data class LlmCircuitBreakerProperties(
         }
         require(slowCallRateThreshold > 0 && slowCallRateThreshold <= 100) {
             "서킷 브레이커 느린 호출 비율 임계치는 0 초과 100 이하여야 합니다"
-        }
-        require(!slowCallDurationThreshold.isNegative && !slowCallDurationThreshold.isZero) {
-            "서킷 브레이커 느린 호출 판정 시간은 양수여야 합니다"
         }
         require(!waitDurationInOpenState.isNegative && !waitDurationInOpenState.isZero) {
             "서킷 브레이커 open 상태 대기 시간은 양수여야 합니다"

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.application.port.outbound.llm.model
 
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 
 /**
@@ -9,6 +9,6 @@ import me.rgunny.kachi.ai.domain.llm.PromptVersion
  * 실제 요약에 쓰인 model은 호출 결과 metadata가 갖는다.
  */
 data class LlmNewsSummaryPlan(
-    val provider: LlmProviderName,
+    val provider: LlmProvider,
     val promptVersion: PromptVersion
 )

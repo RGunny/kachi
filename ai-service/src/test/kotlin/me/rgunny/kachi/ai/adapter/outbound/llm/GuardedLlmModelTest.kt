@@ -10,10 +10,10 @@ import kotlinx.coroutines.yield
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerConfig
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
-import me.rgunny.kachi.ai.config.LlmFailoverProperties
+import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.fake.NamedLlmProviderPort
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
@@ -29,9 +29,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-@DisplayName("GuardedLlmProvider")
-class GuardedLlmProviderTest {
-    private val delegate = NamedLlmProviderPort(PROVIDER_NAME)
+@DisplayName("GuardedLlmModel")
+class GuardedLlmModelTest {
+    private val delegate = NamedLlmProviderPort(MODEL.qualifiedCode)
     private val clock = MutableClock()
 
     @Test
@@ -45,7 +45,7 @@ class GuardedLlmProviderTest {
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
-        assertEquals(LlmProviderName.of(PROVIDER_NAME), blocked.failure.provider)
+        assertEquals(MODEL.provider, blocked.failure.provider)
         assertEquals(2, delegate.summarizeCallCount)
         assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
     }
@@ -119,7 +119,7 @@ class GuardedLlmProviderTest {
 
         val result = provider.summarizeNews(KEYWORD, ARTICLES)
 
-        assertEquals(PROVIDER_NAME, result.metadata.provider.value)
+        assertEquals(MODEL.qualifiedCode, result.metadata.model)
         assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
     }
 
@@ -397,7 +397,7 @@ class GuardedLlmProviderTest {
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
-        assertEquals(LlmProviderName.of(PROVIDER_NAME), blocked.failure.provider)
+        assertEquals(MODEL.provider, blocked.failure.provider)
         assertNull(blocked.failure.statusCode)
         assertNull(blocked.failure.retryAfterMillis)
     }
@@ -459,7 +459,7 @@ class GuardedLlmProviderTest {
         val provider = guarded()
         openCircuit(provider)
 
-        assertEquals(PROVIDER_NAME, provider.prepareNewsSummary().plan.provider.value)
+        assertEquals(MODEL.provider, provider.prepareNewsSummary().plan.provider)
     }
 
     @Test
@@ -483,7 +483,7 @@ class GuardedLlmProviderTest {
 
         val result = provider.prepareNewsSummary().summarize(KEYWORD, ARTICLES)
 
-        assertEquals(PROVIDER_NAME, result.metadata.provider.value)
+        assertEquals(MODEL.qualifiedCode, result.metadata.model)
         assertEquals(1, delegate.summarizeCallCount)
     }
 
@@ -532,7 +532,7 @@ class GuardedLlmProviderTest {
         )
 
         clock.advance(Duration.ofSeconds(30))
-        val openDelegate = NamedLlmProviderPort(PROVIDER_NAME)
+        val openDelegate = NamedLlmProviderPort(MODEL.qualifiedCode)
         val opened = guarded(delegate = openDelegate)
         openCircuit(opened, openDelegate)
         assertEquals("open", opened.exclusionReason(clock.instant()))
@@ -584,7 +584,7 @@ class GuardedLlmProviderTest {
 
         val result = provider.summarizeNews(KEYWORD, ARTICLES)
 
-        assertEquals(PROVIDER_NAME, result.metadata.provider.value)
+        assertEquals(MODEL.qualifiedCode, result.metadata.model)
     }
 
     @Test
@@ -597,7 +597,7 @@ class GuardedLlmProviderTest {
 
         val status = provider.status(clock.instant())
 
-        assertEquals(LlmProviderName.of(PROVIDER_NAME), status.provider)
+        assertEquals(MODEL, status.model)
         assertEquals(CircuitBreaker.State.CLOSED.name, status.circuitBreakerState)
         assertEquals(AiTestFixture.NOW.plusSeconds(30), status.cooldownUntil)
         assertEquals(1, status.failedCalls)
@@ -652,7 +652,7 @@ class GuardedLlmProviderTest {
     }
 
     private suspend fun openCircuit(
-        provider: GuardedLlmProvider,
+        provider: GuardedLlmModel,
         delegate: NamedLlmProviderPort = this.delegate
     ) {
         repeat(2) { delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT) }
@@ -663,7 +663,7 @@ class GuardedLlmProviderTest {
     private fun wideCircuitBreaker(): CircuitBreaker =
         circuitBreaker(slidingWindowSize = 8, minimumNumberOfCalls = 8)
 
-    private suspend fun assertBlocked(provider: GuardedLlmProvider, expectedCalls: Int) {
+    private suspend fun assertBlocked(provider: GuardedLlmModel, expectedCalls: Int) {
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
@@ -673,12 +673,12 @@ class GuardedLlmProviderTest {
     private fun guarded(
         delegate: NamedLlmProviderPort = this.delegate,
         circuitBreaker: CircuitBreaker = circuitBreaker()
-    ): GuardedLlmProvider {
-        return GuardedLlmProvider(
+    ): GuardedLlmModel {
+        return GuardedLlmModel(
             delegate = delegate,
-            provider = LlmProviderName.of(delegate.name),
+            model = MODEL,
             circuitBreaker = circuitBreaker,
-            failover = LlmFailoverProperties(defaultCooldown = DEFAULT_COOLDOWN, maxCooldown = MAX_COOLDOWN),
+            cooldown = LlmCooldownProperties(default = DEFAULT_COOLDOWN, max = MAX_COOLDOWN),
             clock = clock
         )
     }
@@ -699,18 +699,18 @@ class GuardedLlmProviderTest {
                 slidingWindowSize = slidingWindowSize,
                 minimumNumberOfCalls = minimumNumberOfCalls,
                 failureRateThreshold = 50f,
-                slowCallDurationThreshold = slowCallDurationThreshold,
                 slowCallRateThreshold = slowCallRateThreshold,
                 waitDurationInOpenState = Duration.ofHours(1),
                 permittedNumberOfCallsInHalfOpenState = permittedNumberOfCallsInHalfOpenState
-            )
+            ),
+            slowCallDurationThreshold = slowCallDurationThreshold
         )
 
-        return CircuitBreakerRegistry.of(config).circuitBreaker(PROVIDER_NAME)
+        return CircuitBreakerRegistry.of(config).circuitBreaker(MODEL.qualifiedCode)
     }
 
     private companion object {
-        const val PROVIDER_NAME = "groq"
+        val MODEL: LlmModel = AiTestFixture.LLM_MODEL
         val KEYWORD: AiKeyword = AiTestFixture.keyword()
         val ARTICLES = listOf(AiTestFixture.newsArticle())
         val DEFAULT_COOLDOWN: Duration = Duration.ofSeconds(60)

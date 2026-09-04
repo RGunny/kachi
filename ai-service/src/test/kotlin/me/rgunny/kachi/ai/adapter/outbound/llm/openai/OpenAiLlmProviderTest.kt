@@ -4,10 +4,11 @@ import io.netty.handler.timeout.ReadTimeoutException
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
-import me.rgunny.kachi.ai.config.OpenAiProviderProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
 import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
+import me.rgunny.kachi.ai.domain.llm.LlmModel
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -24,27 +25,14 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import reactor.core.publisher.Mono
 import tools.jackson.databind.json.JsonMapper
 import java.net.URI
-import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @DisplayName("OpenAiLlmProvider")
 class OpenAiLlmProviderTest {
-
-    private val properties = OpenAiProviderProperties(
-        enabled = true,
-        apiKey = "api-key",
-        baseUrl = "https://llm.example.com/v1",
-        chatCompletionsPath = "/chat/completions",
-        model = "test-model",
-        connectTimeout = Duration.ofSeconds(2),
-        responseTimeout = Duration.ofSeconds(10),
-        readTimeout = Duration.ofSeconds(10),
-        writeTimeout = Duration.ofSeconds(10),
-        maxInMemorySize = 512 * 1024,
-    )
 
     @Test
     @DisplayName("키워드 확장 요청을 chat completions API로 보내고 JSON 배열 응답을 변환한다")
@@ -75,8 +63,8 @@ class OpenAiLlmProviderTest {
         )
 
         assertEquals(listOf("AI 반도체", "GPU"), result.expandedKeywords.map { it.value })
-        assertEquals("openrouter", result.metadata.provider.value)
-        assertEquals("test-model", result.metadata.model.value)
+        assertEquals(LlmProvider.GROQ, result.metadata.provider)
+        assertEquals("test-model", result.metadata.model)
         assertEquals("keyword-expansion-v1", result.metadata.promptVersion.value)
         assertEquals(12, result.metadata.tokenUsage.inputTokens)
         assertEquals(8, result.metadata.tokenUsage.outputTokens)
@@ -84,6 +72,41 @@ class OpenAiLlmProviderTest {
         val request = exchange.request
         assertEquals("/v1/chat/completions", request.url().path)
         assertEquals("Bearer api-key", request.headers().getFirst("Authorization"))
+        assertEquals(MODEL.code, exchange.sentBody.path("model").asText())
+    }
+
+    @Test
+    @DisplayName("응답이 모델을 보고하지 않으면 요청한 모델 code를 기록한다")
+    fun fallBackToRequestedModelWhenResponseOmitsModel() = runBlocking {
+        val provider = providerOf(
+            CapturingExchangeFunction("""{"choices":[{"message":{"content":"[\"GPU\"]"}}]}""")
+        )
+
+        val result = provider.expandKeyword(keyword = AiKeyword.of("NVIDIA"), maxExpansions = 2)
+
+        assertEquals(MODEL.code, result.metadata.model)
+    }
+
+    @Test
+    @DisplayName("reasoning effort가 OMIT이면 요청에 싣지 않고, 값이 있으면 소문자 이름으로 싣는다")
+    fun serializeReasoningEffortPerModel() = runBlocking {
+        val omitted = CapturingExchangeFunction(keywordResponse())
+        providerOf(omitted, model = LlmModel.GROQ_QWEN3_27B).expandKeyword(AiKeyword.of("NVIDIA"), 1)
+        val none = CapturingExchangeFunction(keywordResponse())
+        providerOf(none, model = LlmModel.OLLAMA_QWEN3_27B).expandKeyword(AiKeyword.of("NVIDIA"), 1)
+
+        assertTrue(omitted.sentBody.path("reasoning_effort").isMissingNode)
+        assertEquals("none", none.sentBody.path("reasoning_effort").asText())
+    }
+
+    @Test
+    @DisplayName("api key가 없으면 Authorization 헤더를 싣지 않는다")
+    fun omitAuthorizationHeaderWithoutApiKey() = runBlocking {
+        val exchange = CapturingExchangeFunction(keywordResponse())
+
+        providerOf(exchange, apiKey = "").expandKeyword(AiKeyword.of("NVIDIA"), 1)
+
+        assertNull(exchange.request.headers().getFirst("Authorization"))
     }
 
     @Test
@@ -148,8 +171,8 @@ class OpenAiLlmProviderTest {
 
         assertEquals("NVIDIA 실적 기대", result.title)
         assertEquals(NewsSummarySentiment.POSITIVE, result.sentiment)
-        assertEquals("openrouter", result.metadata.provider.value)
-        assertEquals("test-model", result.metadata.model.value)
+        assertEquals(LlmProvider.GROQ, result.metadata.provider)
+        assertEquals("test-model", result.metadata.model)
         assertEquals("news-summary-v1", result.metadata.promptVersion.value)
         assertEquals(30, result.metadata.tokenUsage.inputTokens)
         assertEquals(15, result.metadata.tokenUsage.outputTokens)
@@ -250,7 +273,7 @@ class OpenAiLlmProviderTest {
         // provider가 살아 있다는 응답이므로 재시도 대상이 아니고, 이 키워드에 책임을 물을 수 있다.
         assertFalse(exception.failure.retryable)
         assertTrue(exception.failure.keywordBound)
-        assertEquals("openrouter", exception.failure.provider.value)
+        assertEquals(LlmProvider.GROQ, exception.failure.provider)
     }
 
     @Test
@@ -391,26 +414,32 @@ class OpenAiLlmProviderTest {
     }
 
     @Test
-    @DisplayName("provider 이름은 provider 종류의 값이다")
-    fun providerName() {
+    @DisplayName("요약 plan의 제공자는 모델의 제공자다")
+    fun planProviderIsModelProvider() {
         val provider = providerOf(ExchangeFunction { Mono.empty() })
 
-        assertEquals(OpenAiProviderType.OPENROUTER.value, provider.providerName.value)
+        assertEquals(LlmProvider.GROQ, provider.prepareNewsSummary().plan.provider)
     }
 
-    private fun providerOf(exchangeFunction: ExchangeFunction): OpenAiLlmProvider {
+    private fun providerOf(
+        exchangeFunction: ExchangeFunction,
+        model: LlmModel = MODEL,
+        apiKey: String = "api-key"
+    ): OpenAiLlmProvider {
         return OpenAiLlmProvider(
             webClient = WebClient.builder()
-                .baseUrl(properties.baseUrl)
+                .baseUrl("https://llm.example.com/v1")
                 .exchangeFunction(exchangeFunction)
                 .build(),
             jsonMapper = JsonMapper.builder().build(),
-            providerType = OpenAiProviderType.OPENROUTER,
-            properties = properties,
+            model = model,
+            apiKey = apiKey,
             keywordExpansionPromptVersion = PromptVersion.of("keyword-expansion-v1"),
             newsSummaryPromptVersion = PromptVersion.of("news-summary-v1")
         )
     }
+
+    private fun keywordResponse(): String = """{"model":"test-model","choices":[{"message":{"content":"[\"GPU\"]"}}]}"""
 
     private fun newsArticle(): NewsArticle {
         return AiTestFixture.newsArticle(title = "NVIDIA AI GPU demand rises")
@@ -431,4 +460,7 @@ class OpenAiLlmProviderTest {
         }
     }
 
+    private companion object {
+        val MODEL: LlmModel = LlmModel.GROQ_QWEN3_27B
+    }
 }

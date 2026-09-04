@@ -83,6 +83,15 @@ class LlmFailureTest {
     }
 
     @Test
+    @DisplayName("호출이 나가지 않은 실패의 provider code는 none이다")
+    fun providerCodeOfUncalledFailure() {
+        val failure = LlmFailure(code = LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, provider = null)
+
+        assertEquals(LlmFailure.NO_PROVIDER, failure.providerCode)
+        assertEquals(PROVIDER.code, failure(LlmFailureCode.LLM_TIMEOUT).providerCode)
+    }
+
+    @Test
     @DisplayName("빈 메시지로 만들 수 없다")
     fun rejectBlankMessage() {
         assertFailsWith<IllegalArgumentException> {
@@ -119,6 +128,6 @@ class LlmFailureTest {
     }
 
     private companion object {
-        val PROVIDER: LlmProviderName = LlmProviderName.of("groq")
+        val PROVIDER: LlmProvider = LlmProvider.GROQ
     }
 }

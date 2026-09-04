@@ -12,6 +12,6 @@ class LlmProviderException(
     cause: Throwable? = null
 ) : AiException(
     errorCode = AiCommonErrorCode.LLM_PROVIDER_CALL_FAILED,
-    message = "${failure.code.code} ${failure.message} (provider=${failure.provider.value})",
+    message = "${failure.code.code} ${failure.message} (provider=${failure.providerCode})",
     cause = cause
 )
