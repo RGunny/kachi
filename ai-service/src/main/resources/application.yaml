@@ -133,6 +133,20 @@ kachi:
         read-timeout: 10s
         write-timeout: 10s
         max-in-memory-size: 524288
+      # 같은 머신의 Ollama. 인증이 없어 api-key는 자리표시 값이고, 로컬 모델은 응답이 수십 초라 timeout을 길게 둔다.
+      # 서킷 브레이커의 slow-call 판정(8s)은 전역 설정이라 local llm 과 분류체계가 필요할 지 이후 재설계한다.
+      ollama:
+        enabled: false
+        api-key: ollama
+        base-url: http://localhost:11434/v1
+        chat-completions-path: /chat/completions
+        model: qwen3.8:27b
+        reasoning-effort: none
+        connect-timeout: 2s
+        response-timeout: 180s
+        read-timeout: 180s
+        write-timeout: 10s
+        max-in-memory-size: 524288
       gemini:
         enabled: false
         api-key: ${GEMINI_API_KEY:}

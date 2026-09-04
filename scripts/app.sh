@@ -12,6 +12,8 @@ load_env() {
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
     key="${line%%=*}"
+    # 값이 빈 줄(KEY=)은 건너뛴다. 빈 문자열을 export하면 Spring이 그것을 값으로 채택해 yaml의 ${KEY:default}가 default 대신 빈 값이 된다.
+    [[ -n "${line#*=}" ]] || continue
     [[ -n "${!key+x}" ]] || export "$line"
   done <"$1"
 }

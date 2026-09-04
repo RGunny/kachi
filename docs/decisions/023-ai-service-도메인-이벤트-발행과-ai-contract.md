@@ -6,7 +6,7 @@ ADR 022로 ai-service는 뉴스 요약 생성과 키워드 격리를 outbox에 �
 발행 포트의 구현이 없어 relay는 꺼져 있고, outbox는 PENDING으로 쌓이기만 한다. 이 ADR은 그 구현을 붙인다.
 
 알림을 누가 어떤 채널로 받는지는 구독의 문제이고(ADR 025) ai-service의 관심사가 아니다. 
-ai-service는 "요약이 생겼다", "키워드가 격리됐다"는 사실만 발행하고, 그것을 알림으로 펼치는 일은 notification-service의 routing이 한다.
+ai-service는 "요약이 생겼다", "키워드가 격리됐다"는 사실만 발행하고, 그것을 알림으로 fan-out하는 일은 notification-service의 routing이 한다.
 
 여기서 정하는 것은 세 가지다.
 

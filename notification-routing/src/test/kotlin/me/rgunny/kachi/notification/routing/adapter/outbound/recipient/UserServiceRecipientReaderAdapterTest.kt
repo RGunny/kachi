@@ -110,7 +110,7 @@ class UserServiceRecipientReaderAdapterTest {
         }
 
         @Test
-        @DisplayName("사용자마다 채널을 펼쳐 Recipient로 옮긴다")
+        @DisplayName("사용자마다 채널을 fan-out해 Recipient로 옮긴다")
         fun flattenChannels() = runBlocking {
             val recipients = adapterOf(jsonExchangeFunction(adminsJson)).findAdmins()
 

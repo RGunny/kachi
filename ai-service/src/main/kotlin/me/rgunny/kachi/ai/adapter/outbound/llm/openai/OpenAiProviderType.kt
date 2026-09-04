@@ -12,5 +12,6 @@ enum class OpenAiProviderType(
     GROQ("groq"),
     TOGETHER("together"),
     CEREBRAS("cerebras"),
-    MISTRAL("mistral")
+    MISTRAL("mistral"),
+    OLLAMA("ollama")
 }

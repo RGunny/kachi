@@ -38,5 +38,7 @@ kachi:
         enabled: true
       mistral:
         enabled: true
+      ollama:
+        enabled: false
       gemini:
         enabled: false

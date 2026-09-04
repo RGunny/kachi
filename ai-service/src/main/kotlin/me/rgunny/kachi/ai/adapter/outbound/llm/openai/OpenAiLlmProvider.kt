@@ -33,7 +33,7 @@ import tools.jackson.databind.json.JsonMapper
 /**
  * OpenAI 계열 chat completions API를 사용하는 LLM provider adapter.
  *
- * OpenRouter, Groq, Together, Cerebras, Mistral처럼 같은 `/chat/completions`
+ * OpenRouter, Groq, Together, Cerebras, Mistral, Ollama처럼 같은 `/chat/completions`
  * 계약을 제공하는 provider를 하나의 adapter로 연결한다.
  *
  * 호출 실패는 모두 [LlmProviderException]으로 변환해 원천과 성격을 application 계층에 전달한다.
@@ -128,7 +128,8 @@ class OpenAiLlmProvider(
                             OpenAiChatMessage(role = "system", content = systemPrompt),
                             OpenAiChatMessage(role = "user", content = userPrompt)
                         ),
-                        max_tokens = maxTokens
+                        max_tokens = maxTokens,
+                        reasoning_effort = properties.reasoningEffort
                     )
                 )
                 // status와 Retry-After를 함께 봐야 rate limit을 분류할 수 있어 retrieve() 대신 exchangeToMono를 쓴다.

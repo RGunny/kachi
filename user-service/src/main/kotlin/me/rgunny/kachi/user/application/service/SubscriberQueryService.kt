@@ -37,7 +37,7 @@ class SubscriberQueryService(
             .map { it.userId to it.channel }
             .toSet()
 
-        // 3. 구독 x 채널을 펼치되 ACTIVE 바인딩이 있는 채널만 남긴다.
+        // 3. 구독 x 채널 조합을 만들되 ACTIVE 바인딩이 있는 채널만 남긴다.
         return subscriptions
             .flatMap { subscription ->
                 subscription.channels

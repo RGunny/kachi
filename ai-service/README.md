@@ -77,7 +77,7 @@ outbox 행 하나가 레코드 하나다. topic은 행의 eventType이 고르고
 | `kachi.ai.events.enabled` | Kafka 발행 어댑터 | `true` |
 
 relay만 켜고 어댑터가 없으면 기동에 실패한다. local·test 프로파일은 둘 다 `false`다.
-누가 어떤 채널로 받는지는 이 서비스가 모른다. 요약을 알림으로 펼치는 일은 notification-service의 routing이 한다(ADR 025).
+누가 어떤 채널로 받는지는 이 서비스가 모른다. 요약을 알림으로 fan-out하는 일은 notification-service의 routing이 한다(ADR 025).
 
 ## 제외 범위
 
@@ -114,6 +114,7 @@ GET /api/v1/internal/providers/llm/health?keyword=NVIDIA
 - `together`
 - `cerebras`
 - `mistral`
+- `ollama` (같은 머신의 Ollama. 인증 없음, 기본 모델 `qwen3.8:27b`, `reasoning-effort: none`으로 추론 토큰을 끈다)
 
 `gemini`는 설정 항목은 있지만 별도 `generateContent` adapter 구현 전까지 `enabled=true`로 사용할 수 없다.
 

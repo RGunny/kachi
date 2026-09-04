@@ -15,6 +15,7 @@ data class LlmProviderProperties(
     val together: OpenAiProviderProperties,
     val cerebras: OpenAiProviderProperties,
     val mistral: OpenAiProviderProperties,
+    val ollama: OpenAiProviderProperties,
     val gemini: GeminiProviderProperties,
     val circuitBreaker: LlmCircuitBreakerProperties,
     val failover: LlmFailoverProperties,
@@ -31,6 +32,13 @@ data class OpenAiProviderProperties(
     val readTimeout: java.time.Duration,
     val writeTimeout: java.time.Duration,
     val maxInMemorySize: Int,
+    /**
+     * chat completions 요청의 `reasoning_effort`. null이면 요청에 싣지 않는다.
+     *
+     * 추론(thinking) 토큰을 쓰는 모델은 그 토큰이 `max_tokens` 예산에서 빠져나가 본문이 비어 올 수 있다.
+     * 요약처럼 출력 형식이 정해진 호출은 `none`으로 추론을 끈다.
+     */
+    val reasoningEffort: String? = null,
 )
 
 data class GeminiProviderProperties(

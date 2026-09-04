@@ -38,6 +38,7 @@ import java.time.Instant
  * `local` 프로파일에서만 기동 시 한 번 실행되어 시드 사용자와 SLACK 바인딩, 키워드 구독, 그리고 세 채널 바인딩을 가진 관리자 사용자를 심는다.
  * 사용자 등록·로그인·구독을 손으로 하지 않아도 활성 키워드 API가 채워져 수집·요약을 바로 돌릴 수 있고,
  * 역할별 수신자 API가 관리자를 돌려주어 격리 알림 라우팅을 바로 확인할 수 있다.
+ * 관리자는 시드 키워드를 세 채널로 구독한다. 관리자만 실주소 바인딩 설정이 있으므로, 스모크에서 요약 알림을 실제 채널로 받는 수신자다.
  * 모든 단계가 find-or-create라 재기동해도 중복이 생기지 않는다.
  * 시드 사용자의 바인딩 주소는 형식만 맞춘 값이다. 관리자의 바인딩 주소는 [UserSeedProperties]에 설정된 값을 쓰고,
  * 없는 채널만 형식만 맞춘 값으로 심는다. 이미 있는 관리자 바인딩의 주소가 설정값과 다르면 설정값으로 바꾼다.
@@ -50,7 +51,7 @@ import java.time.Instant
 @EnableConfigurationProperties(UserSeedProperties::class)
 class LocalSeedDataConfig {
 
-    /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 → 관리자 사용자 → 관리자 바인딩 순으로 심고 결과를 한 줄 남긴다. */
+    /** 시드 사용자 → SLACK 바인딩 → canonical 키워드 → 구독 → 관리자 사용자 → 관리자 바인딩 → 관리자 구독 순으로 심고 결과를 한 줄 남긴다. */
     @Bean
     fun localSeedDataInitializer(
         userJpaRepository: UserJpaRepository,
@@ -72,18 +73,22 @@ class LocalSeedDataConfig {
                 now
             )
             val keywords = SEED_KEYWORD_NAMES.map { findOrCreateKeyword(keywordJpaRepository, it, now) }
-            val subscriptions = keywords.map { findOrCreateSubscription(subscriptionJpaRepository, seedUser, it, now) }
+            val subscriptions = keywords.map { findOrCreateSubscription(subscriptionJpaRepository, seedUser, it, SEED_CHANNELS, now) }
             val adminUser = findOrCreateAdminUser(userJpaRepository, now)
             SubscriptionChannel.entries.forEach { channel ->
                 findOrCreateBinding(channelBindingJpaRepository, addressCipherPort, adminUser, adminAddress(seedProperties, channel), now)
             }
+            val adminSubscriptions = keywords.map {
+                findOrCreateSubscription(subscriptionJpaRepository, adminUser, it, SubscriptionChannel.entries.toSet(), now)
+            }
 
             log.info(
-                "Local seed data initialized userId={} subscriptionCount={} keywords={} adminUserId={}",
+                "Local seed data initialized userId={} subscriptionCount={} keywords={} adminUserId={} adminSubscriptionCount={}",
                 seedUser.id,
                 subscriptions.size,
                 keywords.map { it.canonicalKey.value },
-                adminUser.id
+                adminUser.id,
+                adminSubscriptions.size
             )
         }
     }
@@ -186,14 +191,15 @@ class LocalSeedDataConfig {
         return keywordJpaRepository.save(KeywordJpaEntity.from(keyword)).toDomain()
     }
 
-    /** 시드 사용자의 구독을 찾고 없으면 시드 채널로 만든다. 비활성화돼 있으면 다시 활성화해 수집 대상에 올린다. */
+    /** 사용자의 구독을 찾고 없으면 [channels]로 만든다. 비활성화돼 있으면 다시 활성화해 수집 대상에 올린다. */
     private fun findOrCreateSubscription(
         subscriptionJpaRepository: SubscriptionJpaRepository,
-        seedUser: User,
+        user: User,
         keyword: Keyword,
+        channels: Set<SubscriptionChannel>,
         registeredAt: Instant
     ): Subscription {
-        val existing = subscriptionJpaRepository.findByUserIdAndKeywordId(seedUser.id.value, keyword.id.value)
+        val existing = subscriptionJpaRepository.findByUserIdAndKeywordId(user.id.value, keyword.id.value)
         if (existing != null) {
             val subscription = existing.toDomain()
             return if (subscription.enabled) {
@@ -204,9 +210,9 @@ class LocalSeedDataConfig {
         }
 
         val subscription = Subscription.create(
-            userId = seedUser.id,
+            userId = user.id,
             keywordId = keyword.id,
-            channels = SEED_CHANNELS,
+            channels = channels,
             registeredAt = registeredAt
         )
 

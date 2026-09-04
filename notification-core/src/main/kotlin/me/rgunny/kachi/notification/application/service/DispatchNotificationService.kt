@@ -83,12 +83,14 @@ class DispatchNotificationService(
             )
 
         // 5. 두 claim 모두 실패하면 현재 상태를 다시 조회한다.
-        // REQUESTED면 아직 dispatch 발행 완료 반영 전이므로 재시도 신호를 내고, 종착/처리 중 상태면 skip한다.
+        // REQUESTED면 아직 dispatch 발행 완료 반영 전이다. PUBLISHED·RETRY_WAIT면 claim 가능한 상태인데 claim이 실패한 것이므로
+        // 발행 완료 반영 transaction이나 같은 행의 다른 claim과 경합한 것이다. 어느 쪽이든 재시도 신호를 내고 다음 시도의 CAS가 가른다.
+        // 종착/처리 중 상태면 skip한다. 경합을 중복으로 보고 ack하면 알림이 발행 완료 상태에 영구히 남는다.
         if (claimedNotification == null) {
             val notification = notificationPersistencePort.findById(command.notificationId)
                 ?: throw NotificationNotFoundException(command.notificationId)
 
-            if (notification.status == NotificationStatus.REQUESTED) {
+            if (notification.status in RETRY_ON_CLAIM_MISS) {
                 deduplicationPort.release(dedupeKey)
                 throw DispatchNotReadyException(command.notificationId, notification.status)
             }
@@ -341,6 +343,12 @@ class DispatchNotificationService(
     }
 
     private companion object {
+        /** claim이 실패했어도 이 상태면 다음 시도가 다시 claim할 수 있다. */
+        val RETRY_ON_CLAIM_MISS = setOf(
+            NotificationStatus.REQUESTED,
+            NotificationStatus.PUBLISHED,
+            NotificationStatus.RETRY_WAIT,
+        )
         const val ALREADY_SENT_REASON = "already sent"
     }
 
