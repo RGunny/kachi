@@ -137,19 +137,23 @@ class AiSummaryCycleIntegrationTest {
         assertEquals(MODEL.provider.code, event.provider)
     }
 
+    /**
+     * 후보가 하나라 429 뒤의 cooldown이 곧 "호출할 모델 없음"이다. 둘째 키워드가 차단 실패로 끝나면서 나머지를 중단시킨다.
+     */
     @Test
-    @DisplayName("rate limit을 만나면 남은 키워드를 호출하지 않고 이벤트도 watermark도 남기지 않는다")
-    fun stopEarlyOnRateLimit() = runBlocking {
+    @DisplayName("후보가 전부 쉬는 중이면 남은 키워드를 호출하지 않고 이벤트도 watermark도 남기지 않는다")
+    fun stopEarlyWhenNoCandidateCanBeCalled() = runBlocking {
         val first = uniqueKeyword("rate-a")
         val second = uniqueKeyword("rate-b")
+        val third = uniqueKeyword("rate-c")
         stubNews(count = 1)
         llm.enqueueRateLimited(retryAfterSeconds = 30)
 
-        val summarized = summarizeNewsUseCase.summarize(command(first, second))
+        val summarized = summarizeNewsUseCase.summarize(command(first, second, third))
         val relayed = relayUseCase.relay()
 
         assertEquals(1, llm.requests.size)
-        assertEquals(1, summarized.failureCount)
+        assertEquals(2, summarized.failureCount)
         assertEquals(1, summarized.skippedCount)
         assertFalse(summarized.watermarkAdvanced)
         assertEquals(0, relayed.published)

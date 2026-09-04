@@ -5,13 +5,15 @@ import java.time.Instant
 
 /**
  * 모델 하나의 차단 상태 응답.
- * [model]은 상수명, [provider]는 제공자 code.
+ * [model]은 상수명, [provider]는 제공자 code. [holdReason]은 보류를 건 실패 코드이고 보류가 없으면 [holdUntil]과 함께 null이다.
  */
 data class LlmModelStatusResponse(
     val model: String,
     val provider: String,
     val circuitBreakerState: String,
     val cooldownUntil: Instant?,
+    val holdReason: String?,
+    val holdUntil: Instant?,
     val failureRate: Float,
     val slowCallRate: Float,
     val bufferedCalls: Int,
@@ -27,6 +29,8 @@ data class LlmModelStatusResponse(
                 provider = status.model.provider.code,
                 circuitBreakerState = status.circuitBreakerState,
                 cooldownUntil = status.cooldownUntil,
+                holdReason = status.hold?.code?.code,
+                holdUntil = status.hold?.until,
                 failureRate = status.failureRate,
                 slowCallRate = status.slowCallRate,
                 bufferedCalls = status.bufferedCalls,

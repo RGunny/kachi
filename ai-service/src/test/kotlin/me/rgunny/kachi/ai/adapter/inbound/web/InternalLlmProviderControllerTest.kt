@@ -1,8 +1,10 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.config.ApiVersionConfig
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.fake.FakeLlmProviderAdminPort
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -40,7 +42,9 @@ class InternalLlmProviderControllerTest {
     @Test
     @DisplayName("모델별 차단 상태를 모델 상수명과 제공자 code로 응답한다")
     fun findModelStatuses() {
-        adminPort.statuses = listOf(status(MODEL, state = "OPEN"))
+        adminPort.statuses = listOf(
+            status(MODEL, state = "OPEN").copy(hold = LlmHold(LlmFailureCode.LLM_MODEL_NOT_FOUND, AiTestFixture.NOW.plusSeconds(3600)))
+        )
 
         val body = webTestClient.get()
             .uri(ApiPaths.V1_INTERNAL_LLM_PROVIDERS)
@@ -58,6 +62,8 @@ class InternalLlmProviderControllerTest {
         assertEquals(MODEL.provider.code, model.get("provider").asString())
         assertEquals("OPEN", model.get("circuitBreakerState").asString())
         assertEquals(AiTestFixture.NOW.toString(), model.get("cooldownUntil").asString())
+        assertEquals("LLM_MODEL_NOT_FOUND", model.get("holdReason").asString())
+        assertEquals(AiTestFixture.NOW.plusSeconds(3600).toString(), model.get("holdUntil").asString())
         assertEquals(2, model.get("failedCalls").asInt())
     }
 
@@ -111,17 +117,7 @@ class InternalLlmProviderControllerTest {
     }
 
     private fun status(model: LlmModel, state: String): LlmModelStatus {
-        return LlmModelStatus(
-            model = model,
-            circuitBreakerState = state,
-            cooldownUntil = AiTestFixture.NOW,
-            failureRate = 50f,
-            slowCallRate = -1f,
-            bufferedCalls = 4,
-            successfulCalls = 2,
-            failedCalls = 2,
-            notPermittedCalls = 3
-        )
+        return AiTestFixture.llmModelStatus(model = model, circuitBreakerState = state, cooldownUntil = AiTestFixture.NOW)
     }
 
     @TestConfiguration

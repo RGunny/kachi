@@ -42,10 +42,11 @@ class LlmCircuitBreakerConfigTest {
     @EnumSource(value = LlmFailureCode::class, names = [
         "LLM_TIMEOUT",
         "LLM_RATE_LIMITED",
-        "LLM_TRANSIENT_ERROR",
-        "LLM_NETWORK_ERROR"
+        "LLM_SERVER_ERROR",
+        "LLM_NETWORK_ERROR",
+        "LLM_UNKNOWN_ERROR"
     ])
-    @DisplayName("실제 호출에서 나온 재시도 가능한 실패만 회로를 여는 근거로 기록한다")
+    @DisplayName("실제 호출에서 나온 일시 실패만 회로를 여는 근거로 기록한다")
     fun recordRetryableFailuresFromActualCall(code: LlmFailureCode) {
         val predicate = circuitBreakerConfig().recordExceptionPredicate
 
@@ -53,16 +54,18 @@ class LlmCircuitBreakerConfigTest {
     }
 
     // 위 목록과 같은 값을 쓴다. 기록 대상이 늘었는데 한쪽만 고치면 그 코드가 이 테스트로 넘어와 바로 실패한다.
-    // LLM_PROVIDER_UNAVAILABLE도 여기 들어온다. 차단이 만든 실패라 실제로는 predicate까지 오지 않지만,
+    // LLM_NOT_PERMITTED도 여기 들어온다. 차단이 만든 실패라 실제로는 predicate까지 오지 않지만,
     // 그 호출 순서가 바뀌어도 차단 실패가 회로를 다시 여는 근거가 되지 않도록 판정을 고정해 둔다.
+    // 404·401·402·403은 한 건으로 확정이라 hold로 다루고 비율에 넣지 않는다.
     @ParameterizedTest
     @EnumSource(value = LlmFailureCode::class, mode = EnumSource.Mode.EXCLUDE, names = [
         "LLM_TIMEOUT",
         "LLM_RATE_LIMITED",
-        "LLM_TRANSIENT_ERROR",
-        "LLM_NETWORK_ERROR"
+        "LLM_SERVER_ERROR",
+        "LLM_NETWORK_ERROR",
+        "LLM_UNKNOWN_ERROR"
     ])
-    @DisplayName("실제 호출에서 나오지 않았거나 재시도로 풀리지 않는 실패는 기록하지 않는다")
+    @DisplayName("실제 호출에서 나오지 않았거나 한 건으로 확정되는 실패는 기록하지 않는다")
     fun doNotRecordFailuresOutsideCircuitEvidence(code: LlmFailureCode) {
         val predicate = circuitBreakerConfig().recordExceptionPredicate
 

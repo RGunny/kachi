@@ -9,83 +9,94 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+/**
+ * 소비처가 내리는 판단 프로퍼티가 코드의 두 축에서 맞게 파생되는지 본다. 목록은 allowlist와 EXCLUDE 쌍으로 두어 코드가 늘면 판정을 요구한다.
+ */
 @DisplayName("LlmFailure")
 class LlmFailureTest {
-
-    @ParameterizedTest
-    @EnumSource(value = LlmFailureCode::class, names = [
-        "LLM_TIMEOUT",
-        "LLM_RATE_LIMITED",
-        "LLM_TRANSIENT_ERROR",
-        "LLM_NETWORK_ERROR",
-        "LLM_PROVIDER_UNAVAILABLE"
-    ])
-    @DisplayName("timeout·rate limit·일시 오류·provider 불능은 재시도 가능하다")
-    fun retryableCodes(code: LlmFailureCode) {
-        assertTrue(failure(code).retryable)
-    }
-
-    // 재시도 가능이 allowlist이므로 나머지 전부가 대상이다. 코드가 늘면 이 테스트가 먼저 판정을 요구한다.
-    // 위 목록과 같은 값을 쓴다. 한쪽만 고치면 새 코드가 이 테스트로 넘어와 바로 실패한다.
-    @ParameterizedTest
-    @EnumSource(value = LlmFailureCode::class, mode = EnumSource.Mode.EXCLUDE, names = [
-        "LLM_TIMEOUT",
-        "LLM_RATE_LIMITED",
-        "LLM_TRANSIENT_ERROR",
-        "LLM_NETWORK_ERROR",
-        "LLM_PROVIDER_UNAVAILABLE"
-    ])
-    @DisplayName("재시도 가능 목록 밖의 실패는 재시도 대상이 아니다")
-    fun nonRetryableCodes(code: LlmFailureCode) {
-        assertFalse(failure(code).retryable)
-    }
 
     @Test
     @DisplayName("차단이 만든 실패만 실제 호출에서 나오지 않은 것으로 본다")
     fun fromActualCallCodes() {
         val notFromCall = LlmFailureCode.entries.filterNot { failure(it).fromActualCall }
 
-        assertEquals(listOf(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE), notFromCall)
+        assertEquals(listOf(LlmFailureCode.LLM_NOT_PERMITTED), notFromCall)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_RATE_LIMITED",
+        "LLM_SERVER_ERROR",
+        "LLM_TIMEOUT",
+        "LLM_NETWORK_ERROR",
+        "LLM_UNKNOWN_ERROR"
+    ])
+    @DisplayName("실제 호출에서 나온 일시 실패는 서킷에 기록한다")
+    fun recordsInCircuitCodes(code: LlmFailureCode) {
+        assertTrue(failure(code).recordsInCircuit)
+    }
+
+    // 위 목록과 같은 값을 쓴다. 한쪽만 고치면 새 코드가 이 테스트로 넘어와 바로 실패한다.
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, mode = EnumSource.Mode.EXCLUDE, names = [
+        "LLM_RATE_LIMITED",
+        "LLM_SERVER_ERROR",
+        "LLM_TIMEOUT",
+        "LLM_NETWORK_ERROR",
+        "LLM_UNKNOWN_ERROR"
+    ])
+    @DisplayName("입력 탓, 한 건 확정, 차단 실패는 서킷에 기록하지 않는다")
+    fun notRecordedInCircuitCodes(code: LlmFailureCode) {
+        assertFalse(failure(code).recordsInCircuit)
     }
 
     @Test
-    @DisplayName("응답 계약 위반과 요청 검증 실패만 키워드에 귀속된다")
-    fun keywordBoundCodes() {
-        val keywordBound = LlmFailureCode.entries.filter { failure(it).keywordBound }
+    @DisplayName("모델이 없다는 응답만 모델을 보류한다")
+    fun holdsModelCodes() {
+        val holdsModel = LlmFailureCode.entries.filter { failure(it).holdsModel }
+
+        assertEquals(listOf(LlmFailureCode.LLM_MODEL_NOT_FOUND), holdsModel)
+    }
+
+    @Test
+    @DisplayName("인증·결제·권한 실패만 제공자를 보류한다")
+    fun holdsProviderCodes() {
+        val holdsProvider = LlmFailureCode.entries.filter { failure(it).holdsProvider }
 
         assertEquals(
-            listOf(LlmFailureCode.LLM_CLIENT_ERROR, LlmFailureCode.LLM_INVALID_RESPONSE),
-            keywordBound
+            listOf(LlmFailureCode.LLM_UNAUTHORIZED, LlmFailureCode.LLM_PAYMENT_REQUIRED, LlmFailureCode.LLM_FORBIDDEN),
+            holdsProvider
         )
     }
 
     @ParameterizedTest
     @EnumSource(LlmFailureCode::class)
-    @DisplayName("원천과 분류는 코드에서 파생된다")
-    fun sourceAndCategoryAreDerivedFromCode(code: LlmFailureCode) {
+    @DisplayName("책임과 지속은 코드에서 파생된다")
+    fun axesAreDerivedFromCode(code: LlmFailureCode) {
         val failure = failure(code)
 
-        assertEquals(code.source, failure.source)
-        assertEquals(code.category, failure.category)
+        assertEquals(code.attribution, failure.attribution)
+        assertEquals(code.transient, failure.transient)
     }
 
     @Test
-    @DisplayName("provider 불능은 application 원천의 UNAVAILABLE 분류다")
-    fun providerUnavailableClassification() {
-        val failure = failure(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+    @DisplayName("차단 실패는 어느 쪽 책임도 아닌 일시 실패다")
+    fun notPermittedClassification() {
+        val failure = failure(LlmFailureCode.LLM_NOT_PERMITTED)
 
-        assertEquals(LlmFailureSource.APPLICATION, failure.source)
-        assertEquals(LlmFailureCategory.UNAVAILABLE, failure.category)
+        assertEquals(LlmFailureAttribution.NONE, failure.attribution)
         // 다음 tick에는 풀릴 수 있지만 provider를 호출해서 얻은 실패가 아니다.
-        assertTrue(failure.retryable)
+        assertTrue(failure.transient)
         assertFalse(failure.fromActualCall)
-        assertFalse(failure.keywordBound)
+        assertFalse(failure.recordsInCircuit)
+        assertFalse(failure.holdsModel)
+        assertFalse(failure.holdsProvider)
     }
 
     @Test
     @DisplayName("호출이 나가지 않은 실패의 provider code는 none이다")
     fun providerCodeOfUncalledFailure() {
-        val failure = LlmFailure(code = LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, provider = null)
+        val failure = LlmFailure(code = LlmFailureCode.LLM_NOT_PERMITTED, provider = null)
 
         assertEquals(LlmFailure.NO_PROVIDER, failure.providerCode)
         assertEquals(PROVIDER.code, failure(LlmFailureCode.LLM_TIMEOUT).providerCode)

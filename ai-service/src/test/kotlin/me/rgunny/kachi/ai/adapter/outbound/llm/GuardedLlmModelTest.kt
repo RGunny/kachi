@@ -23,6 +23,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.time.Duration
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -33,6 +34,7 @@ import kotlin.test.assertTrue
 class GuardedLlmModelTest {
     private val delegate = NamedLlmProviderPort(MODEL.qualifiedCode)
     private val clock = MutableClock()
+    private val providerHolds = ProviderHoldRegistry()
 
     @Test
     @DisplayName("재시도 가능한 실패가 임계치에 도달하면 다음 호출을 차단한다")
@@ -44,7 +46,7 @@ class GuardedLlmModelTest {
         repeat(2) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(MODEL.provider, blocked.failure.provider)
         assertEquals(2, delegate.summarizeCallCount)
         assertEquals(CircuitBreaker.State.OPEN, circuitBreaker.state)
@@ -53,10 +55,11 @@ class GuardedLlmModelTest {
     @ParameterizedTest
     @EnumSource(value = LlmFailureCode::class, names = [
         "LLM_RATE_LIMITED",
-        "LLM_TRANSIENT_ERROR",
-        "LLM_NETWORK_ERROR"
+        "LLM_SERVER_ERROR",
+        "LLM_NETWORK_ERROR",
+        "LLM_UNKNOWN_ERROR"
     ])
-    @DisplayName("rate limit·일시 오류·네트워크 실패도 회로를 여는 근거로 기록한다")
+    @DisplayName("rate limit·서버 오류·네트워크·미분류 실패도 회로를 여는 근거로 기록한다")
     fun recordEveryRetryableFailure(code: LlmFailureCode) = runBlocking {
         val circuitBreaker = circuitBreaker()
         val provider = guarded(circuitBreaker = circuitBreaker)
@@ -85,16 +88,162 @@ class GuardedLlmModelTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LlmFailureCode::class, names = ["LLM_CLIENT_ERROR", "LLM_AUTHORIZATION_ERROR"])
-    @DisplayName("요청 검증 실패와 인증 실패는 회로를 열지 않는다")
-    fun keepClosedOnValidationAndAuthorizationFailure(code: LlmFailureCode) = runBlocking {
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_REQUEST_REJECTED",
+        "LLM_MODEL_NOT_FOUND",
+        "LLM_UNAUTHORIZED",
+        "LLM_PAYMENT_REQUIRED",
+        "LLM_FORBIDDEN"
+    ])
+    @DisplayName("요청 거부와 한 건으로 확정되는 실패는 회로를 열지 않는다")
+    fun keepClosedOnNonTransientFailure(code: LlmFailureCode) = runBlocking {
         val circuitBreaker = circuitBreaker()
         val provider = guarded(circuitBreaker = circuitBreaker)
-        repeat(5) { delegate.failures += AiTestFixture.llmProviderException(code) }
+        delegate.failures += AiTestFixture.llmProviderException(code)
 
-        repeat(5) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
+        assertEquals(0, circuitBreaker.metrics.numberOfFailedCalls)
+    }
+
+    @Test
+    @DisplayName("모델이 없다는 응답을 받으면 재탐색 시각까지 그 모델을 호출하지 않는다")
+    fun holdModelOnModelNotFound() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        val until = AiTestFixture.NOW.plus(REPROBE_AFTER)
+        assertEquals("model-hold(code=LLM_MODEL_NOT_FOUND, until=$until)", provider.exclusionReason(clock.instant()))
+        assertBlocked(provider, expectedCalls = 1)
+        clock.advance(REPROBE_AFTER.minusSeconds(1))
+        assertBlocked(provider, expectedCalls = 1)
+    }
+
+    @Test
+    @DisplayName("재탐색 시각이 지나면 한 번 호출이 나가고 같은 실패면 다시 보류한다")
+    fun reprobeModelAfterHoldAndHoldAgainOnSameFailure() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        clock.advance(REPROBE_AFTER)
+        val reprobe = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        assertEquals(LlmFailureCode.LLM_MODEL_NOT_FOUND, reprobe.failure.code)
+        assertEquals(2, delegate.summarizeCallCount)
+        assertEquals(clock.instant().plus(REPROBE_AFTER), provider.status(clock.instant()).hold?.until)
+        assertBlocked(provider, expectedCalls = 2)
+    }
+
+    @Test
+    @DisplayName("재탐색 호출이 성공하면 보류가 남지 않는다")
+    fun reprobeSuccessClearsHold() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        clock.advance(REPROBE_AFTER)
+        provider.summarizeNews(KEYWORD, ARTICLES)
+        provider.summarizeNews(KEYWORD, ARTICLES)
+
+        assertEquals(3, delegate.summarizeCallCount)
+        assertNull(provider.status(clock.instant()).hold)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = ["LLM_UNAUTHORIZED", "LLM_PAYMENT_REQUIRED", "LLM_FORBIDDEN"])
+    @DisplayName("계정 실패는 같은 제공자의 다른 모델까지 재탐색 시각까지 막고 다른 제공자는 막지 않는다")
+    fun holdProviderOnAccountFailure(code: LlmFailureCode) = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        // 같은 제공자의 다른 가드. 상수가 제공자마다 하나라 같은 모델 상수에 위임 대상과 회로만 따로 둔다.
+        val siblingDelegate = NamedLlmProviderPort("${MODEL.qualifiedCode}#sibling", MODEL.provider)
+        val sibling = guarded(delegate = siblingDelegate, circuitBreaker = wideCircuitBreaker())
+        val otherDelegate = NamedLlmProviderPort(OTHER_PROVIDER_MODEL.qualifiedCode, OTHER_PROVIDER_MODEL.provider)
+        val other = guarded(delegate = otherDelegate, model = OTHER_PROVIDER_MODEL, circuitBreaker = wideCircuitBreaker(OTHER_PROVIDER_MODEL))
+        delegate.failures += AiTestFixture.llmProviderException(code)
+
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+
+        val until = AiTestFixture.NOW.plus(REPROBE_AFTER)
+        val reason = "provider-hold(code=${code.code}, until=$until)"
+        assertEquals(reason, provider.exclusionReason(clock.instant()))
+        assertEquals(reason, sibling.exclusionReason(clock.instant()))
+        val blocked = assertFailsWith<LlmProviderException> { sibling.summarizeNews(KEYWORD, ARTICLES) }
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
+        assertEquals(0, siblingDelegate.summarizeCallCount)
+        other.summarizeNews(KEYWORD, ARTICLES)
+        assertEquals(1, otherDelegate.summarizeCallCount)
+
+        clock.advance(REPROBE_AFTER)
+        sibling.summarizeNews(KEYWORD, ARTICLES)
+        assertEquals(1, siblingDelegate.summarizeCallCount)
+    }
+
+    @Test
+    @DisplayName("제공자 보류는 더 늦은 시각으로만 갱신된다")
+    fun extendProviderHoldOnlyForward() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_PAYMENT_REQUIRED)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        val first = provider.status(clock.instant()).hold
+
+        providerHolds.hold(MODEL.provider, LlmFailureCode.LLM_FORBIDDEN, AiTestFixture.NOW.plusSeconds(1))
+
+        assertEquals(first, provider.status(clock.instant()).hold)
+    }
+
+    @Test
+    @DisplayName("보류 중 차단은 회로 집계에 들어가지 않는다")
+    fun holdBlockIsNotRecorded() = runBlocking {
+        val circuitBreaker = circuitBreaker()
+        val provider = guarded(circuitBreaker = circuitBreaker)
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        val bufferedCalls = circuitBreaker.metrics.numberOfBufferedCalls
+
+        repeat(3) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
+
+        assertEquals(bufferedCalls, circuitBreaker.metrics.numberOfBufferedCalls)
+        assertEquals(0, circuitBreaker.metrics.numberOfNotPermittedCalls)
+        assertEquals(CircuitBreaker.State.CLOSED, circuitBreaker.state)
+    }
+
+    @Test
+    @DisplayName("상태 스냅샷의 보류는 제공자 보류를 모델 보류보다 우선한다")
+    fun statusPrefersProviderHold() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        clock.advance(Duration.ofMinutes(1))
+        providerHolds.hold(MODEL.provider, LlmFailureCode.LLM_FORBIDDEN, clock.instant().plus(REPROBE_AFTER))
+
+        val hold = assertNotNull(provider.status(clock.instant()).hold)
+
+        assertEquals(LlmFailureCode.LLM_FORBIDDEN, hold.code)
+        assertEquals(clock.instant().plus(REPROBE_AFTER), hold.until)
+    }
+
+    @Test
+    @DisplayName("되돌리면 모델 보류와 제공자 보류도 풀려 호출이 다시 나간다")
+    fun resetClearsHolds() = runBlocking {
+        val provider = guarded(circuitBreaker = wideCircuitBreaker())
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_PAYMENT_REQUIRED)
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        provider.reset()
+        assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
+        assertNotNull(providerHolds.holdOf(MODEL.provider, clock.instant()))
+
+        provider.reset()
+        provider.summarizeNews(KEYWORD, ARTICLES)
+
+        assertNull(provider.status(clock.instant()).hold)
+        assertNull(providerHolds.holdOf(MODEL.provider, clock.instant()))
+        assertEquals(3, delegate.summarizeCallCount)
     }
 
     @Test
@@ -165,7 +314,7 @@ class GuardedLlmModelTest {
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(2, delegate.summarizeCallCount - callsBeforeProbe)
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
     }
 
     @Test
@@ -188,7 +337,7 @@ class GuardedLlmModelTest {
         gate.complete(Unit)
         probe.await()
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(1, delegate.summarizeCallCount - callsBefore)
     }
 
@@ -220,8 +369,8 @@ class GuardedLlmModelTest {
     }
 
     @Test
-    @DisplayName("half-open 호출이 키워드 귀속 실패면 provider는 살아 있다고 보고 닫는다")
-    fun closeWhenProbeFailsWithKeywordBoundFailure() = runBlocking {
+    @DisplayName("half-open 호출이 입력 탓 실패면 모델은 살아 있다고 보고 닫는다")
+    fun closeWhenProbeFailsWithInputFailure() = runBlocking {
         val circuitBreaker = circuitBreaker()
         val provider = guarded(circuitBreaker = circuitBreaker)
         openCircuit(provider)
@@ -389,14 +538,14 @@ class GuardedLlmModelTest {
     }
 
     @Test
-    @DisplayName("차단 실패는 자기 provider 이름을 가진 UNAVAILABLE이다")
+    @DisplayName("차단 실패는 자기 provider 이름을 가진 NOT_PERMITTED다")
     fun unavailableFailureShape() = runBlocking {
         val provider = guarded()
         openCircuit(provider)
 
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(MODEL.provider, blocked.failure.provider)
         assertNull(blocked.failure.statusCode)
         assertNull(blocked.failure.retryAfterMillis)
@@ -412,7 +561,7 @@ class GuardedLlmModelTest {
         repeat(2) { assertFailsWith<LlmProviderException> { provider.expandKeyword(KEYWORD, 3) } }
         val blocked = assertFailsWith<LlmProviderException> { provider.expandKeyword(KEYWORD, 3) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(2, delegate.expandCallCount)
     }
 
@@ -472,7 +621,7 @@ class GuardedLlmModelTest {
 
         val blocked = assertFailsWith<LlmProviderException> { prepared.summarize(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(callsBefore, delegate.summarizeCallCount)
     }
 
@@ -496,7 +645,7 @@ class GuardedLlmModelTest {
 
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(0, delegate.summarizeCallCount)
         assertEquals("forced-open", provider.exclusionReason(clock.instant()))
         assertFalse(provider.isLikelyAvailable(clock.instant()))
@@ -619,7 +768,7 @@ class GuardedLlmModelTest {
 
     @Test
     @DisplayName("되돌리면 열린 회로가 닫히고 쉬는 시각도 지워져 호출이 다시 나간다")
-    fun resetClearsBothGuards() = runBlocking {
+    fun resetClearsCircuitAndCooldown() = runBlocking {
         val circuitBreaker = circuitBreaker()
         val provider = guarded(circuitBreaker = circuitBreaker)
         // 마지막 실패를 rate limit으로 두면 회로가 열리는 시점에 cooldown도 함께 걸린다.
@@ -659,26 +808,29 @@ class GuardedLlmModelTest {
         repeat(2) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
     }
 
-    /** 실패율로는 열리지 않는 회로. cooldown만 검증하는 테스트가 회로 상태에 흔들리지 않게 한다. */
-    private fun wideCircuitBreaker(): CircuitBreaker =
-        circuitBreaker(slidingWindowSize = 8, minimumNumberOfCalls = 8)
+    /** 실패율로는 열리지 않는 회로. cooldown과 hold만 검증하는 테스트가 회로 상태에 흔들리지 않게 한다. */
+    private fun wideCircuitBreaker(model: LlmModel = MODEL): CircuitBreaker =
+        circuitBreaker(slidingWindowSize = 8, minimumNumberOfCalls = 8, model = model)
 
     private suspend fun assertBlocked(provider: GuardedLlmModel, expectedCalls: Int) {
         val blocked = assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, blocked.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, blocked.failure.code)
         assertEquals(expectedCalls, delegate.summarizeCallCount)
     }
 
     private fun guarded(
         delegate: NamedLlmProviderPort = this.delegate,
+        model: LlmModel = MODEL,
         circuitBreaker: CircuitBreaker = circuitBreaker()
     ): GuardedLlmModel {
         return GuardedLlmModel(
             delegate = delegate,
-            model = MODEL,
+            model = model,
             circuitBreaker = circuitBreaker,
             cooldown = LlmCooldownProperties(default = DEFAULT_COOLDOWN, max = MAX_COOLDOWN),
+            hold = AiTestFixture.holdProperties(REPROBE_AFTER),
+            providerHolds = providerHolds,
             clock = clock
         )
     }
@@ -692,7 +844,8 @@ class GuardedLlmModelTest {
         minimumNumberOfCalls: Int = 2,
         slowCallDurationThreshold: Duration = Duration.ofSeconds(8),
         slowCallRateThreshold: Float = 100f,
-        permittedNumberOfCallsInHalfOpenState: Int = 1
+        permittedNumberOfCallsInHalfOpenState: Int = 1,
+        model: LlmModel = MODEL
     ): CircuitBreaker {
         val config = LlmCircuitBreakerConfig().circuitBreakerConfig(
             LlmCircuitBreakerProperties(
@@ -706,11 +859,13 @@ class GuardedLlmModelTest {
             slowCallDurationThreshold = slowCallDurationThreshold
         )
 
-        return CircuitBreakerRegistry.of(config).circuitBreaker(MODEL.qualifiedCode)
+        return CircuitBreakerRegistry.of(config).circuitBreaker(model.qualifiedCode)
     }
 
     private companion object {
         val MODEL: LlmModel = AiTestFixture.LLM_MODEL
+        val OTHER_PROVIDER_MODEL: LlmModel = LlmModel.entries.first { it.provider != MODEL.provider }
+        val REPROBE_AFTER: Duration = Duration.ofHours(1)
         val KEYWORD: AiKeyword = AiTestFixture.keyword()
         val ARTICLES = listOf(AiTestFixture.newsArticle())
         val DEFAULT_COOLDOWN: Duration = Duration.ofSeconds(60)

@@ -22,8 +22,8 @@ import java.time.Instant
  * 묶은 후보를 쓰는 방식은 순차 failover 정책이다. 모든 후보가 처리 대상이고 실패했을 때만 다음으로 넘기므로,
  * handler가 처리 여부를 스스로 고르는 Chain of Responsibility와는 다르다. "라우터"는 역할 이름이지 패턴 이름이 아니다.
  *
- * 후보 하나가 실패해도 다른 후보가 같은 요청을 처리할 수 있으면 다음으로 넘긴다.
- * 판별 기준은 "다른 모델이 같은 입력으로 성공할 수 있는가"이고, 그 답이 곧 실패의 keyword 귀속 여부다.
+ * 후보 하나가 실패하면 실패의 종류를 가리지 않고 다음으로 넘긴다. 입력 탓으로 보이는 실패도 넘긴다.
+ * 한 모델의 거부가 그 모델 탓일 수 있어, 입력 탓인지는 시도한 후보 전부의 판정이 같을 때만 확정하고 그 판단은 소비처에 넘긴다.
  * 한 번의 호출에서 후보 하나는 최대 한 번만 시도하므로 호출 수는 후보 수로 묶인다.
  *
  * 순서는 설정 그대로다. 섞거나 가용성으로 정렬하지 않는다. 순서가 고정이어야 선조회 plan과 실제 첫 호출이 같다.
@@ -75,6 +75,7 @@ class RoutingLlmProvider(
      *
      * 후보를 모두 쓰고도 성공하지 못하면 실제로 호출된 실패가 있었는지로 결과를 가른다.
      * 차단은 호출이 아니므로, 차단이 마지막이었다는 이유로 "전 모델 불능"이라고 기록하면 거짓이 된다.
+     * 실제 호출의 실패는 전부 예외에 실어 올린다. 격리 카운트는 그 전부의 책임이 어디 있는지를 보고 정한다.
      */
     internal suspend fun <T> callWithFailover(
         order: List<LlmProviderCandidate>,
@@ -89,18 +90,13 @@ class RoutingLlmProvider(
             } catch (exception: LlmProviderException) {
                 val failure = exception.failure
 
-                // 1. 같은 입력이면 다른 모델도 같은 결과를 준다. 넘겨도 호출만 늘어난다.
-                if (failure.keywordBound) {
-                    throw exception
-                }
-
-                // 2. 차단은 호출이 아니므로 "실제 실패"로 세지 않는다. 후보 소진 시 판정에 쓴다.
+                // 1. 차단은 호출이 아니므로 "실제 실패"로 세지 않는다. 후보 소진 시 판정에 쓴다.
                 failures += failure
                 if (failure.fromActualCall) {
                     lastCallFailure = exception
                 }
 
-                // 3. 다음 후보로 넘긴다.
+                // 2. 실패의 종류를 가리지 않고 다음 후보로 넘긴다.
                 log.warn(
                     "LLM model call failed. Trying the next candidate: model={}, code={}, next={}",
                     candidate.model.qualifiedCode,
@@ -110,13 +106,17 @@ class RoutingLlmProvider(
             }
         }
 
-        // 4. 실제 호출이 있었으면 그 실패를 그대로 올린다. 제공자와 status가 실행 기록에 남아야 한다.
-        lastCallFailure?.let {
+        // 3. 실제 호출이 있었으면 마지막 실패를 대표로 올린다. 제공자와 status가 실행 기록에 남아야 한다.
+        lastCallFailure?.let { last ->
             log.warn(
                 "All LLM candidates were tried without success: attempts=[{}]",
                 failures.joinToString { "${it.providerCode}=${it.code.code}" }
             )
-            throw it
+            throw LlmProviderException(
+                failure = last.failure,
+                cause = last,
+                attempts = failures.filter { it.fromActualCall }
+            )
         }
 
         throw noCandidateAvailable(order)
@@ -137,7 +137,7 @@ class RoutingLlmProvider(
 
         return LlmProviderException(
             LlmFailure(
-                code = LlmFailureCode.LLM_PROVIDER_UNAVAILABLE,
+                code = LlmFailureCode.LLM_NOT_PERMITTED,
                 provider = null,
                 message = message
             )

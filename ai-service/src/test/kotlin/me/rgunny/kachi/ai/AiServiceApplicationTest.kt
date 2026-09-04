@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiOutboxRelayScheduler
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModel
+import me.rgunny.kachi.ai.adapter.outbound.llm.ProviderHoldRegistry
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
 import me.rgunny.kachi.ai.application.port.inbound.outbox.FindAiOutboxesUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RecoverAiOutboxUseCase
@@ -181,6 +182,12 @@ class AiServiceApplicationTest {
             router.candidates.values.flatten().map { assertIs<GuardedLlmModel>(it).model }.toSet(),
             llmProviderAdminPort.statuses().map { it.model }.toSet()
         )
+    }
+
+    @Test
+    @DisplayName("제공자 보류 registry는 컨텍스트에 하나다")
+    fun registerSingleProviderHoldRegistry() {
+        assertEquals(1, applicationContext.getBeansOfType(ProviderHoldRegistry::class.java).size)
     }
 
     @Test

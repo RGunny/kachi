@@ -29,10 +29,11 @@ class GuardedLlmModelAdmin(
 
         // 수동 개입은 이후 호출 결과를 해석하는 기준이 되므로 되돌리기 직전 상태를 남긴다.
         log.warn(
-            "Resetting LLM model guard: model={}, circuitBreakerState={}, cooldownUntil={}",
+            "Resetting LLM model guard: model={}, circuitBreakerState={}, cooldownUntil={}, hold={}",
             before.model.qualifiedCode,
             before.circuitBreakerState,
-            before.cooldownUntil
+            before.cooldownUntil,
+            before.hold
         )
 
         guarded.reset()

@@ -131,6 +131,13 @@ class LlmPropertiesTest {
     }
 
     @Test
+    @DisplayName("hold의 reprobe-after는 양수여야 한다")
+    fun rejectNonPositiveReprobeAfter() {
+        assertFailsWith<IllegalArgumentException> { LlmHoldProperties(reprobeAfter = Duration.ZERO) }
+        assertFailsWith<IllegalArgumentException> { LlmHoldProperties(reprobeAfter = Duration.ofMinutes(-1)) }
+    }
+
+    @Test
     @DisplayName("용도의 후보는 하나 이상이고 같은 모델이 두 번 있을 수 없다")
     fun requireDistinctNonEmptyCandidates() {
         assertFailsWith<IllegalArgumentException> { LlmProperties.UseProperties(emptyList()) }
@@ -173,6 +180,7 @@ class LlmPropertiesTest {
         assertEquals(2, circuitBreaker.permittedNumberOfCallsInHalfOpenState)
         assertEquals(Duration.ofSeconds(60), properties.guard.cooldown.default)
         assertEquals(Duration.ofMinutes(10), properties.guard.cooldown.max)
+        assertEquals(Duration.ofHours(1), properties.guard.hold.reprobeAfter)
     }
 
     private fun productionYamlBinder(): Binder {

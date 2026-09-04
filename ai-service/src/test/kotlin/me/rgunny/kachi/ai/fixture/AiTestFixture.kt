@@ -12,6 +12,9 @@ import me.rgunny.kachi.ai.config.AiOutboxRetryProperties
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
+import me.rgunny.kachi.ai.config.LlmHoldProperties
 import me.rgunny.kachi.ai.config.LlmProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
@@ -54,6 +57,7 @@ object AiTestFixture {
 
     /** 후보로 쓰는 모델 상수. 가드·라우터 테스트가 식별자로 쓴다. */
     val LLM_MODEL: LlmModel = LlmModel.GROQ_QWEN3_27B
+    val DEFAULT_HOLD_REPROBE_AFTER: Duration = Duration.ofHours(1)
     val PROVIDER: LlmProvider = LLM_MODEL.provider
 
     /** 응답이 보고한 모델 이름. 요청한 code와 같지 않아도 된다는 것을 드러내려고 다른 값을 쓴다. */
@@ -381,6 +385,40 @@ object AiTestFixture {
         return LlmProviderException(llmFailure(code))
     }
 
+    /**
+     * 후보 여럿을 거친 뒤의 실패. 대표 실패는 마지막 시도이고 [codes]가 실제 호출 순서다. 격리 카운트가 전 후보 합의를 보는지 확인하는 데 쓴다.
+     */
+    fun llmProviderException(vararg codes: LlmFailureCode): LlmProviderException {
+        require(codes.isNotEmpty())
+        val attempts = codes.map { llmFailure(it) }
+
+        return LlmProviderException(failure = attempts.last(), attempts = attempts)
+    }
+
+    fun holdProperties(reprobeAfter: Duration = DEFAULT_HOLD_REPROBE_AFTER): LlmHoldProperties {
+        return LlmHoldProperties(reprobeAfter = reprobeAfter)
+    }
+
+    fun llmModelStatus(
+        model: LlmModel = LLM_MODEL,
+        circuitBreakerState: String = "CLOSED",
+        cooldownUntil: Instant? = null,
+        hold: LlmHold? = null
+    ): LlmModelStatus {
+        return LlmModelStatus(
+            model = model,
+            circuitBreakerState = circuitBreakerState,
+            cooldownUntil = cooldownUntil,
+            hold = hold,
+            failureRate = 50f,
+            slowCallRate = -1f,
+            bufferedCalls = 4,
+            successfulCalls = 2,
+            failedCalls = 2,
+            notPermittedCalls = 3
+        )
+    }
+
     /** 429 응답. [retryAfterMillis]가 null이면 Retry-After 헤더가 없는 응답이다. */
     fun rateLimitedException(retryAfterMillis: Long?): LlmProviderException {
         return LlmProviderException(
@@ -463,7 +501,8 @@ object AiTestFixture {
             ),
             guard = LlmProperties.GuardProperties(
                 circuitBreaker = circuitBreakerProperties(),
-                cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10))
+                cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
+                hold = holdProperties()
             )
         )
     }

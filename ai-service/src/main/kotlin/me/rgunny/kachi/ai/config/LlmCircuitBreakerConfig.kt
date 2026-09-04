@@ -27,9 +27,9 @@ class LlmCircuitBreakerConfig {
     }
 
     /**
-     * 실제 호출에서 나온, 재시도로 풀릴 수 있는 LLM 실패만 회로를 여는 근거로 삼는다.
+     * 실제 호출에서 나온 일시 실패만 회로를 여는 근거로 삼는다.
      *
-     * 응답 계약 위반이나 인증 실패는 모델이 살아 있다는 증거이므로 기록하지 않는다.
+     * 응답 계약 위반은 모델이 살아 있다는 증거이고, 404나 402는 한 건으로 확정이라 비율이 아니라 hold로 다룬다.
      * 집계 기준은 시간이 아니라 호출 횟수다. 호출량이 적어 시간 window는 비율이 흔들린다.
      */
     fun circuitBreakerConfig(
@@ -47,7 +47,7 @@ class LlmCircuitBreakerConfig {
             .permittedNumberOfCallsInHalfOpenState(properties.permittedNumberOfCallsInHalfOpenState)
             // 차단이 만든 실패는 가드가 집계 구간에 들어가기 전에 던지므로 지금은 여기 닿지 않는다.
             // 그 호출 순서에 기대지 않고 판정을 남겨 둔다. 만약 도달하면 차단이 회로를 더 여는 문제가 생긴다.
-            .recordException { it is LlmProviderException && it.failure.fromActualCall && it.failure.retryable }
+            .recordException { it is LlmProviderException && it.failure.recordsInCircuit }
             .build()
     }
 }

@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper
  * 이 규격을 내는 제공자는 여럿이지만 요청·응답의 모양은 하나라 adapter도 하나다.
  * 어느 제공자의 어느 모델을 부르는지는 [model]이 정하고, 주소와 timeout은 [webClient]에 이미 들어 있다.
  *
- * 호출 실패는 모두 [LlmProviderException]으로 변환해 원천과 성격을 application 계층에 전달한다.
+ * 호출 실패는 모두 HTTP status를 실패 코드로 옮긴 [LlmProviderException]으로 변환해 application 계층에 전달한다.
  * 여기서 재시도하지 않는다. 재시도 구동은 scheduler tick이 맡는다(ADR 021).
  */
 class OpenAiLlmProvider(
@@ -173,12 +173,16 @@ class OpenAiLlmProvider(
         body: String
     ): LlmProviderException {
         val detail = "status=$statusCode, body=${body.take(MAX_ERROR_BODY_LENGTH)}"
-        val code = when {
-            statusCode == HTTP_TOO_MANY_REQUESTS -> LlmFailureCode.LLM_RATE_LIMITED
-            // 인증 실패는 4xx지만 키워드가 아니라 credential 문제이므로 따로 분류한다.
-            statusCode == HTTP_UNAUTHORIZED || statusCode == HTTP_FORBIDDEN -> LlmFailureCode.LLM_AUTHORIZATION_ERROR
-            statusCode in HTTP_CLIENT_ERROR_RANGE -> LlmFailureCode.LLM_CLIENT_ERROR
-            else -> LlmFailureCode.LLM_TRANSIENT_ERROR
+        // 요청 본문(400·413·422), 모델(404), 계정401·402·403)
+        val code = when (statusCode) {
+            HTTP_BAD_REQUEST, HTTP_PAYLOAD_TOO_LARGE, HTTP_UNPROCESSABLE_CONTENT -> LlmFailureCode.LLM_REQUEST_REJECTED
+            HTTP_UNAUTHORIZED -> LlmFailureCode.LLM_UNAUTHORIZED
+            HTTP_PAYMENT_REQUIRED -> LlmFailureCode.LLM_PAYMENT_REQUIRED
+            HTTP_FORBIDDEN -> LlmFailureCode.LLM_FORBIDDEN
+            HTTP_NOT_FOUND -> LlmFailureCode.LLM_MODEL_NOT_FOUND
+            HTTP_TOO_MANY_REQUESTS -> LlmFailureCode.LLM_RATE_LIMITED
+            in HTTP_SERVER_ERROR_RANGE -> LlmFailureCode.LLM_SERVER_ERROR
+            else -> LlmFailureCode.LLM_UNKNOWN_ERROR
         }
 
         return LlmProviderException(
@@ -374,10 +378,15 @@ class OpenAiLlmProvider(
         /** 응답 body를 메모리에 받는 상한. 요약 응답은 수 KB라 넉넉하다. */
         const val MAX_IN_MEMORY_SIZE = 512 * 1024
 
-        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private const val HTTP_BAD_REQUEST = 400
         private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_PAYMENT_REQUIRED = 402
         private const val HTTP_FORBIDDEN = 403
-        private val HTTP_CLIENT_ERROR_RANGE = 400..499
+        private const val HTTP_NOT_FOUND = 404
+        private const val HTTP_PAYLOAD_TOO_LARGE = 413
+        private const val HTTP_UNPROCESSABLE_CONTENT = 422
+        private const val HTTP_TOO_MANY_REQUESTS = 429
+        private val HTTP_SERVER_ERROR_RANGE = 500..599
         private const val MAX_ERROR_BODY_LENGTH = 500
         private const val MILLIS_PER_SECOND = 1_000L
         private const val KEYWORD_EXPANSION_SYSTEM_PROMPT =

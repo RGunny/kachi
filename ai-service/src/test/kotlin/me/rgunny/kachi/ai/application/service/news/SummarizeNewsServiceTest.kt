@@ -388,7 +388,7 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
-    @DisplayName("키워드에 귀속된 실패가 임계치에 도달하면 격리한다")
+    @DisplayName("키워드 탓인 실패가 임계치에 도달하면 격리한다")
     fun quarantineKeywordAfterConsecutiveFailures() = runBlocking {
         val keyword = AiKeyword.of("NVIDIA")
         quarantinePersistence.quarantines += AiTestFixture.quarantine(keyword = keyword, consecutiveFailures = 2)
@@ -447,15 +447,13 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
-    @DisplayName("rate limit을 만나면 남은 키워드를 호출하지 않고 건너뛴다")
-    fun abortRemainingKeywordsOnRateLimit() = runBlocking {
+    @DisplayName("rate limit 한 건은 남은 키워드를 막지 않는다")
+    fun continueRemainingKeywordsOnRateLimit() = runBlocking {
         val first = AiKeyword.of("NVIDIA")
         val second = AiKeyword.of("TESLA")
-        val third = AiKeyword.of("APPLE")
         newsReader.articlesByKeyword = mapOf(
             first to listOf(AiTestFixture.newsArticle()),
-            second to listOf(AiTestFixture.newsArticle()),
-            third to listOf(AiTestFixture.newsArticle())
+            second to listOf(AiTestFixture.newsArticle())
         )
         llmProvider.failureByKeyword = mapOf(
             first to AiTestFixture.llmProviderException(LlmFailureCode.LLM_RATE_LIMITED)
@@ -463,14 +461,13 @@ class SummarizeNewsServiceTest {
         val service = service()
 
         val result = service.summarize(
-            SummarizeNewsCommand(keywords = listOf(first, second, third), window = watermarkWindow())
+            SummarizeNewsCommand(keywords = listOf(first, second), window = watermarkWindow())
         )
 
         assertEquals(1, result.failureCount)
-        assertEquals(2, result.skippedCount)
-        assertEquals(AiSkipReason.PROVIDER_UNAVAILABLE, result.skipReason)
-        assertEquals(1, llmProvider.summarizeCallCount)
-        assertEquals(listOf(first), newsReader.readKeywords)
+        assertEquals(1, result.succeededCount)
+        assertEquals(0, result.skippedCount)
+        assertEquals(2, llmProvider.summarizeCallCount)
         assertFalse(result.watermarkAdvanced)
     }
 
@@ -486,7 +483,7 @@ class SummarizeNewsServiceTest {
             third to listOf(AiTestFixture.newsArticle())
         )
         llmProvider.failureByKeyword = mapOf(
-            first to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+            first to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NOT_PERMITTED)
         )
         val service = service()
 
@@ -507,7 +504,7 @@ class SummarizeNewsServiceTest {
         val keyword = AiKeyword.of("NVIDIA")
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NOT_PERMITTED)
         )
         val service = service()
 
@@ -522,7 +519,7 @@ class SummarizeNewsServiceTest {
         val keyword = AiKeyword.of("NVIDIA")
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NOT_PERMITTED)
         )
         val service = service()
 
@@ -540,7 +537,7 @@ class SummarizeNewsServiceTest {
         val keyword = AiKeyword.of("NVIDIA")
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
         llmProvider.failureByKeyword = mapOf(
-            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NOT_PERMITTED)
         )
         val service = service()
 
@@ -566,7 +563,7 @@ class SummarizeNewsServiceTest {
             newsHash = NewsHash.calculate(keyword = reusable, sourceNewsIds = listOf(article.id))
         )
         llmProvider.failureByKeyword = mapOf(
-            failing to AiTestFixture.llmProviderException(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE)
+            failing to AiTestFixture.llmProviderException(LlmFailureCode.LLM_NOT_PERMITTED)
         )
         val service = service()
 
@@ -581,8 +578,8 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
-    @DisplayName("rate limit이 아닌 실패는 남은 키워드 처리를 막지 않는다")
-    fun continueRemainingKeywordsOnRetryableFailure() = runBlocking {
+    @DisplayName("실제 호출이 있었던 실패는 남은 키워드 처리를 막지 않는다")
+    fun continueRemainingKeywordsOnActualCallFailure() = runBlocking {
         val failed = AiKeyword.of("NVIDIA")
         val succeeded = AiKeyword.of("TESLA")
         newsReader.articlesByKeyword = mapOf(
@@ -603,6 +600,40 @@ class SummarizeNewsServiceTest {
         assertEquals(1, result.failureCount)
         assertEquals(0, result.skippedCount)
         assertEquals(AiFailureReason.TIMEOUT, aiRunPersistence.savedRuns.last().failureReason)
+    }
+
+    @Test
+    @DisplayName("시도한 후보 전부가 입력 탓으로 끝났을 때만 격리 카운트를 올린다")
+    fun countQuarantineOnlyWhenEveryCandidateFailsByInput() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_REQUEST_REJECTED, LlmFailureCode.LLM_INVALID_RESPONSE)
+        )
+        val service = service()
+
+        service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(1, quarantinePersistence.findByKeyword(keyword)?.consecutiveFailures)
+        assertEquals(AiFailureReason.INVALID_RESPONSE, quarantinePersistence.findByKeyword(keyword)?.lastFailureReason)
+    }
+
+    @Test
+    @DisplayName("한 후보라도 입력 탓이 아니면 격리 카운트를 올리지 않는다")
+    fun doNotCountQuarantineWhenAnyCandidateFailsOutsideInput() = runBlocking {
+        val keyword = AiKeyword.of("NVIDIA")
+        newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
+        llmProvider.failureByKeyword = mapOf(
+            keyword to AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE, LlmFailureCode.LLM_MODEL_NOT_FOUND)
+        )
+        val service = service()
+
+        val result = service.summarize(SummarizeNewsCommand(keywords = listOf(keyword), window = watermarkWindow()))
+
+        assertEquals(0, quarantinePersistence.saveCount)
+        assertNull(quarantinePersistence.findByKeyword(keyword))
+        assertEquals(1, result.failureCount)
+        assertEquals(AiFailureReason.MODEL_NOT_FOUND, aiRunPersistence.savedRuns.last().failureReason)
     }
 
     @Test
@@ -646,7 +677,7 @@ class SummarizeNewsServiceTest {
     }
 
     @Test
-    @DisplayName("도메인 불변식을 어긴 응답은 키워드 귀속 실패로 격리 카운트를 올린다")
+    @DisplayName("도메인 불변식을 어긴 응답은 키워드 탓 실패로 격리 카운트를 올린다")
     fun countInvariantViolationTowardQuarantine() = runBlocking {
         val keyword = AiKeyword.of("NVIDIA")
         newsReader.articlesByKeyword = mapOf(keyword to listOf(AiTestFixture.newsArticle()))
@@ -910,12 +941,15 @@ class SummarizeNewsServiceTest {
         val FAILURE_REASON_BY_CODE = mapOf(
             LlmFailureCode.LLM_TIMEOUT to AiFailureReason.TIMEOUT,
             LlmFailureCode.LLM_RATE_LIMITED to AiFailureReason.RATE_LIMITED,
-            LlmFailureCode.LLM_TRANSIENT_ERROR to AiFailureReason.SERVER_ERROR,
+            LlmFailureCode.LLM_SERVER_ERROR to AiFailureReason.SERVER_ERROR,
             LlmFailureCode.LLM_NETWORK_ERROR to AiFailureReason.NETWORK_ERROR,
-            LlmFailureCode.LLM_CLIENT_ERROR to AiFailureReason.CLIENT_ERROR,
-            LlmFailureCode.LLM_AUTHORIZATION_ERROR to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_REQUEST_REJECTED to AiFailureReason.CLIENT_ERROR,
+            LlmFailureCode.LLM_MODEL_NOT_FOUND to AiFailureReason.MODEL_NOT_FOUND,
+            LlmFailureCode.LLM_UNAUTHORIZED to AiFailureReason.ACCOUNT_ERROR,
+            LlmFailureCode.LLM_PAYMENT_REQUIRED to AiFailureReason.ACCOUNT_ERROR,
+            LlmFailureCode.LLM_FORBIDDEN to AiFailureReason.ACCOUNT_ERROR,
             LlmFailureCode.LLM_INVALID_RESPONSE to AiFailureReason.INVALID_RESPONSE,
-            LlmFailureCode.LLM_PROVIDER_UNAVAILABLE to AiFailureReason.PROVIDER_UNAVAILABLE,
+            LlmFailureCode.LLM_NOT_PERMITTED to AiFailureReason.PROVIDER_UNAVAILABLE,
             LlmFailureCode.LLM_UNKNOWN_ERROR to AiFailureReason.UNKNOWN
         )
     }

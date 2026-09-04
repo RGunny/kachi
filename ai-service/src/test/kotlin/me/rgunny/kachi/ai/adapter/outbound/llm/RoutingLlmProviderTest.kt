@@ -11,10 +11,13 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * 순회 정책만 검증한다. 후보가 왜 차단되는지는 후보 구현의 몫이라 가용성은 fake에 직접 지정한다.
@@ -80,32 +83,68 @@ class RoutingLlmProviderTest {
         assertEquals(second.name, result.metadata.model)
     }
 
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = ["LLM_INVALID_RESPONSE", "LLM_REQUEST_REJECTED"])
+    @DisplayName("입력 탓 실패도 다음 후보를 호출한다")
+    fun failoverOnInputFailure(code: LlmFailureCode) = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(code)
+
+        val result = router.summarizeNews(KEYWORD, ARTICLES)
+
+        assertEquals(1, first.summarizeCallCount)
+        assertEquals(second.name, result.metadata.model)
+    }
+
     @Test
-    @DisplayName("키워드 귀속 실패는 다른 후보를 시도하지 않는다")
-    fun doNotFailoverOnKeywordBoundFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+    @DisplayName("시도한 후보 전부가 입력 탓으로 끝나면 결과 예외가 키워드 탓으로 확정한다")
+    fun allInputWhenEveryCandidateFailsByInput() = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_REQUEST_REJECTED)
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
+        assertTrue(failure.allInput)
         assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, failure.failure.code)
-        assertEquals(0, second.summarizeCallCount)
+        assertEquals(
+            listOf(LlmFailureCode.LLM_REQUEST_REJECTED, LlmFailureCode.LLM_INVALID_RESPONSE),
+            failure.attempts.map { it.code }
+        )
     }
 
     @Test
-    @DisplayName("요청 검증 실패도 다른 후보를 시도하지 않는다")
-    fun doNotFailoverOnValidationFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_CLIENT_ERROR)
+    @DisplayName("일부 후보만 입력 탓이면 키워드 탓으로 확정하지 않는다")
+    fun notAllInputWhenOnlySomeCandidatesFailByInput() = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_SERVER_ERROR)
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_CLIENT_ERROR, failure.failure.code)
-        assertEquals(0, second.summarizeCallCount)
+        assertFalse(failure.allInput)
+        assertEquals(2, failure.attempts.size)
     }
 
     @Test
-    @DisplayName("인증 실패는 다른 후보로 넘어간다")
-    fun failoverOnAuthorizationFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_AUTHORIZATION_ERROR)
+    @DisplayName("차단된 후보는 시도 기록에 들어가지 않는다")
+    fun blockedCandidatesAreNotAttempts() = runBlocking {
+        first.blockedBy = OPEN
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+
+        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
+
+        assertEquals(listOf(LlmFailureCode.LLM_INVALID_RESPONSE), failure.attempts.map { it.code })
+        assertTrue(failure.allInput)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_MODEL_NOT_FOUND",
+        "LLM_UNAUTHORIZED",
+        "LLM_PAYMENT_REQUIRED",
+        "LLM_FORBIDDEN"
+    ])
+    @DisplayName("모델·계정 실패는 다른 후보로 넘어간다")
+    fun failoverOnModelAndProviderFailure(code: LlmFailureCode) = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(code)
 
         val result = router.summarizeNews(KEYWORD, ARTICLES)
 
@@ -164,8 +203,9 @@ class RoutingLlmProviderTest {
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, failure.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, failure.failure.code)
         assertNull(failure.failure.provider)
+        assertFalse(failure.allInput)
         assertEquals(0, first.summarizeCallCount + second.summarizeCallCount)
         assertEquals(
             "no llm candidate available: ${first.name}=$OPEN, ${second.name}=$OPEN",
@@ -182,7 +222,8 @@ class RoutingLlmProviderTest {
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertSame(thrown, failure)
+        assertEquals(thrown.failure, failure.failure)
+        assertEquals(thrown, failure.cause)
     }
 
     @Test
@@ -264,7 +305,7 @@ class RoutingLlmProviderTest {
         val prepared = router.prepareNewsSummary()
         val failure = assertFailsWith<LlmProviderException> { prepared.summarize(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, failure.failure.code)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, failure.failure.code)
         assertNull(failure.failure.provider)
     }
 

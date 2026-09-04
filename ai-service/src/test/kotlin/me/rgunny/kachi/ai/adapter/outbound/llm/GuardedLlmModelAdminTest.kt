@@ -6,6 +6,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.fake.NamedLlmProviderPort
+import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -17,6 +18,7 @@ import kotlin.test.assertTrue
 @DisplayName("GuardedLlmModelAdmin")
 class GuardedLlmModelAdminTest {
     private val clock = MutableClock()
+    private val providerHolds = ProviderHoldRegistry()
     private val circuitBreakers = MODELS.associateWith { circuitBreaker(it) }
     private val models = MODELS.map { guarded(it) }
     private val admin = GuardedLlmModelAdmin(models = models, clock = clock)
@@ -61,6 +63,8 @@ class GuardedLlmModelAdminTest {
             model = model,
             circuitBreaker = circuitBreakers.getValue(model),
             cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
+            hold = AiTestFixture.holdProperties(),
+            providerHolds = providerHolds,
             clock = clock
         )
     }

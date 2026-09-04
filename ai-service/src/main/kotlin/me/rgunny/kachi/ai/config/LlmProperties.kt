@@ -110,10 +110,11 @@ data class LlmProperties(
     )
 
     /**
-     * 모델 호출을 막는 장치들의 정책. failure rate·slow call rate·wait duration은 어느 모델에나 같다.
+     * 모델 호출을 막는 장치들의 정책. failure rate·slow call rate·wait duration·cooldown·hold 재탐색 간격은 어느 모델에나 같다.
      */
     data class GuardProperties(
         val circuitBreaker: LlmCircuitBreakerProperties,
-        val cooldown: LlmCooldownProperties
+        val cooldown: LlmCooldownProperties,
+        val hold: LlmHoldProperties
     )
 }

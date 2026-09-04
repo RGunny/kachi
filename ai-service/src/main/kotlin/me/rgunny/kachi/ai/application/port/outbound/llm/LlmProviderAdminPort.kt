@@ -14,7 +14,8 @@ interface LlmProviderAdminPort {
     fun statuses(): List<LlmModelStatus>
 
     /**
-     * 회로를 닫고 cooldown을 지운다. false는 후보에 없는 모델이다.
+     * 회로를 닫고 cooldown과 보류를 지운다. 그 모델의 제공자 보류도 함께 푼다.
+     * false는 후보에 없는 모델이다.
      */
     fun reset(model: LlmModel): Boolean
 }

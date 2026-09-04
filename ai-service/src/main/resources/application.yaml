@@ -118,3 +118,6 @@ kachi:
         cooldown:
           default: 60s
           max: 10m
+        # 404·401·402·403을 받은 모델이나 제공자를 후보에서 빼는 시간. 지나면 한 번 다시 시도하고 같은 실패면 다시 뺀다.
+        hold:
+          reprobe-after: 1h

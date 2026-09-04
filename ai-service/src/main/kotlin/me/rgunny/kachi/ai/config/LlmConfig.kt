@@ -4,6 +4,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import io.netty.channel.ChannelOption
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModel
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModelAdmin
+import me.rgunny.kachi.ai.adapter.outbound.llm.ProviderHoldRegistry
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
 import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiLlmProvider
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
@@ -47,6 +48,12 @@ class LlmConfig {
     }
 
     /**
+     * 제공자 보류는 계정의 상태라 같은 제공자의 가드들이 한 곳을 봐야 한다.
+     */
+    @Bean
+    fun providerHoldRegistry(): ProviderHoldRegistry = ProviderHoldRegistry()
+
+    /**
      * 후보 모델마다 자기 회로를 가진 가드를 씌운다.
      *
      * 회로를 모델 단위로 두어야 한 모델의 장애가 나머지 모델의 호출을 막지 않고, slow call duration threshold도 그 모델의 값이 된다.
@@ -56,11 +63,12 @@ class LlmConfig {
         properties: LlmProperties,
         promptVersions: LlmPromptVersions,
         circuitBreakerRegistry: CircuitBreakerRegistry,
+        providerHoldRegistry: ProviderHoldRegistry,
         jsonMapper: JsonMapper,
         clock: Clock
     ): List<GuardedLlmModel> {
         // Decorator Pattern
-        // adapter(전략)를 같은 포트 LlmProviderPort로 감싼다. GuardedLlmModel은 호출을 받으면 서킷·cooldown을 검사하고
+        // adapter(전략)를 같은 포트 LlmProviderPort로 감싼다. GuardedLlmModel은 호출을 받으면 서킷·cooldown·hold를 검사하고
         // 통과하면 delegate에 그대로 넘긴다. adapter는 감싸인 사실을 모르고, 라우터는 감싼 것을 adapter와 같은 포트로 본다.
         // 그래서 차단 장치를 더하거나 빼도 adapter와 라우터는 바뀌지 않는다.
         return properties.candidateModels.map { model ->
@@ -69,6 +77,8 @@ class LlmConfig {
                 model = model,
                 circuitBreaker = circuitBreakerRegistry.circuitBreaker(model.qualifiedCode, model.qualifiedCode),
                 cooldown = properties.guard.cooldown,
+                hold = properties.guard.hold,
+                providerHolds = providerHoldRegistry,
                 clock = clock
             )
         }

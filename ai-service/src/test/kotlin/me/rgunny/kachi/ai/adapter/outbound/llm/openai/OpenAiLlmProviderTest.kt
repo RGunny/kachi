@@ -5,8 +5,8 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
-import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
+import me.rgunny.kachi.ai.domain.llm.LlmFailureAttribution
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
@@ -15,6 +15,8 @@ import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.CapturingExchangeFunction
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
@@ -269,10 +271,10 @@ class OpenAiLlmProviderTest {
             )
         }
 
-        assertEquals(LlmFailureCategory.INVALID_RESPONSE, exception.failure.category)
-        // provider가 살아 있다는 응답이므로 재시도 대상이 아니고, 이 키워드에 책임을 물을 수 있다.
-        assertFalse(exception.failure.retryable)
-        assertTrue(exception.failure.keywordBound)
+        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, exception.failure.code)
+        // 모델이 살아 있다는 응답이므로 이 키워드의 입력 탓이고 일시 실패가 아니다.
+        assertEquals(LlmFailureAttribution.INPUT, exception.failure.attribution)
+        assertFalse(exception.failure.transient)
         assertEquals(LlmProvider.GROQ, exception.failure.provider)
     }
 
@@ -287,7 +289,7 @@ class OpenAiLlmProviderTest {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.INVALID_RESPONSE, exception.failure.category)
+        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, exception.failure.code)
     }
 
     @Test
@@ -299,55 +301,48 @@ class OpenAiLlmProviderTest {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.RATE_LIMITED, exception.failure.category)
+        assertEquals(LlmFailureCode.LLM_RATE_LIMITED, exception.failure.code)
         assertEquals(429, exception.failure.statusCode)
         assertEquals(30_000L, exception.failure.retryAfterMillis)
-        assertTrue(exception.failure.retryable)
-        assertFalse(exception.failure.keywordBound)
     }
 
-    @Test
-    @DisplayName("401 응답을 AUTHORIZATION_ERROR로 분류해 키워드에 책임을 묻지 않는다")
-    fun classifyUnauthorizedAsAuthorizationError() = runBlocking {
-        val provider = providerOf(errorExchangeFunction(HttpStatus.UNAUTHORIZED))
+    @ParameterizedTest
+    @CsvSource(
+        "400, LLM_REQUEST_REJECTED",
+        "413, LLM_REQUEST_REJECTED",
+        "422, LLM_REQUEST_REJECTED",
+        "401, LLM_UNAUTHORIZED",
+        "402, LLM_PAYMENT_REQUIRED",
+        "403, LLM_FORBIDDEN",
+        "404, LLM_MODEL_NOT_FOUND",
+        "429, LLM_RATE_LIMITED",
+        "500, LLM_SERVER_ERROR",
+        "503, LLM_SERVER_ERROR",
+        "409, LLM_UNKNOWN_ERROR"
+    )
+    @DisplayName("HTTP status를 실패 코드로 옮기고 status를 보존한다")
+    fun classifyHttpStatus(status: Int, code: LlmFailureCode) = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.valueOf(status)))
 
         val exception = assertFailsWith<LlmProviderException> {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.AUTHORIZATION_ERROR, exception.failure.category)
-        assertEquals(401, exception.failure.statusCode)
-        assertFalse(exception.failure.keywordBound)
-        assertFalse(exception.failure.retryable)
+        assertEquals(code, exception.failure.code)
+        assertEquals(status, exception.failure.statusCode)
+        assertEquals(LlmProvider.GROQ, exception.failure.provider)
     }
 
     @Test
-    @DisplayName("그 외 4xx 응답을 VALIDATION_ERROR로 분류한다")
-    fun classifyClientErrorAsValidationError() = runBlocking {
-        val provider = providerOf(errorExchangeFunction(HttpStatus.BAD_REQUEST))
+    @DisplayName("Retry-After는 429에만 보존한다")
+    fun keepRetryAfterOnlyForRateLimit() = runBlocking {
+        val provider = providerOf(errorExchangeFunction(HttpStatus.SERVICE_UNAVAILABLE, retryAfterSeconds = 30))
 
         val exception = assertFailsWith<LlmProviderException> {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.VALIDATION_ERROR, exception.failure.category)
-        assertTrue(exception.failure.keywordBound)
-        assertFalse(exception.failure.retryable)
-    }
-
-    @Test
-    @DisplayName("5xx 응답을 TRANSIENT_ERROR로 분류한다")
-    fun classifyServerErrorAsTransientError() = runBlocking {
-        val provider = providerOf(errorExchangeFunction(HttpStatus.SERVICE_UNAVAILABLE))
-
-        val exception = assertFailsWith<LlmProviderException> {
-            provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
-        }
-
-        assertEquals(LlmFailureCategory.TRANSIENT_ERROR, exception.failure.category)
-        assertEquals(503, exception.failure.statusCode)
-        assertTrue(exception.failure.retryable)
-        assertFalse(exception.failure.keywordBound)
+        assertNull(exception.failure.retryAfterMillis)
     }
 
     @Test
@@ -370,13 +365,12 @@ class OpenAiLlmProviderTest {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.TIMEOUT, exception.failure.category)
-        assertEquals(LlmFailureSource.NETWORK, exception.failure.source)
-        assertTrue(exception.failure.retryable)
+        assertEquals(LlmFailureCode.LLM_TIMEOUT, exception.failure.code)
+        assertTrue(exception.failure.transient)
     }
 
     @Test
-    @DisplayName("timeout이 아닌 연결 실패는 NETWORK 원천의 TRANSIENT_ERROR로 분류한다")
+    @DisplayName("timeout이 아닌 연결 실패는 NETWORK_ERROR로 분류한다")
     fun classifyConnectionFailureAsNetworkTransientError() = runBlocking {
         val provider = providerOf(
             ExchangeFunction {
@@ -395,8 +389,8 @@ class OpenAiLlmProviderTest {
             provider.summarizeNews(keyword = AiKeyword.of("NVIDIA"), articles = listOf(newsArticle()))
         }
 
-        assertEquals(LlmFailureCategory.TRANSIENT_ERROR, exception.failure.category)
-        assertEquals(LlmFailureSource.NETWORK, exception.failure.source)
+        assertEquals(LlmFailureCode.LLM_NETWORK_ERROR, exception.failure.code)
+        assertTrue(exception.failure.transient)
     }
 
     @Test
