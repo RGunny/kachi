@@ -205,6 +205,26 @@ hold는 서킷과 다른 상태다.
 - 검증은 후보마다 `GET /models`로 존재를, 실제 생성 1회로 계약을 본다. `/models`만으로는 402·403이 드러나지 않는다.
 - 소스셋 구성과 실행 방법은 `docs/테스트전략.md`에 있다. notification-worker의 실 webhook 테스트도 같은 규칙으로 옮긴다.
 
+이 구조는 아래 공식문서들을 참고하여 구성했다.
+
+- Gradle 공식 문서 [The JVM Test Suite Plugin](https://docs.gradle.org/current/userguide/jvm_test_suite_plugin.html).
+  - 테스트 종류마다 소스셋과 task를 따로 두는 형식으로 Gradle 7.3에 도입됐다. 옛 `sourceSets` 방식도 문서에 그대로 있다.
+  - "only the built-in `test` suite will automatically have a dependency on the production code of the project"가 `implementation(project())`의 근거다.
+  - "only the built-in `test` suite will automatically have access to the production source's `implementation` dependencies, all other suites must explicitly declare these"가 `realTestImplementation`이 `testImplementation`을 잇는 근거다. `testImplementation`은 `implementation`을 이미 잇고 있어 main의 의존성과 test 라이브러리(JUnit·Spring test)를 한 번에 받는다.
+  - "test suite targets are not associated with the `check` task"가 기본이라 `check`에 넣지 않는 것은 별도 설정이 아니다.
+- Gradle 공식 문서 [Testing in Java & JVM projects › Configuring integration tests](https://docs.gradle.org/current/userguide/java_testing.html#sec:configuring_java_integration_tests).
+  - 같은 구조를 `sourceSets`와 `configurations.extendsFrom`으로 쓰는 옛 형식이다.
+- Spring Boot 저장소의 빌드 플러그인 [IntegrationTestPlugin](https://github.com/spring-projects/spring-boot/blob/main/buildSrc/src/main/java/org/springframework/boot/build/test/IntegrationTestPlugin.java)(`src/intTest`)과 [DockerTestPlugin](https://github.com/spring-projects/spring-boot/blob/main/buildSrc/src/main/java/org/springframework/boot/build/test/DockerTestPlugin.java)(`src/dockerTest`).
+  - 바깥 자원이 필요한 테스트를 소스셋으로 가르는 실제 사례다. `dockerTest`는 `test` 소스셋의 output을 classpath에 더하며, `realTest`가 `AiTestFixture`를 가져다 쓰는 것과 같다.
+  - 두 플러그인은 `check`에 연결한다. CI에 Docker가 있기 때문이고, 실 provider를 부르는 `realTest`는 그 조건이 없어 연결하지 않는다.
+- Maven [Failsafe Plugin](https://maven.apache.org/surefire/maven-failsafe-plugin/).
+  - "The Failsafe Plugin is designed to run integration tests while the Surefire Plugin is designed to run unit tests." 이름 규칙(`**/*IT.java`)으로 같은 분리를 하는 Maven 쪽 관행이다.
+- JUnit [`@Tag`](https://github.com/junit-team/junit-framework/blob/main/junit-jupiter-api/src/main/java/org/junit/jupiter/api/Tag.java)는 채택하지 않았다.
+  - "Tags are used to filter which tests are executed for a given test plan." 태그는 같은 소스셋 안의 필터라, `src/test` 전체 실행에서 빠지려면 Gradle과 IDE에 각각 제외 설정이 있어야 한다.
+  - 소스셋은 디렉터리·classpath·task가 갈려 있어 `src/test` 전체를 어느 러너로 돌려도 realTest가 섞이지 않는다. 클래스를 직접 실행하면 나가는 것은 두 방식이 같고, 그것이 이 설계의 의도다.
+- JUnit 5.12 [release notes](https://docs.junit.org/5.12.0/release-notes/)의 `@ParameterizedTest(allowZeroInvocations = true)`.
+  - 과금 후보가 없는 프로파일에서 과금 검증 클래스가 0건인 것을 실패로 보지 않기 위해 쓴다.
+
 ### 운영 API는 모델 단위다
 
 | 경로 | 내용 |
