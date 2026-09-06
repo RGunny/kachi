@@ -164,6 +164,7 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
             sentiment = NewsSummarySentiment.NEUTRAL,
             provider = provider,
             model = model,
+            requestedModel = model,
             promptVersion = PromptVersion.of("news-summary-v1"),
             tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 5),
             createdAt = createdAt

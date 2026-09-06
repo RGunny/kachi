@@ -30,6 +30,7 @@ class TestStubServer : AutoCloseable {
             // query는 호출 상대를 고르는 데 쓰이지 않으므로 path만으로 응답을 찾는다.
             val path = request.uri().substringBefore("?")
             paths += path
+            requestHeaders += request.requestHeaders().associate { (name, value) -> name.lowercase() to value }
             val stubResponse = queuedResponses[path]?.poll()
                 ?: fixedResponses[path]
                 ?: NOT_FOUND
@@ -38,6 +39,7 @@ class TestStubServer : AutoCloseable {
             response.header(HttpHeaderNames.CONTENT_TYPE, "application/json")
             request.receive().aggregate().asString().defaultIfEmpty("")
                 .doOnNext { body -> bodies.getOrPut(path) { Collections.synchronizedList(mutableListOf()) } += body }
+                .then(Mono.delay(stubResponse.delay))
                 .then(response.sendString(Mono.just(stubResponse.body)).then())
         }
         .bindNow()
@@ -45,6 +47,9 @@ class TestStubServer : AutoCloseable {
     val port: Int = server.port()
     val baseUrl: String = "http://localhost:$port"
     val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
+
+    /** 요청 순서대로 기록한 헤더. 이름은 소문자다. */
+    val requestHeaders: MutableList<Map<String, String>> = Collections.synchronizedList(mutableListOf())
     val bodies: MutableMap<String, MutableList<String>> = ConcurrentHashMap()
 
     /** 한 번만 쓰이는 응답을 path의 큐 뒤에 붙인다. */
@@ -66,6 +71,7 @@ class TestStubServer : AutoCloseable {
         queuedResponses.clear()
         fixedResponses.clear()
         paths.clear()
+        requestHeaders.clear()
         bodies.clear()
     }
 

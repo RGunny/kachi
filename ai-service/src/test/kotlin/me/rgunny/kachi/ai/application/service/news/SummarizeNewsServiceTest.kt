@@ -82,6 +82,8 @@ class SummarizeNewsServiceTest {
         assertEquals(false, result.summaries.first().reused)
         assertEquals(1, newsSummaryPersistence.savedSummaries.size)
         assertEquals("NVIDIA 요약", newsSummaryPersistence.savedSummaries.first().title)
+        assertEquals(AiTestFixture.MODEL, newsSummaryPersistence.savedSummaries.first().model)
+        assertEquals(AiTestFixture.REQUESTED_MODEL, newsSummaryPersistence.savedSummaries.first().requestedModel)
         assertEquals(2, aiRunPersistence.savedRuns.size)
         assertEquals(AiTestFixture.PROVIDER, aiRunPersistence.savedRuns.last().provider)
         assertEquals(AiTestFixture.MODEL, aiRunPersistence.savedRuns.last().model)

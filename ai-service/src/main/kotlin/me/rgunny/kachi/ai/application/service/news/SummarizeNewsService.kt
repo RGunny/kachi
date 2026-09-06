@@ -275,6 +275,7 @@ class SummarizeNewsService(
             summary = SummarizedNewsResult.from(existingSummary, reused = true),
             metadata = LlmGenerationMetadata(
                 provider = existingSummary.provider,
+                requestedModel = existingSummary.requestedModel,
                 model = existingSummary.model,
                 promptVersion = existingSummary.promptVersion,
                 tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
@@ -302,6 +303,7 @@ class SummarizeNewsService(
             sentiment = llmResult.sentiment,
             provider = llmResult.metadata.provider,
             model = llmResult.metadata.model,
+            requestedModel = llmResult.metadata.requestedModel,
             promptVersion = llmResult.metadata.promptVersion,
             tokenUsage = llmResult.metadata.tokenUsage,
             createdAt = now

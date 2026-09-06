@@ -14,13 +14,13 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
  */
 internal class OpenAiPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,
-    private val provider: OpenAiLlmProvider
+    private val adapter: OpenAiChatAdapter
 ) : PreparedLlmNewsSummary {
 
     override suspend fun summarize(
         keyword: AiKeyword,
         articles: List<NewsArticle>
     ): LlmNewsSummaryResult {
-        return provider.summarizeNews(keyword, articles)
+        return adapter.summarizeNews(keyword, articles)
     }
 }

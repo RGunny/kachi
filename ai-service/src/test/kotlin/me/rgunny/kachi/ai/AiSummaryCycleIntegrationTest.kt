@@ -124,6 +124,9 @@ class AiSummaryCycleIntegrationTest {
 
         val summary = mongoTemplate.findAll(NewsSummaryMongoDocument::class.java).collectList().block()!!.single()
         assertEquals(newsIds.toSet(), summary.sourceNewsIds.toSet())
+        // stub은 요청과 다른 이름으로 답한다. 응답이 보고한 모델과 요청한 모델이 각자 남아야 한다.
+        assertEquals("test-model", summary.model)
+        assertEquals(MODEL.code, summary.requestedModel)
         assertEquals(AiOutboxStatus.PUBLISHED.name, outboxCollection.findAll().single().status)
         assertNotNull(mongoTemplate.findAll(SummaryWatermarkMongoDocument::class.java).blockFirst())
 

@@ -102,9 +102,6 @@ kachi:
           candidates: [GROQ_QWEN3_27B, MISTRAL_SMALL_2603]
         KEYWORD_EXPANSION:
           candidates: [GROQ_QWEN3_27B, MISTRAL_SMALL_2603]
-      prompts:
-        news-summary-version: news-summary-v1
-        keyword-expansion-version: keyword-expansion-v1
       guard:
         # failure rate·slow call rate·wait duration은 모델 전체가 공유한다. slow call duration threshold는 models.*.slow-after다.
         circuit-breaker:

@@ -1,26 +1,22 @@
 package me.rgunny.kachi.ai.config
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
-import io.netty.channel.ChannelOption
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModel
 import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModelAdmin
 import me.rgunny.kachi.ai.adapter.outbound.llm.ProviderHoldRegistry
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
-import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.openai.OpenAiChatAdapter
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.domain.llm.LlmApi
 import me.rgunny.kachi.ai.domain.llm.LlmModel
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.LlmUse
-import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.netty.http.client.HttpClient
 import tools.jackson.databind.json.JsonMapper
 import java.time.Clock
-import java.time.Duration
 
 /**
  * LLM 호출 층을 조립한다. 층은 셋이고 전부 같은 포트 [LlmProviderPort]를 구현한다.
@@ -37,17 +33,6 @@ import java.time.Duration
 class LlmConfig {
 
     /**
-     * prompt version은 저장 키의 일부라 adapter와 선조회가 같은 값을 봐야 한다.
-     */
-    @Bean
-    fun llmPromptVersions(properties: LlmProperties): LlmPromptVersions {
-        return LlmPromptVersions(
-            keywordExpansion = PromptVersion.of(properties.prompts.keywordExpansionVersion),
-            newsSummary = PromptVersion.of(properties.prompts.newsSummaryVersion)
-        )
-    }
-
-    /**
      * 제공자 보류는 계정의 상태라 같은 제공자의 가드들이 한 곳을 봐야 한다.
      */
     @Bean
@@ -57,23 +42,35 @@ class LlmConfig {
      * 후보 모델마다 자기 회로를 가진 가드를 씌운다.
      *
      * 회로를 모델 단위로 두어야 한 모델의 장애가 나머지 모델의 호출을 막지 않고, slow call duration threshold도 그 모델의 값이 된다.
+     * WebClient는 제공자마다 하나를 만들고 모델마다 응답 timeout을 덧붙여 복제한다. 층 구분은 [LlmWebClients]에 있다.
      */
     @Bean
     fun guardedLlmModels(
         properties: LlmProperties,
-        promptVersions: LlmPromptVersions,
         circuitBreakerRegistry: CircuitBreakerRegistry,
         providerHoldRegistry: ProviderHoldRegistry,
         jsonMapper: JsonMapper,
         clock: Clock
     ): List<GuardedLlmModel> {
+        val providerWebClients = properties.candidateModels
+            .map { it.provider }
+            .distinct()
+            .associateWith { provider -> providerWebClient(provider, properties) }
+
         // Decorator Pattern
         // adapter(전략)를 같은 포트 LlmProviderPort로 감싼다. GuardedLlmModel은 호출을 받으면 서킷·cooldown·hold를 검사하고
         // 통과하면 delegate에 그대로 넘긴다. adapter는 감싸인 사실을 모르고, 라우터는 감싼 것을 adapter와 같은 포트로 본다.
         // 그래서 차단 장치를 더하거나 빼도 adapter와 라우터는 바뀌지 않는다.
         return properties.candidateModels.map { model ->
             GuardedLlmModel(
-                delegate = adapter(model, properties, promptVersions, jsonMapper),
+                delegate = adapter(
+                    model = model,
+                    webClient = LlmWebClients.forModel(
+                        providerWebClient = providerWebClients.getValue(model.provider),
+                        responseTimeout = properties.modelOf(model).timeout
+                    ),
+                    jsonMapper = jsonMapper
+                ),
                 model = model,
                 circuitBreaker = circuitBreakerRegistry.circuitBreaker(model.qualifiedCode, model.qualifiedCode),
                 cooldown = properties.guard.cooldown,
@@ -121,50 +118,32 @@ class LlmConfig {
      */
     private fun adapter(
         model: LlmModel,
-        properties: LlmProperties,
-        promptVersions: LlmPromptVersions,
+        webClient: WebClient,
         jsonMapper: JsonMapper
     ): LlmProviderPort {
-        val provider = properties.providerOf(model)
-        val timing = properties.modelOf(model)
-
         // Strategy Pattern
         // LlmProviderPort가 전략의 공통 계약이고, 규격마다 그것을 구현한 adapter가 구체 전략이다.
         // 어느 전략을 쓸지는 model.provider.api 하나로 여기서 고른다. 위 층은 반환 타입 LlmProviderPort만 보므로
         // 규격이 늘어도 바뀌지 않고, 새 LlmApi 상수에 분기가 빠지면 이 when이 컴파일에서 잡는다.
         return when (model.provider.api) {
-            LlmApi.OPENAI_CHAT_COMPLETIONS -> OpenAiLlmProvider(
-                webClient = webClient(
-                    baseUrl = provider.baseUrl,
-                    connectTimeout = provider.connectTimeout,
-                    responseTimeout = timing.timeout
-                ),
+            LlmApi.OPENAI_CHAT_COMPLETIONS -> OpenAiChatAdapter(
+                webClient = webClient,
                 jsonMapper = jsonMapper,
-                model = model,
-                apiKey = provider.apiKey,
-                keywordExpansionPromptVersion = promptVersions.keywordExpansion,
-                newsSummaryPromptVersion = promptVersions.newsSummary
+                model = model
             )
         }
     }
 
-    /**
-     * 모델마다 WebClient를 따로 둔다. 연결 timeout은 제공자의 값이고 응답 timeout은 모델의 값이다.
-     */
-    private fun webClient(
-        baseUrl: String,
-        connectTimeout: Duration,
-        responseTimeout: Duration
+    private fun providerWebClient(
+        provider: LlmProvider,
+        properties: LlmProperties
     ): WebClient {
-        val httpClient = HttpClient.create()
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout.toMillis().toInt())
-            .responseTimeout(responseTimeout)
+        val settings = properties.providers.getValue(provider)
 
-        return WebClient.builder()
-            .baseUrl(baseUrl)
-            .clientConnector(ReactorClientHttpConnector(httpClient))
-            // LLM 응답 body 역직렬화에 사용할 memory buffer 상한을 둔다.
-            .codecs { it.defaultCodecs().maxInMemorySize(OpenAiLlmProvider.MAX_IN_MEMORY_SIZE) }
-            .build()
+        return LlmWebClients.forProvider(
+            baseUrl = settings.baseUrl,
+            apiKey = settings.apiKey,
+            connectTimeout = settings.connectTimeout
+        )
     }
 }

@@ -168,8 +168,6 @@ class LlmPropertiesTest {
             listOf(LlmModel.GROQ_QWEN3_27B, LlmModel.MISTRAL_SMALL_2603),
             properties.uses.getValue(LlmUse.NEWS_SUMMARY).candidates
         )
-        assertEquals("news-summary-v1", properties.prompts.newsSummaryVersion)
-        assertEquals("keyword-expansion-v1", properties.prompts.keywordExpansionVersion)
 
         val circuitBreaker = properties.guard.circuitBreaker
         assertEquals(6, circuitBreaker.slidingWindowSize)

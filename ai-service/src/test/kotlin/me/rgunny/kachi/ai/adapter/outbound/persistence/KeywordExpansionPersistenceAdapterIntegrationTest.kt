@@ -125,6 +125,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
             ),
             provider = provider,
             model = model,
+            requestedModel = model,
             promptVersion = PromptVersion.of("keyword-expansion-v1"),
             createdAt = createdAt
         )

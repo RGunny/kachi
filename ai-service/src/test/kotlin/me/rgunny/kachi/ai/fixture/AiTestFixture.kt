@@ -29,6 +29,8 @@ import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.LlmUse
+import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
+import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
@@ -62,8 +64,11 @@ object AiTestFixture {
 
     /** 응답이 보고한 모델 이름. 요청한 code와 같지 않아도 된다는 것을 드러내려고 다른 값을 쓴다. */
     const val MODEL: String = "test-model"
-    val NEWS_SUMMARY_PROMPT_VERSION: PromptVersion = PromptVersion.of("news-summary-v1")
-    val KEYWORD_EXPANSION_PROMPT_VERSION: PromptVersion = PromptVersion.of("keyword-expansion-v1")
+
+    /** 요청에 실은 모델 code. */
+    val REQUESTED_MODEL: String = LLM_MODEL.code
+    val NEWS_SUMMARY_PROMPT_VERSION: PromptVersion = NewsSummaryPrompt.version
+    val KEYWORD_EXPANSION_PROMPT_VERSION: PromptVersion = KeywordExpansionPrompt.version
     val TOKEN_USAGE: TokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20)
 
     val NEWS_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
@@ -247,6 +252,7 @@ object AiTestFixture {
         expandedKeywords: List<String> = listOf("AI 반도체", "GPU"),
         provider: LlmProvider = PROVIDER,
         model: String = MODEL,
+        requestedModel: String = REQUESTED_MODEL,
         createdAt: Instant = NOW
     ): KeywordExpansion {
         return KeywordExpansion.create(
@@ -254,6 +260,7 @@ object AiTestFixture {
             expandedKeywords = expandedKeywords.map(ExpandedKeyword::of),
             provider = provider,
             model = model,
+            requestedModel = requestedModel,
             promptVersion = KEYWORD_EXPANSION_PROMPT_VERSION,
             createdAt = createdAt
         )
@@ -265,6 +272,7 @@ object AiTestFixture {
         newsHash: String = "news-hash",
         provider: LlmProvider = PROVIDER,
         model: String = MODEL,
+        requestedModel: String = REQUESTED_MODEL,
         createdAt: Instant = NOW
     ): NewsSummary {
         return NewsSummary.create(
@@ -276,6 +284,7 @@ object AiTestFixture {
             sentiment = NewsSummarySentiment.NEUTRAL,
             provider = provider,
             model = model,
+            requestedModel = requestedModel,
             promptVersion = NEWS_SUMMARY_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE,
             createdAt = createdAt
@@ -285,6 +294,7 @@ object AiTestFixture {
     fun newsSummaryMetadata(): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = PROVIDER,
+            requestedModel = REQUESTED_MODEL,
             model = MODEL,
             promptVersion = NEWS_SUMMARY_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE
@@ -294,6 +304,7 @@ object AiTestFixture {
     fun keywordExpansionMetadata(): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = PROVIDER,
+            requestedModel = REQUESTED_MODEL,
             model = MODEL,
             promptVersion = KEYWORD_EXPANSION_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE
@@ -495,10 +506,6 @@ object AiTestFixture {
             providers = providers,
             models = models,
             uses = uses,
-            prompts = LlmProperties.PromptProperties(
-                newsSummaryVersion = NEWS_SUMMARY_PROMPT_VERSION.value,
-                keywordExpansionVersion = KEYWORD_EXPANSION_PROMPT_VERSION.value
-            ),
             guard = LlmProperties.GuardProperties(
                 circuitBreaker = circuitBreakerProperties(),
                 cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),

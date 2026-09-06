@@ -35,6 +35,7 @@ data class NewsSummaryMongoDocument(
     val sentiment: NewsSummarySentiment,
     val provider: String,
     val model: String,
+    val requestedModel: String,
     val promptVersion: String,
     val inputTokens: Int,
     val outputTokens: Int,
@@ -52,6 +53,7 @@ data class NewsSummaryMongoDocument(
             sentiment = sentiment,
             provider = LlmProvider.ofCode(provider),
             model = model,
+            requestedModel = requestedModel,
             promptVersion = PromptVersion.of(promptVersion),
             tokenUsage = TokenUsage(inputTokens = inputTokens, outputTokens = outputTokens),
             createdAt = createdAt
@@ -70,6 +72,7 @@ data class NewsSummaryMongoDocument(
                 sentiment = newsSummary.sentiment,
                 provider = newsSummary.provider.code,
                 model = newsSummary.model,
+                requestedModel = newsSummary.requestedModel,
                 promptVersion = newsSummary.promptVersion.value,
                 inputTokens = newsSummary.tokenUsage.inputTokens,
                 outputTokens = newsSummary.tokenUsage.outputTokens,

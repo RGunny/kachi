@@ -25,11 +25,28 @@ class KeywordExpansionTest {
             ),
             provider = provider,
             model = model,
+            requestedModel = model,
             promptVersion = promptVersion,
             createdAt = now
         )
 
         assertEquals(listOf("AI 반도체", "GPU"), expansion.expandedKeywords.map { it.value })
+    }
+
+    @Test
+    @DisplayName("요청 모델이 비어 있으면 생성할 수 없다")
+    fun rejectBlankRequestedModel() {
+        assertFailsWith<IllegalArgumentException> {
+            KeywordExpansion.create(
+                keyword = AiKeyword.of("NVIDIA"),
+                expandedKeywords = listOf(ExpandedKeyword.of("GPU")),
+                provider = provider,
+                model = model,
+                requestedModel = " ",
+                promptVersion = promptVersion,
+                createdAt = now
+            )
+        }
     }
 
     @Test
@@ -41,6 +58,7 @@ class KeywordExpansionTest {
                 expandedKeywords = listOf(ExpandedKeyword.of("nvidia")),
                 provider = provider,
                 model = model,
+                requestedModel = model,
                 promptVersion = promptVersion,
                 createdAt = now
             )

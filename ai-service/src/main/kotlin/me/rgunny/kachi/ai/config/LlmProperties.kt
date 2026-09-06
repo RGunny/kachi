@@ -21,7 +21,6 @@ data class LlmProperties(
     val providers: Map<LlmProvider, ProviderProperties>,
     val models: Map<LlmModel, ModelProperties>,
     val uses: Map<LlmUse, UseProperties>,
-    val prompts: PromptProperties,
     val guard: GuardProperties
 ) {
     companion object {
@@ -100,14 +99,6 @@ data class LlmProperties(
             require(candidates.size == candidates.distinct().size) { "LLM use의 candidates에 같은 모델이 두 번 있습니다" }
         }
     }
-
-    /**
-     * 용도별 prompt version. 저장 키의 일부라 생성과 선조회가 같은 값을 봐야 한다.
-     */
-    data class PromptProperties(
-        val newsSummaryVersion: String,
-        val keywordExpansionVersion: String
-    )
 
     /**
      * 모델 호출을 막는 장치들의 정책. failure rate·slow call rate·wait duration·cooldown·hold 재탐색 간격은 어느 모델에나 같다.

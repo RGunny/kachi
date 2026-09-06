@@ -22,7 +22,7 @@ import java.time.Duration
  * 어느 후보가 호출됐는지 이름으로 식별할 수 있는 LLM 호출 fake.
  *
  * 라우팅과 failover 테스트는 "몇 번 호출됐는가"가 아니라 "누가 호출됐는가"를 확인해야 한다.
- * 응답 metadata의 model에 [name]을 실어 결과만 보고도 누가 답했는지 알 수 있게 한다.
+ * 응답 metadata의 requestedModel에 [name]을 실어 결과만 보고도 누가 답했는지 알 수 있게 한다.
  *
  * [failures]에 넣은 예외를 호출 순서대로 하나씩 던진다. 비면 성공한다.
  * [callDelay]는 느린 호출 판정을, [gate]는 여러 호출이 동시에 진행되는 상황을 만드는 데 쓴다.
@@ -94,6 +94,7 @@ open class NamedLlmProviderPort(
     private fun metadata(promptVersion: PromptVersion): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = provider,
+            requestedModel = name,
             model = name,
             promptVersion = promptVersion,
             tokenUsage = TokenUsage(inputTokens = 1, outputTokens = 1)

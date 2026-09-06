@@ -30,6 +30,7 @@ data class KeywordExpansionMongoDocument(
     val expandedKeywords: List<String>,
     val provider: String,
     val model: String,
+    val requestedModel: String,
     val promptVersion: String,
     @Indexed
     val createdAt: Instant
@@ -41,6 +42,7 @@ data class KeywordExpansionMongoDocument(
             expandedKeywords = expandedKeywords.map(ExpandedKeyword::of),
             provider = LlmProvider.ofCode(provider),
             model = model,
+            requestedModel = requestedModel,
             promptVersion = PromptVersion.of(promptVersion),
             createdAt = createdAt
         )
@@ -54,6 +56,7 @@ data class KeywordExpansionMongoDocument(
                 expandedKeywords = keywordExpansion.expandedKeywords.map { it.value },
                 provider = keywordExpansion.provider.code,
                 model = keywordExpansion.model,
+                requestedModel = keywordExpansion.requestedModel,
                 promptVersion = keywordExpansion.promptVersion.value,
                 createdAt = keywordExpansion.createdAt
             )

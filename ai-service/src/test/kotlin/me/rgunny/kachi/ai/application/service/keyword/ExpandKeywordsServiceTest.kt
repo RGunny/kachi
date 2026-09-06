@@ -2,7 +2,6 @@ package me.rgunny.kachi.ai.application.service.keyword
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.config.LlmPromptVersions
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.run.AiRunStatus
@@ -22,10 +21,6 @@ class ExpandKeywordsServiceTest {
     private val llmProvider = FakeLlmProviderPort()
     private val keywordExpansionPersistence = FakeKeywordExpansionPersistencePort()
     private val aiRunPersistence = FakeAiRunPersistencePort()
-    private val promptVersions = LlmPromptVersions(
-        keywordExpansion = AiTestFixture.KEYWORD_EXPANSION_PROMPT_VERSION,
-        newsSummary = AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION
-    )
 
     @Test
     @DisplayName("키워드를 확장하고 실행 기록을 성공 상태로 완료한다")
@@ -145,7 +140,6 @@ class ExpandKeywordsServiceTest {
             llmProviderPort = llmProvider,
             keywordExpansionPersistencePort = keywordExpansionPersistence,
             aiRunPersistencePort = aiRunPersistence,
-            promptVersions = promptVersions,
             clock = clock
         )
     }

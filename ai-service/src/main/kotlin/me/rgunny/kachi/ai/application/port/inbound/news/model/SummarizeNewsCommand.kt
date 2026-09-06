@@ -1,6 +1,7 @@
 package me.rgunny.kachi.ai.application.port.inbound.news.model
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
 
 /**
  * 뉴스 요약 실행 요청
@@ -18,6 +19,7 @@ data class SummarizeNewsCommand(
 
     companion object {
         const val DEFAULT_MAX_ARTICLES_PER_KEYWORD = 20
-        const val MAX_ARTICLES_PER_KEYWORD = 100
+        /** 프롬프트가 한 번에 싣는 기사 수와 같다. 여기서 더 받아도 프롬프트 경계에서 잘린다. */
+        const val MAX_ARTICLES_PER_KEYWORD = NewsSummaryPrompt.MAX_ARTICLES
     }
 }

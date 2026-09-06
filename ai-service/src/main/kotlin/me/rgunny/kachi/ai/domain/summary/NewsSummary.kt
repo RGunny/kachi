@@ -16,8 +16,10 @@ class NewsSummary private constructor(
     val content: String,
     val sentiment: NewsSummarySentiment,
     val provider: LlmProvider,
-    /** 요약을 만든 모델. */
+    /** 요약을 만든 모델. 응답이 보고한 모델이고, 보고가 없으면 요청한 모델이다. */
     val model: String,
+    /** 요청에 실은 모델. [model]과 다르면 제공자가 다른 모델로 대신 답한 것이다. */
+    val requestedModel: String,
     val promptVersion: PromptVersion,
     val tokenUsage: TokenUsage,
     val createdAt: Instant
@@ -34,6 +36,7 @@ class NewsSummary private constructor(
             sentiment: NewsSummarySentiment,
             provider: LlmProvider,
             model: String,
+            requestedModel: String,
             promptVersion: PromptVersion,
             tokenUsage: TokenUsage,
             createdAt: Instant
@@ -43,6 +46,7 @@ class NewsSummary private constructor(
             require(title.isNotBlank()) { "요약 제목은 빈 값일 수 없습니다" }
             require(content.isNotBlank()) { "요약 본문은 빈 값일 수 없습니다" }
             require(model.isNotBlank()) { "요약 모델은 빈 값일 수 없습니다" }
+            require(requestedModel.isNotBlank()) { "요청 모델은 빈 값일 수 없습니다" }
 
             return NewsSummary(
                 id = NewsSummaryId.newId(),
@@ -54,6 +58,7 @@ class NewsSummary private constructor(
                 sentiment = sentiment,
                 provider = provider,
                 model = model,
+                requestedModel = requestedModel,
                 promptVersion = promptVersion,
                 tokenUsage = tokenUsage,
                 createdAt = createdAt
@@ -70,6 +75,7 @@ class NewsSummary private constructor(
             sentiment: NewsSummarySentiment,
             provider: LlmProvider,
             model: String,
+            requestedModel: String,
             promptVersion: PromptVersion,
             tokenUsage: TokenUsage,
             createdAt: Instant
@@ -84,6 +90,7 @@ class NewsSummary private constructor(
                 sentiment = sentiment,
                 provider = provider,
                 model = model,
+                requestedModel = requestedModel,
                 promptVersion = promptVersion,
                 tokenUsage = tokenUsage,
                 createdAt = createdAt
