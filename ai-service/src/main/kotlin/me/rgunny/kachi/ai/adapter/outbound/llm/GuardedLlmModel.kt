@@ -13,6 +13,7 @@ import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.config.LlmHoldProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
@@ -38,10 +39,13 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * 실패 분류는 위임 대상이 끝냈으므로 여기서 다시 하지 않고 [LlmFailure]를 그대로 소비한다.
  * 재시도도 하지 않는다. 재시도 구동은 다음 tick의 몫이다(ADR 021).
+ *
+ * [billing]은 차단과 무관하지만 상태 스냅샷에 실린다. 운영자가 차단을 해제하거나 실제 호출을 확인할 때 비용을 알아야 한다.
  */
 class GuardedLlmModel(
     private val delegate: LlmProviderPort,
     override val model: LlmModel,
+    val billing: LlmBilling,
     private val circuitBreaker: CircuitBreaker,
     private val cooldown: LlmCooldownProperties,
     private val hold: LlmHoldProperties,
@@ -100,6 +104,7 @@ class GuardedLlmModel(
 
         return LlmModelStatus(
             model = model,
+            billing = billing,
             circuitBreakerState = circuitBreaker.state.name,
             cooldownUntil = coolingDownUntil(now),
             hold = activeHold(now),

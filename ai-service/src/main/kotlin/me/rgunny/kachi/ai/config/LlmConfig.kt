@@ -72,6 +72,7 @@ class LlmConfig {
                     jsonMapper = jsonMapper
                 ),
                 model = model,
+                billing = properties.providerOf(model).billing,
                 circuitBreaker = circuitBreakerRegistry.circuitBreaker(model.qualifiedCode, model.qualifiedCode),
                 cooldown = properties.guard.cooldown,
                 hold = properties.guard.hold,

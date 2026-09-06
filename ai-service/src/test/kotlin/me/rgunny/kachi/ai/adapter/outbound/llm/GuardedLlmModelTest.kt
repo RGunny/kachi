@@ -12,6 +12,7 @@ import me.rgunny.kachi.ai.config.LlmCircuitBreakerConfig
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.fake.NamedLlmProviderPort
@@ -827,6 +828,7 @@ class GuardedLlmModelTest {
         return GuardedLlmModel(
             delegate = delegate,
             model = model,
+            billing = LlmBilling.FREE_TIER,
             circuitBreaker = circuitBreaker,
             cooldown = LlmCooldownProperties(default = DEFAULT_COOLDOWN, max = MAX_COOLDOWN),
             hold = AiTestFixture.holdProperties(REPROBE_AFTER),

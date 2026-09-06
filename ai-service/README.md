@@ -98,51 +98,80 @@ relay만 켜고 어댑터가 없으면 기동에 실패한다. local·test 프�
 
 ### Internal
 
-LLM provider 연결 확인:
+LLM 모델 상태 조회:
 
 ```http
-GET /api/v1/internal/providers/llm/health?keyword=NVIDIA
+GET /api/v1/internal/llm/models
 ```
 
-이 API는 현재 provider mode에 따라 키워드 확장 요청을 실제 호출하고 응답 파싱까지 확인한다.
-초기 구현은 OpenAI 계열 chat completions provider를 지원한다.
+어느 용도에든 후보로 오른 모델 전부의 차단 상태를 돌려준다.
+서킷 상태와 failure rate·slow call rate, cooldown 종료 시각, hold 사유와 해제 시각, 제공자 계정의 과금 방식이 들어 있다.
+`model`은 `LlmModel` 상수명이고 `provider`는 제공자 code다.
+제공자·모델·용도의 정의는 `domain/llm`의 enum에 있고, 어느 모델을 쓰는지는 `application.yaml`의 `kachi.ai.llm.uses.*.candidates`다.
 
-지원 provider:
-
-- `openrouter`
-- `groq`
-- `together`
-- `cerebras`
-- `mistral`
-- `ollama` (같은 머신의 Ollama. 인증 없음, 기본 모델 `qwen3.8:27b`, `reasoning-effort: none`으로 추론 토큰을 끈다)
-
-`gemini`는 설정 항목은 있지만 별도 `generateContent` adapter 구현 전까지 `enabled=true`로 사용할 수 없다.
-
-local에서 확인하려면 `.env.local`에 사용할 provider를 `enabled=true`로 두고 API key와 model을 지정한다.
-
-```env
-KACHI_AI_LLM_PROVIDER_MODE=single-random
-KACHI_AI_OPENROUTER_ENABLED=true
-OPENROUTER_API_KEY=...
-KACHI_AI_OPENROUTER_MODEL=openai/gpt-4o-mini
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "model": "OLLAMA_QWEN3_27B",
+      "provider": "ollama",
+      "billing": "SELF_HOSTED",
+      "circuitBreakerState": "CLOSED",
+      "cooldownUntil": null,
+      "holdReason": null,
+      "holdUntil": null,
+      "failureRate": -1.0,
+      "slowCallRate": -1.0,
+      "bufferedCalls": 0,
+      "successfulCalls": 0,
+      "failedCalls": 0,
+      "notPermittedCalls": 0
+    }
+  ],
+  "error": null
+}
 ```
 
-응답 예시:
+차단 해제:
+
+```http
+POST /api/v1/internal/llm/models/{model}/reset
+```
+
+그 모델의 서킷·cooldown·모델 hold를 풀고 제공자 hold도 함께 푼다. 운영자가 원인 해소를 확인했다는 뜻이다.
+응답은 푼 뒤의 상태다.
+
+실제 호출 확인(probe):
+
+```http
+POST /api/v1/internal/llm/models/{model}/probe
+```
+
+지정한 모델 하나에 키워드 확장 요청을 한 번 실제로 보내 응답 여부를 확인한다. 후보 순회를 거치지 않지만 차단 장치는 그대로 지난다.
+차단 중이면 사유를 실어 502로 실패하고, 실패의 결과는 평소 호출과 같이 상태에 남는다.
+`billing`이 `METERED`면 과금된 호출이다.
 
 ```json
 {
   "success": true,
   "data": {
-    "provider": "openrouter",
-    "model": "openai/gpt-4o-mini",
-    "promptVersion": "keyword-expansion-v1",
-    "expandedKeywords": ["AI 반도체", "GPU", "데이터센터"],
+    "model": "GROQ_QWEN3_27B",
+    "provider": "groq",
+    "billing": "FREE_TIER",
+    "requestedModel": "qwen/qwen3.8-27b",
+    "servedModel": "qwen/qwen3.8-27b",
+    "promptVersion": "keyword-expansion-v2",
+    "latencyMillis": 812,
     "inputTokens": 100,
-    "outputTokens": 20
+    "outputTokens": 20,
+    "expandedKeywords": ["AI 반도체", "GPU", "데이터센터"]
   },
   "error": null
 }
 ```
+
+`{model}`이 상수명이 아니면 400, 상수지만 어느 용도의 후보도 아니면 404다.
 
 키워드 확장 수동 실행:
 

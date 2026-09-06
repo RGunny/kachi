@@ -14,6 +14,7 @@ import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProbeResult
 import me.rgunny.kachi.ai.config.LlmHoldProperties
 import me.rgunny.kachi.ai.config.LlmProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
@@ -412,12 +413,14 @@ object AiTestFixture {
 
     fun llmModelStatus(
         model: LlmModel = LLM_MODEL,
+        billing: LlmBilling = LlmBilling.FREE_TIER,
         circuitBreakerState: String = "CLOSED",
         cooldownUntil: Instant? = null,
         hold: LlmHold? = null
     ): LlmModelStatus {
         return LlmModelStatus(
             model = model,
+            billing = billing,
             circuitBreakerState = circuitBreakerState,
             cooldownUntil = cooldownUntil,
             hold = hold,
@@ -427,6 +430,20 @@ object AiTestFixture {
             successfulCalls = 2,
             failedCalls = 2,
             notPermittedCalls = 3
+        )
+    }
+
+    fun llmProbeResult(
+        model: LlmModel = LLM_MODEL,
+        billing: LlmBilling = LlmBilling.FREE_TIER,
+        latency: Duration = Duration.ofMillis(1234)
+    ): LlmProbeResult {
+        return LlmProbeResult(
+            model = model,
+            billing = billing,
+            metadata = keywordExpansionMetadata(),
+            latency = latency,
+            expandedKeywords = listOf(ExpandedKeyword.of("AI 반도체"), ExpandedKeyword.of("GPU"))
         )
     }
 
