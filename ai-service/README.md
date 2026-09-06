@@ -53,8 +53,7 @@ LLM 호출은 외부 I/O가 많고 timeout, retry, rate limit 대응이 필요�
 `lookback`은 실행 주기보다 길게 두어 tick 사이에 수집된 뉴스가 누락되지 않게 하고,
 겹침으로 생기는 중복 요약은 `newsHash` 재사용이 막는다.
 
-local에서는 자동 LLM 호출을 피하기 위해 둘 다 기본 비활성화한다.
-파이프라인 실동작을 확인할 때만 켠다. 켜는 방법은 [실행](#실행)을 따른다.
+local 프로필은 둘 다 켠다. 뉴스 요약은 기본값 그대로이고 키워드 확장은 local에서만 켠다. test 프로필은 둘 다 끈다.
 
 실행 중인 같은 AI 작업이 있으면 이번 tick은 건너뛰고 로그만 남긴다.
 
@@ -303,10 +302,10 @@ set +a
 
 `.env.local`의 `SPRING_PROFILES_ACTIVE`가 어느 프로필로 뜰지 정한다.
 
-scheduler는 local에서 꺼져 있다. 주기 실행까지 확인하려면 실행 인자로 함께 켠다.
+scheduler·outbox relay·이벤트 발행은 local에서도 켜져 있다. 끄고 띄우려면 실행 인자로 준다.
 
 ```sh
-./gradlew :ai-service:bootRun --args='--kachi.ai.scheduler.news-summary.enabled=true'
+./gradlew :ai-service:bootRun --args='--kachi.ai.scheduler.news-summary.enabled=false'
 ```
 
 테스트:

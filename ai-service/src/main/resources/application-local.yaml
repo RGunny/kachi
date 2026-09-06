@@ -13,14 +13,14 @@ kachi:
   ai:
     scheduler:
       news-summary:
-        enabled: false
+        enabled: true
       keyword-expansion:
-        enabled: false
+        enabled: true
     outbox:
       relay:
-        enabled: false
+        enabled: true
     events:
-      enabled: false
+      enabled: true
     clients:
       user-service:
         base-url: ${KACHI_USER_SERVICE_BASE_URL:http://localhost:8080}

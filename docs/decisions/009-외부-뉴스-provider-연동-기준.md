@@ -40,11 +40,12 @@ Naver와 Finnhub는 credential이 필요하므로 기본 비활성화한다.
 | Provider | 기본 enabled | 인증 | 비고 |
 | --- | --- | --- | --- |
 | Google News RSS | `true` | 없음 | 초기 수집 흐름 검증용으로 사용 |
-| Naver Search API | `false` | `X-Naver-Client-Id`, `X-Naver-Client-Secret` | credential 없으면 bean을 만들지 않음 |
-| Finnhub Company News | `false` | `X-Finnhub-Token` | keyword를 company symbol로 해석 |
+| Naver Search API | `true` | `X-Naver-Client-Id`, `X-Naver-Client-Secret` | credential이 비면 기동 실패 |
+| Finnhub Company News | `true` | `X-Finnhub-Token` | keyword를 company symbol로 해석 |
 
 Credential이 필요한 provider는 enabled 상태에서 credential이 비어 있으면 애플리케이션 기동 시점에 실패시킨다.
-반대로 기본값은 `enabled=false`로 두어 credential 없는 로컬/CI 실행이 깨지지 않게 한다.
+기본값은 세 provider 모두 `enabled=true`다. 수집기가 소스를 끄고 도는 것이 기본이면 로컬 전체 기동에서 파이프라인이 반쪽으로 돈다.
+credential이 없는 환경은 test 프로필처럼 그 provider를 명시적으로 끈다.
 
 Provider 응답은 adapter 안에서 `CollectedArticle`로 변환한다.
 

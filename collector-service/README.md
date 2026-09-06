@@ -55,8 +55,8 @@ GET /api/v1/internal/providers/news/{source}/health?keyword=NVIDIA
 현재 지원 source:
 
 - `GOOGLE`
-- `NAVER` (`KACHI_COLLECTOR_NAVER_ENABLED=true`와 Naver API key 필요)
-- `FINNHUB` (`KACHI_COLLECTOR_FINNHUB_ENABLED=true`와 Finnhub API key 필요)
+- `NAVER` (Naver API key 필요)
+- `FINNHUB` (Finnhub API key 필요)
 
 이 API는 외부 provider 호출과 응답 파싱까지만 확인한다.
 뉴스 저장과 `CollectionRun` 기록은 하지 않는다.
@@ -163,8 +163,7 @@ kachi:
         initial-delay: 30s
 ```
 
-기본 설정은 `application.yaml`에 두고, local/test 프로필에서는 scheduler를 기본 비활성화한다.
-로컬에서 자동 수집까지 확인하려면 `KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=true`를 지정한다.
+기본 설정은 `application.yaml`에 두고 test 프로필만 scheduler를 끈다. local은 운영과 같이 켜져 있다.
 
 ## 단일 인스턴스 실행 가정
 
@@ -223,7 +222,7 @@ kachi:
         display: 100
         sort: date
 ```
-credential이 없으면 `KACHI_COLLECTOR_NAVER_ENABLED=false` 상태로 Google provider만 사용한다.
+기본으로 켜져 있고 credential이 없으면 기동에 실패한다. 쓰지 않을 환경은 `KACHI_COLLECTOR_NAVER_ENABLED=false`로 끈다.
 
 ### Finnhub Company News
 
@@ -240,7 +239,7 @@ kachi:
         lookback-days: 7
 ```
 
-credential이 없으면 `KACHI_COLLECTOR_FINNHUB_ENABLED=false` 상태로 Google provider만 사용한다.
+기본으로 켜져 있고 credential이 없으면 기동에 실패한다. 쓰지 않을 환경은 `KACHI_COLLECTOR_FINNHUB_ENABLED=false`로 끈다.
 
 ## 저장소
 
