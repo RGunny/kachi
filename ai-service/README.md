@@ -20,7 +20,7 @@ Scheduler 또는 Internal API
           -> NewsReaderPort
               -> collector-service internal news API
           -> LlmProviderPort
-              -> OpenAI 계열 LLM provider
+              -> 용도별 후보 모델 (OpenAI chat completions 규격)
           -> KeywordExpansionPersistencePort / NewsSummaryPersistencePort / AiRunPersistencePort
               -> MongoDB
 ```
@@ -53,7 +53,8 @@ LLM 호출은 외부 I/O가 많고 timeout, retry, rate limit 대응이 필요�
 `lookback`은 실행 주기보다 길게 두어 tick 사이에 수집된 뉴스가 누락되지 않게 하고,
 겹침으로 생기는 중복 요약은 `newsHash` 재사용이 막는다.
 
-local 프로필은 둘 다 켠다. 뉴스 요약은 기본값 그대로이고 키워드 확장은 local에서만 켠다. test 프로필은 둘 다 끈다.
+local 프로필은 둘 다 켠다. 뉴스 요약은 기본값 그대로이고 키워드 확장은 local에서만 켠다.
+test 프로필은 둘 다 끈다.
 
 실행 중인 같은 AI 작업이 있으면 이번 tick은 건너뛰고 로그만 남긴다.
 
@@ -75,8 +76,48 @@ outbox 행 하나가 레코드 하나다. topic은 행의 eventType이 고르고
 | `kachi.ai.outbox.relay.enabled` | outbox를 읽어 발행 포트로 넘기는 relay | `true` |
 | `kachi.ai.events.enabled` | Kafka 발행 어댑터 | `true` |
 
-relay만 켜고 어댑터가 없으면 기동에 실패한다. local·test 프로파일은 둘 다 `false`다.
+relay만 켜고 어댑터가 없으면 기동에 실패한다. local은 둘 다 켜고 test 프로파일은 둘 다 `false`다.
 누가 어떤 채널로 받는지는 이 서비스가 모른다. 요약을 알림으로 fan-out하는 일은 notification-service의 routing이 한다(ADR 025).
+
+## LLM
+
+LLM 호출의 단위는 모델이다. 어느 회사의 어느 모델을 어느 용도에 쓰는지는 `domain/llm`의 enum이 정하고, 주소·키·시간·후보 순서만 yaml이 정한다(ADR 030).
+
+| enum | 뜻 | 상수 |
+| --- | --- | --- |
+| `LlmApi` | 요청·응답 규격. adapter 하나가 규격 하나를 맡는다 | `OPENAI_CHAT_COMPLETIONS` |
+| `LlmProvider` | 한 계정으로 부르는 회사 | `GROQ`, `MISTRAL`, `OLLAMA`, `OPENROUTER`, `TOGETHER`, `CEREBRAS`, `MOONSHOT` |
+| `LlmModel` | 한 제공자의 모델 하나. wire id와 요청 옵션을 함께 갖는다 | `GROQ_QWEN3_27B`, `MISTRAL_SMALL_2603`, `OLLAMA_QWEN3_27B` |
+| `LlmUse` | 호출 용도. 용도마다 후보 순서가 따로 있다 | `NEWS_SUMMARY`, `KEYWORD_EXPANSION` |
+
+`LlmModel` 상수는 실호출 검증을 통과한 것만 둔다.
+`-latest` 같은 이동 alias는 쓰지 않는다. 어느 날 다른 모델이 응답해도 알 길이 없기 때문이다.
+Ollama tag는 이동 alias지만 digest 고정 호출이 확인되지 않아 예외로 두고, 실호출 검증이 digest를 보고에 남긴다.
+
+yaml은 `kachi.ai.llm` 아래에 있다.
+
+| 키 | 내용 |
+| --- | --- |
+| `providers.<PROVIDER>` | `base-url`, `api-key`(`${GROQ_API_KEY:}` 같은 자리표시), `billing`(`free-tier`·`metered`·`subscription`·`self-hosted`), `connect-timeout` |
+| `models.<MODEL>` | `timeout`(응답 전체), `slow-after`(서킷의 slow call 판정). 같은 모델도 호스팅에 따라 수십 배 달라 모델의 속성이다 |
+| `uses.<USE>.candidates` | 시도할 모델의 순서. 여기 없는 모델은 클라이언트도 서킷도 만들지 않는다 |
+| `guard.circuit-breaker` | 모델 전체가 공유하는 서킷 설정 |
+| `guard.cooldown` | 429를 받은 모델이 쉬는 시간. Retry-After가 있으면 그 값(상한 `max`) |
+| `guard.hold` | 404·401·402·403을 받은 모델이나 제공자를 후보에서 빼는 시간 |
+
+프로파일마다 후보가 다르다.
+
+| 프로파일 | 후보 | 비고 |
+| --- | --- | --- |
+| 기본(`application.yaml`) | `GROQ_QWEN3_27B` → `MISTRAL_SMALL_2603` | `GROQ_API_KEY`·`MISTRAL_API_KEY`가 있어야 뜬다 |
+| `local` | `OLLAMA_QWEN3_27B` | 같은 머신의 Ollama. 키가 없고 `ollama pull qwen3.8:27b`가 먼저다 |
+| `test` | `OLLAMA_QWEN3_27B` | 주소가 테스트 stub이다 |
+
+env로 덮을 때는 Spring relaxed binding 이름을 쓴다. Ollama가 다른 머신에 있으면 `KACHI_AI_LLM_PROVIDERS_OLLAMA_BASEURL`이다.
+api-key 검증은 후보에 오른 제공자에만 건다. 정의만 있는 클라우드 제공자 때문에 local이 뜨지 못하면 안 되기 때문이다.
+
+실패는 책임(입력 탓·모델 탓·제공자 탓)과 지속(transient 여부) 두 축으로 가른다. 모델 탓은 그 모델을, 제공자 탓은 그 제공자의 모델 전부를 후보에서 빼고 다음 후보로 간다.
+후보 전부가 입력 탓이라고 합의할 때만 키워드 격리 카운트가 오른다. 상태는 아래 [API](#api)의 모델 상태 조회로 본다.
 
 ## 제외 범위
 
@@ -282,13 +323,12 @@ local 기본값:
 
 ```text
 server.port=8083
-MONGO_HOST=localhost
-MONGO_PORT=27017
-MONGO_DATABASE=kachi_ai
+spring.mongodb.uri=mongodb://localhost:27017/kachi_ai?replicaSet=rs0
 KACHI_USER_SERVICE_BASE_URL=http://localhost:8080
 KACHI_COLLECTOR_SERVICE_BASE_URL=http://localhost:8082
-kachi.ai.scheduler.news-summary.enabled=false
-kachi.ai.scheduler.keyword-expansion.enabled=false
+kachi.ai.scheduler.news-summary.enabled=true
+kachi.ai.scheduler.keyword-expansion.enabled=true
+kachi.ai.llm.uses.*.candidates=[OLLAMA_QWEN3_27B]
 ```
 
 실행:
@@ -321,6 +361,38 @@ Docker Desktop을 쓰면 소켓 경로를 함께 넘긴다.
 DOCKER_HOST=unix://$HOME/.docker/run/docker.sock ./gradlew :ai-service:test
 ```
 
+### 실호출 검증(realTest)
+
+`src/test`는 실제 provider를 부르지 않는다. 실제로 부르는 테스트는 `src/realTest` 소스셋에 있고 `test`·`check`에 끼지 않는다.
+모델을 더하거나 바꿀 때, 제공자 계정을 바꿀 때 돌려서 통과한 뒤 커밋한다.
+
+```sh
+./gradlew :ai-service:realTest                            # local 프로파일. Ollama 후보
+./gradlew :ai-service:realTest -Pkachi.llm.profile=default   # 기본 yaml만. Groq·Mistral 후보
+```
+
+프로파일의 설정을 Spring 컨텍스트 없이 바인딩해 운영과 같은 조립(adapter·가드·WebClient)으로 후보를 만든다.
+`default`는 기본 yaml만 쓰고, 그 밖의 이름은 `application-<profile>.yaml`이 있어야 한다.
+secret은 기동 스크립트와 같은 순서로 찾는다. 환경변수 → `.env.<profile>` → `.env`이며 없으면 skip이 아니라 실패다.
+
+검사하는 것은 둘이다.
+
+- 모델마다 제공자의 `GET /models`에 wire id가 있는지. 토큰을 쓰지 않는다. Ollama는 `/api/tags`의 digest도 보고한다.
+- 후보로 오른 (용도, 모델) 쌍마다 실제 생성 1회가 계약대로 돌아오는지. 요약과 확장의 JSON 계약이 달라 둘 다 본다.
+
+과금 여부로 클래스가 갈린다. `LlmVerificationTest`는 `billing: metered`를 뺀 후보, `LlmMeteredVerificationTest`는 `metered`만 돈다.
+과금 후보가 없는 프로파일에서 후자는 0건이며 실패가 아니다.
+
+결과는 stdout에 한 줄씩 나온다. 어느 주소를 검증했는지 보이도록 base-url을 싣는다.
+
+```text
+[realTest] profile=local listed model=OLLAMA_QWEN3_27B code=ollama/qwen3.8:27b billing=SELF_HOSTED baseUrl=http://localhost:11434/v1
+[realTest] profile=local digest model=OLLAMA_QWEN3_27B code=ollama/qwen3.8:27b digest=22130167c4c2...
+[realTest] profile=local generated model=OLLAMA_QWEN3_27B code=ollama/qwen3.8:27b use=NEWS_SUMMARY served=qwen3.8:27b latency=41205ms tokens=402/97 sentiment=POSITIVE title="..."
+```
+
+IntelliJ에서는 소스셋이 갈려 있어 `src/test` 전체를 어느 러너로 돌려도 realTest가 섞이지 않는다. realTest 클래스를 직접 실행하면 실호출이 나간다.
+
 ## 관련 문서
 
 - [아키텍처](../docs/아키텍처.md)
@@ -328,3 +400,4 @@ DOCKER_HOST=unix://$HOME/.docker/run/docker.sock ./gradlew :ai-service:test
 - [테스트 전략](../docs/테스트전략.md)
 - [010. ai-service 초기 설계](../docs/decisions/010-ai-service-초기-설계.md)
 - [020. ai-service scheduler 실행 모델과 요약 window](../docs/decisions/020-ai-service-scheduler-실행-모델과-요약-window.md)
+- [030. ai-service LLM 호출 단위, 실패 분류, 실호출 검증](../docs/decisions/030-ai-service-llm-호출-단위와-실패-분류와-실호출-검증.md)
