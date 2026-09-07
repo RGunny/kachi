@@ -110,21 +110,19 @@ GET /api/v1/internal/news?keyword={keyword}&from={from}&to={to}&limit={limit}
 
 ## LLM provider 정책
 
-LLM 연동은 `LlmProviderPort` 뒤에 둔다.
+LLM 연동은 `LlmProviderPort` 뒤에 둔다. application 서비스는 포트만 부르고 어느 제공자의 어느 모델이 응답하는지 모른다.
 
 ```text
 SummarizeNewsService / ExpandKeywordsService
   -> LlmProviderPort
-      -> OpenAiLlmProvider
-      -> CompatibleLlmProvider
+      -> 용도별 후보 모델 (API 규격별 adapter)
 ```
 
-초기 provider 설정 원칙은 다음과 같다.
+호출 단위(API 규격·제공자·모델·용도), yaml에 두는 값, 조립, 실패 분류, 실호출 검증은 ADR 030이 정한다.
+실패를 소비처가 어떻게 쓰는지(서킷·hold·격리·조기 중단)는 ADR 021이다.
 
-- provider별 properties와 WebClient bean을 분리한다.
-- credential이 필요한 provider는 enabled 상태에서 credential이 없으면 기동 실패한다.
-- credential 없는 local/CI 실행이 깨지지 않도록 기본 provider는 명시적으로 켠 경우에만 생성한다.
-- 테스트는 실제 LLM API를 호출하지 않고 fake adapter 또는 fake `ExchangeFunction`으로 요청/응답 변환을 검증한다.
+- 후보 제공자의 credential이 없으면 기동에 실패한다. 후보가 아닌 제공자의 credential은 요구하지 않는다.
+- `src/test`는 실제 LLM API를 호출하지 않고 stub 서버로 요청·응답 변환을 검증한다. 실제 호출은 `src/realTest`다.
 
 LLM 응답은 adapter에서 raw response DTO로 받고, application service에서 도메인 결과로 변환하기 전에 파싱 실패와 필수값 누락을 실패로 분류한다.
 

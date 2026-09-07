@@ -10,7 +10,7 @@ ai-service는 뉴스 요약과 키워드 확장에 외부 LLM을 쓴다. 이전 
 
 2026-09-04 전체 사이클 스모크(ADR 029)에서 이 구조의 결함이 드러났다.
 
-- 제공 종료된 모델의 404와 결제 문제의 402가 키워드 귀속 실패로 분류됐다.
+- 제공 종료된 모델의 404와 결제 문제의 402가 키워드 탓 실패로 분류됐다.
   - failover가 일어나지 않고 서킷에도 기록되지 않아 다음 tick에 같은 provider가 다시 뽑혔다.
   - 키워드 격리 카운트가 올라갔다. 죽은 모델 하나가 멀쩡한 키워드를 영구 격리시키는 경로였다.
 - 로컬 Ollama는 호출당 수십 초에서 2분인데 서킷의 slow call 판정이 전역 8초라, 실행 스크립트(`scripts/cycle.sh`)가 그 값을 env로 덮었다.
@@ -118,7 +118,7 @@ ExpandKeywordsService ──▶ LlmProviderPort.expandKeyword()  KEYWORD_EXPANSI
 
 **전략 패턴.** API 규격별 호출을 전략 패턴으로 구현한다.
 
-- 공통 계약은 `LlmProviderPort`, 전략은 규격 하나를 담당하는 adapter(`OpenAiLlmProvider`)다.
+- 공통 계약은 `LlmProviderPort`, 전략은 규격 하나를 담당하는 adapter(`OpenAiChatAdapter`)다.
 - 선택 키는 `LlmApi`이고 선택은 조립 시점에 `LlmConfig` 한 곳에서 한다.
 
 - 느슨한 결합: 가드·라우터·application 서비스는 adapter 구현을 모르고 포트 계약만 본다. adapter를 바꿔도 위 층은 바뀌지 않는다.
@@ -141,14 +141,14 @@ ExpandKeywordsService ──▶ LlmProviderPort.expandKeyword()  KEYWORD_EXPANSI
 - 확장성: 요약에는 클라우드를, 확장에는 로컬을 쓰는 것이 yaml 한 줄이다.
 - 다형성: 같은 포트 뒤에 후보가 하나든 넷이든 호출하는 쪽은 같다.
 
-### 실패는 두 축으로 가른다. 귀속과 지속
+### 실패는 두 축으로 가른다. 책임과 지속
 
 이전에는 `retryable` 하나에서 "다음 tick 재시도", "다른 provider로 failover", "이 provider를 제외"가 파생됐다. 셋은 다른 질문이라 근거를 따로 둔다.
 
-- 귀속 `LlmFailureAttribution`: 이 실패의 책임이 어디 있는가. `INPUT`(이 키워드의 요청·응답), `MODEL`, `PROVIDER`(계정과 endpoint), `NONE`(우리 가드가 호출 전에 막음).
+- 책임 `LlmFailureAttribution`: 이 실패의 책임이 어디 있는가. `INPUT`(이 키워드의 요청·응답), `MODEL`, `PROVIDER`(계정과 endpoint), `NONE`(우리 가드가 호출 전에 막음).
 - 지속 `transient`: 다음 tick이나 다음 후보에서 저절로 풀리는가.
 
-| 상황 | 코드 | 귀속 | transient |
+| 상황 | 코드 | 책임 | transient |
 | --- | --- | --- | --- |
 | 404 | `LLM_MODEL_NOT_FOUND` | MODEL | false |
 | 400·413·422 | `LLM_REQUEST_REJECTED` | INPUT | false |
@@ -166,9 +166,9 @@ ExpandKeywordsService ──▶ LlmProviderPort.expandKeyword()  KEYWORD_EXPANSI
 | 판단 | 규칙 |
 | --- | --- |
 | 다음 후보로 failover | 항상 |
-| 서킷 기록 | 귀속이 MODEL 또는 PROVIDER이고 transient이며 실제 호출일 때 |
-| 모델 hold | 귀속이 MODEL이고 transient가 아닐 때. `reprobe-after` 뒤 한 번 다시 시도 |
-| 제공자 hold | 귀속이 PROVIDER이고 transient가 아닐 때. 그 제공자의 모든 모델을 뺀다. `reprobe-after` 뒤 다시 시도 |
+| 서킷 기록 | 책임이 MODEL 또는 PROVIDER이고 transient이며 실제 호출일 때 |
+| 모델 hold | 책임이 MODEL이고 transient가 아닐 때. `reprobe-after` 뒤 한 번 다시 시도 |
+| 제공자 hold | 책임이 PROVIDER이고 transient가 아닐 때. 그 제공자의 모든 모델을 뺀다. `reprobe-after` 뒤 다시 시도 |
 | cooldown | 429. Retry-After를 따르고 없으면 기본값, 상한 있음 |
 | 키워드 격리 카운트 | 시도한 후보 전부가 INPUT으로 끝났을 때만 |
 | tick 조기 중단 | 실제 호출이 한 건도 나갈 수 없을 때. 후보 전부가 차단·hold·cooldown |
@@ -191,7 +191,9 @@ hold는 서킷과 다른 상태다.
 - ADR 011의 "model 교체 시 promptVersion을 올린다" 규칙은 폐지한다.
   - 요약은 10분 window의 뉴스 묶음이라 수명이 짧다. 모델을 바꿨다고 옛 묶음을 다시 요약하면 새 `summaryId`가 생겨 같은 뉴스 알림이 다시 나간다.
   - 저장 키 `keyword + newsHash + promptVersion`은 그대로이고 promptVersion은 프롬프트만 뜻한다.
-- 요청한 모델(`requestedModel`)과 응답이 보고한 모델(`servedModel`, 없으면 null)을 따로 기록한다. Mongo 문서에는 필드를 더하고 기존 `model`은 유지한다.
+- 요청한 모델(`requestedModel`)과 응답이 보고한 모델(`model`)을 따로 기록한다.
+  - 응답이 모델을 보고하지 않으면 요청한 모델을 그대로 둔다. 둘 다 항상 값이 있다.
+  - Mongo 문서에는 `requestedModel`을 더하고 기존 `model`은 유지한다. 운영 데이터가 없어 옛 문서 호환 코드는 두지 않는다.
 
 ### 실제 provider를 부르는 검증은 별도 소스셋 `src/realTest`에 둔다
 
@@ -202,8 +204,9 @@ hold는 서킷과 다른 상태다.
 - secret이 없으면 skip이 아니라 실패다. 일부러 실행한 테스트가 조용히 skip되면 결과를 오해한다.
   - ADR 029의 "secret 부재는 skip"은 이 결정으로 폐지한다.
 - 유료 계정(`billing: metered`)은 플래그가 아니라 클래스 분리로 opt-in한다.
-- 검증은 후보마다 `GET /models`로 존재를, 실제 생성 1회로 계약을 본다. `/models`만으로는 402·403이 드러나지 않는다.
-- 소스셋 구성과 실행 방법은 `docs/테스트전략.md`에 있다. notification-worker의 실 webhook 테스트도 같은 규칙으로 옮긴다.
+- 검증은 모델마다 `GET /models`로 존재를, 후보로 오른 (용도, 모델) 쌍마다 실제 생성 1회로 계약을 본다.
+  - `/models`만으로는 402·403이 드러나지 않는다. 요약과 확장은 JSON 계약이 달라 용도마다 본다.
+- 규칙은 `docs/테스트전략.md`에, 실행 방법과 보고 형식은 `ai-service/README.md`에 있다. notification-worker의 실 webhook 테스트도 같은 규칙으로 옮긴다.
 
 이 구조는 아래 공식문서들을 참고하여 구성했다.
 
@@ -229,7 +232,7 @@ hold는 서킷과 다른 상태다.
 
 | 경로 | 내용 |
 | --- | --- |
-| `GET /api/v1/internal/llm/models` | 후보 모델 전부의 상태. 서킷 상태와 비율, cooldown 종료 시각, hold 사유와 해제 시각 |
+| `GET /api/v1/internal/llm/models` | 후보 모델 전부의 상태. 서킷 상태와 비율, cooldown 종료 시각, hold 사유와 해제 시각, 제공자 계정의 과금 방식 |
 | `POST /api/v1/internal/llm/models/{model}/reset` | 그 모델의 서킷·cooldown·hold와 제공자 hold를 함께 해제 |
 | `POST /api/v1/internal/llm/models/{model}/probe` | 그 모델 하나에 키워드 확장 1회 실호출. 과금 호출임을 응답에 명시 |
 

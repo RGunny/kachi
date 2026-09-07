@@ -29,7 +29,7 @@ ai-service는 뉴스 요약을 만들고, 반복해서 실패하는 키워드를
 알림 채널 fan-out은 이 서비스의 관심사가 아니다(ADR 023).
 
 eventKey는 내용 해시가 아니라 aggregate 식별자다. ADR 011 이후 요약 1건은 `keyword + newsHash + promptVersion` 1건이므로 id가 곧 핵심 키다. 
-내용 해시를 쓰면 요약을 지우고 재생성할 때 outbox 키가 충돌해 요약 저장 자체가 실패하고, 그 실패는 키워드 귀속이 아니라서 격리되지 않은 채 watermark를 영구히 붙잡는다.
+내용 해시를 쓰면 요약을 지우고 재생성할 때 outbox 키가 충돌해 요약 저장 자체가 실패하고, 그 실패는 키워드 탓이 아니라서 격리되지 않은 채 watermark를 영구히 붙잡는다.
 
 ### payload
 

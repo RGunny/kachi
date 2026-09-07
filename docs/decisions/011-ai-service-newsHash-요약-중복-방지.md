@@ -108,7 +108,9 @@ failover가 일어난 tick은 계획한 model과 저장된 model이 달라 다�
 `keyword_expansions`도 같은 이유로 `keyword + promptVersion`으로 줄였다. 이쪽은 index만 바꾸면 provider가 달라도
 두 번째 실행이 DuplicateKey로 실패하는 회귀가 생기므로 선조회 재사용을 함께 넣었다.
 
-포기하는 것: model 교체만으로는 재요약이 일어나지 않는다. model 교체 시 promptVersion을 올리는 것을 운용 규칙으로 둔다.
+포기하는 것: model 교체만으로는 재요약이 일어나지 않는다. ~~model 교체 시 promptVersion을 올리는 것을 운용 규칙으로 둔다.~~ ADR 030에서 폐지.
+모델 교체는 재요약 대상이 아니다. 요약은 수명이 짧아 옛 뉴스 묶음을 새 모델로 다시 요약하면 같은 뉴스 알림이 다시 나간다.
+프롬프트 버전은 프롬프트 본문과 같은 코드 파일(`LlmPrompt`)에 있고, 본문·입력 모양·출력 형식이 바뀔 때만 올린다.
 
 반려한 대안은 두 가지다.
 
