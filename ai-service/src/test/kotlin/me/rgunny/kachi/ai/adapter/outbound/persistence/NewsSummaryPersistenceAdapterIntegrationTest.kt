@@ -2,8 +2,7 @@ package me.rgunny.kachi.ai.adapter.outbound.persistence
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
@@ -80,14 +79,14 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
             adapter.save(newsSummary())
 
             assertFailsWith<DuplicateKeyException> {
-                adapter.save(newsSummary(provider = "groq", model = "llama-3.3-70b"))
+                adapter.save(newsSummary(provider = LlmProvider.GROQ, model = "llama-3.3-70b"))
             }
         }
 
         @Test
         @DisplayName("같은 keyword, newsHash, promptVersion 조합이면 model이 달라도 기존 요약을 조회한다")
         fun findByUniqueKey() = runBlocking {
-            adapter.save(newsSummary(provider = "groq", model = "llama-3.3-70b"))
+            adapter.save(newsSummary(provider = LlmProvider.GROQ, model = "llama-3.3-70b"))
 
             val found = adapter.findByUniqueKey(
                 keyword = AiKeyword.of("NVIDIA"),
@@ -97,7 +96,7 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
 
             assertNotNull(found)
             assertEquals("summary title", found.title)
-            assertEquals("llama-3.3-70b", found.model.value)
+            assertEquals("llama-3.3-70b", found.model)
         }
 
     }
@@ -123,7 +122,7 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
         @DisplayName("중복 저장이 발생하면 기존 요약을 반환하고 이벤트를 남기지 않는다")
         fun returnExistingSummaryOnDuplicateSave() = runBlocking {
             val first = adapter.save(newsSummary())
-            val retried = newsSummary(provider = "groq", model = "llama-3.3-70b")
+            val retried = newsSummary(provider = LlmProvider.GROQ, model = "llama-3.3-70b")
 
             val second = adapter.saveOrFindExisting(retried, outbox(eventKey = retried.id.value.toString()))
 
@@ -152,7 +151,7 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
     }
 
     private fun newsSummary(
-        provider: String = "openrouter",
+        provider: LlmProvider = LlmProvider.OPENROUTER,
         model: String = "openai/gpt-4o-mini",
         newsHash: String = "news-hash"
     ): NewsSummary {
@@ -163,8 +162,9 @@ class NewsSummaryPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrati
             title = "summary title",
             content = "summary content",
             sentiment = NewsSummarySentiment.NEUTRAL,
-            provider = LlmProviderName.of(provider),
-            model = LlmModelName.of(model),
+            provider = provider,
+            model = model,
+            requestedModel = model,
             promptVersion = PromptVersion.of("news-summary-v1"),
             tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 5),
             createdAt = createdAt

@@ -8,9 +8,9 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetad
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
 import me.rgunny.kachi.ai.application.port.outbound.persistence.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordExpansionPersistencePort
-import me.rgunny.kachi.ai.config.LlmPromptVersions
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
+import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
@@ -25,7 +25,6 @@ class ExpandKeywordsService(
     private val llmProviderPort: LlmProviderPort,
     private val keywordExpansionPersistencePort: KeywordExpansionPersistencePort,
     private val aiRunPersistencePort: AiRunPersistencePort,
-    private val promptVersions: LlmPromptVersions,
     private val clock: Clock
 ) : ExpandKeywordsUseCase {
 
@@ -90,7 +89,7 @@ class ExpandKeywordsService(
     ): LlmGenerationMetadata {
         val existingExpansion = keywordExpansionPersistencePort.findByUniqueKey(
             keyword = keyword,
-            promptVersion = promptVersions.keywordExpansion
+            promptVersion = KeywordExpansionPrompt.version
         )
 
         return existingExpansion?.let(::reuseMetadata)
@@ -103,6 +102,7 @@ class ExpandKeywordsService(
     private fun reuseMetadata(existingExpansion: KeywordExpansion): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = existingExpansion.provider,
+            requestedModel = existingExpansion.requestedModel,
             model = existingExpansion.model,
             promptVersion = existingExpansion.promptVersion,
             tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
@@ -122,6 +122,7 @@ class ExpandKeywordsService(
             expandedKeywords = llmResult.expandedKeywords,
             provider = llmResult.metadata.provider,
             model = llmResult.metadata.model,
+            requestedModel = llmResult.metadata.requestedModel,
             promptVersion = llmResult.metadata.promptVersion,
             createdAt = Instant.now(clock)
         )

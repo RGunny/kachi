@@ -2,21 +2,22 @@ package me.rgunny.kachi.ai.adapter.outbound.llm
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
-import me.rgunny.kachi.ai.config.LlmProviderMode
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
+import me.rgunny.kachi.ai.domain.llm.LlmUse
 import me.rgunny.kachi.ai.fake.FakeLlmProviderCandidate
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.MutableClock
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
-import kotlin.random.Random
+import org.junit.jupiter.params.provider.EnumSource
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertSame
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * 순회 정책만 검증한다. 후보가 왜 차단되는지는 후보 구현의 몫이라 가용성은 fake에 직접 지정한다.
@@ -25,45 +26,53 @@ import kotlin.test.assertSame
 class RoutingLlmProviderTest {
     private val clock = MutableClock()
     private val callLog = mutableListOf<String>()
-    private val candidates = candidates("a", "b")
-    private val router = router(candidates)
-    private val order = callOrder(candidates)
-    private val first = order[0]
-    private val second = order[1]
+    private val first = candidate(LlmModel.GROQ_QWEN3_27B)
+    private val second = candidate(LlmModel.MISTRAL_SMALL_2603)
+    private val third = candidate(LlmModel.OLLAMA_QWEN3_27B)
+    private val router = router(
+        summary = listOf(first, second),
+        expansion = listOf(first, second)
+    )
 
     @Test
-    @DisplayName("single-random mode는 등록된 provider 중 하나를 호출한다")
-    fun callSingleRandomProvider() = runBlocking {
-        val candidates = candidates("openrouter", "groq", "mistral")
-        val router = router(candidates)
+    @DisplayName("후보를 설정 순서 그대로 시도한다")
+    fun tryCandidatesInConfiguredOrder() = runBlocking {
+        val router = router(summary = listOf(third, first, second), expansion = listOf(first))
+        listOf(third, first).forEach { it.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT) }
 
-        val result = router.expandKeyword(keyword = KEYWORD, maxExpansions = 3)
+        val result = router.summarizeNews(KEYWORD, ARTICLES)
 
-        assertEquals(1, candidates.count { it.expandCallCount == 1 })
-        assertEquals(result.metadata.provider, candidates.first { it.expandCallCount == 1 }.provider)
+        assertEquals(listOf(third.name, first.name, second.name), callLog)
+        assertEquals(second.name, result.metadata.model)
     }
 
     @Test
-    @DisplayName("provider가 없으면 생성할 수 없다")
-    fun failWhenProvidersAreEmpty() {
+    @DisplayName("용도마다 자기 후보 목록을 쓴다")
+    fun useCandidatesOfEachUse() = runBlocking {
+        val router = router(summary = listOf(first), expansion = listOf(third))
+
+        router.summarizeNews(KEYWORD, ARTICLES)
+        router.expandKeyword(KEYWORD, 3)
+
+        assertEquals(listOf(first.name, third.name), callLog)
+    }
+
+    @Test
+    @DisplayName("후보가 없는 용도가 있으면 생성할 수 없다")
+    fun failWhenAnyUseHasNoCandidates() {
         assertFailsWith<IllegalArgumentException> {
-            RoutingLlmProvider(providers = emptyList(), mode = LlmProviderMode.SINGLE_RANDOM, clock = clock)
+            RoutingLlmProvider(candidates = mapOf(LlmUse.NEWS_SUMMARY to listOf(first)), clock = clock)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            RoutingLlmProvider(
+                candidates = mapOf(LlmUse.NEWS_SUMMARY to listOf(first), LlmUse.KEYWORD_EXPANSION to emptyList()),
+                clock = clock
+            )
         }
     }
 
     @Test
-    @DisplayName("aggregate mode는 아직 호출하지 않는다")
-    fun aggregateModeIsNotImplemented() = runBlocking {
-        val router = router(candidates, mode = LlmProviderMode.AGGREGATE)
-
-        assertFailsWith<UnsupportedOperationException> { router.expandKeyword(KEYWORD, 3) }
-        assertFailsWith<UnsupportedOperationException> { router.summarizeNews(KEYWORD, ARTICLES) }
-        assertFailsWith<UnsupportedOperationException> { router.prepareNewsSummary() }
-        Unit
-    }
-
-    @Test
-    @DisplayName("재시도 가능한 실패면 다음 provider를 호출한다")
+    @DisplayName("재시도 가능한 실패면 다음 후보를 호출한다")
     fun failoverOnRetryableFailure() = runBlocking {
         first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
 
@@ -71,49 +80,85 @@ class RoutingLlmProviderTest {
 
         assertEquals(1, first.summarizeCallCount)
         assertEquals(1, second.summarizeCallCount)
-        assertEquals(second.provider, result.metadata.provider)
+        assertEquals(second.name, result.metadata.model)
     }
 
-    @Test
-    @DisplayName("키워드 귀속 실패는 다른 provider를 시도하지 않는다")
-    fun doNotFailoverOnKeywordBoundFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
-
-        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
-
-        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, failure.failure.code)
-        assertEquals(0, second.summarizeCallCount)
-    }
-
-    @Test
-    @DisplayName("요청 검증 실패도 다른 provider를 시도하지 않는다")
-    fun doNotFailoverOnValidationFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_CLIENT_ERROR)
-
-        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
-
-        assertEquals(LlmFailureCode.LLM_CLIENT_ERROR, failure.failure.code)
-        assertEquals(0, second.summarizeCallCount)
-    }
-
-    @Test
-    @DisplayName("인증 실패는 다른 provider로 넘어간다")
-    fun failoverOnAuthorizationFailure() = runBlocking {
-        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_AUTHORIZATION_ERROR)
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = ["LLM_INVALID_RESPONSE", "LLM_REQUEST_REJECTED"])
+    @DisplayName("입력 탓 실패도 다음 후보를 호출한다")
+    fun failoverOnInputFailure(code: LlmFailureCode) = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(code)
 
         val result = router.summarizeNews(KEYWORD, ARTICLES)
 
-        assertEquals(second.provider, result.metadata.provider)
+        assertEquals(1, first.summarizeCallCount)
+        assertEquals(second.name, result.metadata.model)
     }
 
     @Test
-    @DisplayName("분류되지 않은 LLM 실패는 다른 provider로 넘어간다")
+    @DisplayName("시도한 후보 전부가 입력 탓으로 끝나면 결과 예외가 키워드 탓으로 확정한다")
+    fun allInputWhenEveryCandidateFailsByInput() = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_REQUEST_REJECTED)
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+
+        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
+
+        assertTrue(failure.allInput)
+        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, failure.failure.code)
+        assertEquals(
+            listOf(LlmFailureCode.LLM_REQUEST_REJECTED, LlmFailureCode.LLM_INVALID_RESPONSE),
+            failure.attempts.map { it.code }
+        )
+    }
+
+    @Test
+    @DisplayName("일부 후보만 입력 탓이면 키워드 탓으로 확정하지 않는다")
+    fun notAllInputWhenOnlySomeCandidatesFailByInput() = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_SERVER_ERROR)
+
+        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
+
+        assertFalse(failure.allInput)
+        assertEquals(2, failure.attempts.size)
+    }
+
+    @Test
+    @DisplayName("차단된 후보는 시도 기록에 들어가지 않는다")
+    fun blockedCandidatesAreNotAttempts() = runBlocking {
+        first.blockedBy = OPEN
+        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_INVALID_RESPONSE)
+
+        val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
+
+        assertEquals(listOf(LlmFailureCode.LLM_INVALID_RESPONSE), failure.attempts.map { it.code })
+        assertTrue(failure.allInput)
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = LlmFailureCode::class, names = [
+        "LLM_MODEL_NOT_FOUND",
+        "LLM_UNAUTHORIZED",
+        "LLM_PAYMENT_REQUIRED",
+        "LLM_FORBIDDEN"
+    ])
+    @DisplayName("모델·계정 실패는 다른 후보로 넘어간다")
+    fun failoverOnModelAndProviderFailure(code: LlmFailureCode) = runBlocking {
+        first.failures += AiTestFixture.llmProviderException(code)
+
+        val result = router.summarizeNews(KEYWORD, ARTICLES)
+
+        assertEquals(second.name, result.metadata.model)
+    }
+
+    @Test
+    @DisplayName("분류되지 않은 LLM 실패는 다른 후보로 넘어간다")
     fun failoverOnUnknownFailure() = runBlocking {
         first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_UNKNOWN_ERROR)
 
         val result = router.summarizeNews(KEYWORD, ARTICLES)
 
-        assertEquals(second.provider, result.metadata.provider)
+        assertEquals(second.name, result.metadata.model)
     }
 
     @Test
@@ -127,10 +172,10 @@ class RoutingLlmProviderTest {
     }
 
     @Test
-    @DisplayName("각 provider는 한 호출에 최대 한 번만 시도한다")
-    fun tryEachProviderOnce() = runBlocking {
-        val candidates = candidates("a", "b", "c")
-        val router = router(candidates)
+    @DisplayName("각 후보는 한 호출에 최대 한 번만 시도한다")
+    fun tryEachCandidateOnce() = runBlocking {
+        val candidates = listOf(first, second, third)
+        val router = router(summary = candidates, expansion = candidates)
         candidates.forEach { it.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT) }
 
         assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
@@ -140,29 +185,30 @@ class RoutingLlmProviderTest {
     }
 
     @Test
-    @DisplayName("차단된 provider는 호출 없이 건너뛴다")
-    fun skipBlockedProviderWithoutCall() = runBlocking {
+    @DisplayName("차단된 후보는 호출 없이 건너뛴다")
+    fun skipBlockedCandidateWithoutCall() = runBlocking {
         first.blockedBy = OPEN
 
         val result = router.summarizeNews(KEYWORD, ARTICLES)
 
         assertEquals(0, first.summarizeCallCount)
         assertEquals(1, second.summarizeCallCount)
-        assertEquals(second.provider, result.metadata.provider)
+        assertEquals(second.name, result.metadata.model)
     }
 
     @Test
-    @DisplayName("모든 provider가 차단되면 호출 없이 실패한다")
-    fun failWithoutCallWhenAllProvidersAreBlocked() = runBlocking {
-        candidates.forEach { it.blockedBy = OPEN }
+    @DisplayName("모든 후보가 차단되면 호출 없이 실패한다")
+    fun failWithoutCallWhenAllCandidatesAreBlocked() = runBlocking {
+        listOf(first, second).forEach { it.blockedBy = OPEN }
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, failure.failure.code)
-        assertEquals(LlmProviderName.NONE, failure.failure.provider)
-        assertEquals(0, candidates.sumOf { it.summarizeCallCount })
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, failure.failure.code)
+        assertNull(failure.failure.provider)
+        assertFalse(failure.allInput)
+        assertEquals(0, first.summarizeCallCount + second.summarizeCallCount)
         assertEquals(
-            "no llm provider available: ${first.name}=$OPEN, ${second.name}=$OPEN",
+            "no llm candidate available: ${first.name}=$OPEN, ${second.name}=$OPEN",
             failure.failure.message
         )
     }
@@ -176,7 +222,8 @@ class RoutingLlmProviderTest {
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
-        assertSame(thrown, failure)
+        assertEquals(thrown.failure, failure.failure)
+        assertEquals(thrown, failure.cause)
     }
 
     @Test
@@ -203,84 +250,73 @@ class RoutingLlmProviderTest {
     }
 
     @Test
-    @DisplayName("차단 사유가 provider마다 다르면 각각 열거한다")
-    fun listBlockedReasonPerProvider() = runBlocking {
+    @DisplayName("차단 사유가 후보마다 다르면 각각 열거한다")
+    fun listBlockedReasonPerCandidate() = runBlocking {
         first.blockedBy = OPEN
         second.blockedBy = COOLDOWN
 
         val failure = assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
 
         assertEquals(
-            "no llm provider available: ${first.name}=$OPEN, ${second.name}=$COOLDOWN",
+            "no llm candidate available: ${first.name}=$OPEN, ${second.name}=$COOLDOWN",
             failure.failure.message
         )
     }
 
     @Test
-    @DisplayName("요약은 plan의 provider를 먼저 호출한다")
-    fun callPlanProviderFirst() = runBlocking {
+    @DisplayName("요약 plan은 첫 후보의 것이고 그 후보를 먼저 호출한다")
+    fun planComesFromFirstCandidate() = runBlocking {
         val prepared = router.prepareNewsSummary()
         prepared.summarize(KEYWORD, ARTICLES)
 
-        assertEquals(prepared.plan.provider.value, callLog.first())
+        assertEquals(first.model.provider, prepared.plan.provider)
+        assertEquals(first.name, callLog.first())
     }
 
     @Test
-    @DisplayName("plan의 provider가 실패하면 다른 provider가 요약한다")
-    fun summarizeWithNextProviderWhenPlanProviderFails() = runBlocking {
+    @DisplayName("첫 후보가 차단돼 있어도 plan은 첫 후보의 것이다")
+    fun planIgnoresAvailability() = runBlocking {
+        first.blockedBy = OPEN
+
         val prepared = router.prepareNewsSummary()
-        val planProvider = candidates.first { it.provider == prepared.plan.provider }
-        val other = candidates.first { it.provider != prepared.plan.provider }
-        planProvider.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
+        val result = prepared.summarize(KEYWORD, ARTICLES)
+
+        assertEquals(first.model.provider, prepared.plan.provider)
+        assertEquals(second.name, result.metadata.model)
+    }
+
+    @Test
+    @DisplayName("plan의 후보가 실패하면 다음 후보가 요약한다")
+    fun summarizeWithNextCandidateWhenPlanCandidateFails() = runBlocking {
+        val prepared = router.prepareNewsSummary()
+        first.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
 
         val result = prepared.summarize(KEYWORD, ARTICLES)
 
-        assertEquals(other.provider, result.metadata.provider)
-        assertEquals(planProvider.provider, prepared.plan.provider)
+        assertEquals(second.name, result.metadata.model)
+        assertEquals(first.model.provider, prepared.plan.provider)
     }
 
     @Test
-    @DisplayName("모든 provider가 차단돼도 요약 준비는 plan을 돌려준다")
-    fun prepareReturnsPlanWhenAllProvidersAreBlocked() = runBlocking {
-        candidates.forEach { it.blockedBy = OPEN }
+    @DisplayName("모든 후보가 차단돼도 요약 준비는 plan을 돌려준다")
+    fun prepareReturnsPlanWhenAllCandidatesAreBlocked() = runBlocking {
+        listOf(first, second).forEach { it.blockedBy = OPEN }
 
         val prepared = router.prepareNewsSummary()
         val failure = assertFailsWith<LlmProviderException> { prepared.summarize(KEYWORD, ARTICLES) }
 
-        assertEquals(LlmFailureCode.LLM_PROVIDER_UNAVAILABLE, failure.failure.code)
-        assertEquals(LlmProviderName.NONE, failure.failure.provider)
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    @DisplayName("호출 가능해 보이는 provider를 plan으로 우선 고른다")
-    fun preferAvailableProviderAsPlan(seed: Int) = runBlocking {
-        val candidates = candidates("a", "b")
-        val router = router(candidates, seed = seed)
-        candidates.first { it.name == "a" }.blockedBy = OPEN
-
-        assertEquals("b", router.prepareNewsSummary().plan.provider.value)
+        assertEquals(LlmFailureCode.LLM_NOT_PERMITTED, failure.failure.code)
+        assertNull(failure.failure.provider)
     }
 
     @Test
-    @DisplayName("같은 seed면 같은 순서로 시도한다")
-    fun sameSeedGivesSameOrder() = runBlocking {
-        val firstLog = failoverCallLog(seed = 7)
-        val secondLog = failoverCallLog(seed = 7)
-
-        assertEquals(firstLog, secondLog)
-        assertEquals(3, firstLog.size)
-    }
-
-    @Test
-    @DisplayName("차단이 풀린 provider는 다시 후보가 된다")
-    fun retryProviderOnceUnblocked() = runBlocking {
+    @DisplayName("차단이 풀린 후보는 다시 후보가 된다")
+    fun retryCandidateOnceUnblocked() = runBlocking {
         first.blockedBy = OPEN
         router.summarizeNews(KEYWORD, ARTICLES)
         assertEquals(0, first.summarizeCallCount)
 
         first.blockedBy = null
-        second.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
         router.summarizeNews(KEYWORD, ARTICLES)
 
         assertEquals(1, first.summarizeCallCount)
@@ -294,43 +330,24 @@ class RoutingLlmProviderTest {
         val result = router.expandKeyword(KEYWORD, 3)
 
         assertEquals(1, first.expandCallCount)
-        assertEquals(second.provider, result.metadata.provider)
+        assertEquals(second.name, result.metadata.model)
     }
 
-    /**
-     * 전 provider가 실패하는 동안의 호출 순서. 같은 seed가 같은 순서를 만드는지 확인하는 데 쓴다.
-     */
-    private suspend fun failoverCallLog(seed: Int): List<String> {
-        val candidates = candidates("a", "b", "c")
-        val router = router(candidates, seed = seed)
-        candidates.forEach { it.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT) }
-
-        assertFailsWith<LlmProviderException> { router.summarizeNews(KEYWORD, ARTICLES) }
-
-        return callLog.toList().also { callLog.clear() }
-    }
-
-    /**
-     * router가 만들 후보 순서. 전원이 호출 가능할 때 router와 같은 seed로 섞은 결과와 같다.
-     */
-    private fun callOrder(candidates: List<FakeLlmProviderCandidate>): List<FakeLlmProviderCandidate> {
-        return candidates.shuffled(Random(SEED))
-    }
-
-    private fun candidates(vararg names: String): List<FakeLlmProviderCandidate> {
-        return names.map { name -> FakeLlmProviderCandidate(name).also { it.callLog = callLog } }
+    private fun candidate(model: LlmModel): FakeLlmProviderCandidate {
+        return FakeLlmProviderCandidate(model).also { it.callLog = callLog }
     }
 
     private fun router(
-        candidates: List<FakeLlmProviderCandidate>,
-        mode: LlmProviderMode = LlmProviderMode.SINGLE_RANDOM,
-        seed: Int = SEED
+        summary: List<FakeLlmProviderCandidate>,
+        expansion: List<FakeLlmProviderCandidate>
     ): RoutingLlmProvider {
-        return RoutingLlmProvider(providers = candidates, mode = mode, clock = clock, random = Random(seed))
+        return RoutingLlmProvider(
+            candidates = mapOf(LlmUse.NEWS_SUMMARY to summary, LlmUse.KEYWORD_EXPANSION to expansion),
+            clock = clock
+        )
     }
 
     private companion object {
-        const val SEED = 1
         const val OPEN = "open"
         const val COOLDOWN = "cooldown"
         val KEYWORD: AiKeyword = AiTestFixture.keyword()

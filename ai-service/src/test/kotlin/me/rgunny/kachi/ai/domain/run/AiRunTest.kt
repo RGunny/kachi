@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.domain.run
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -39,16 +38,16 @@ class AiRunTest {
             succeededCount = 2,
             failureCount = 0,
             failureReason = null,
-            provider = LlmProviderName.of("openai"),
-            model = LlmModelName.of("gpt-4.1-mini"),
+            provider = LlmProvider.GROQ,
+            model = "gpt-4.1-mini",
             promptVersion = PromptVersion.of("news-summary-v1"),
             finishedAt = finishedAt
         )
 
         assertEquals(AiRunStatus.SUCCEEDED, completed.status)
         assertEquals(null, completed.failureReason)
-        assertEquals(LlmProviderName.of("openai"), completed.provider)
-        assertEquals(LlmModelName.of("gpt-4.1-mini"), completed.model)
+        assertEquals(LlmProvider.GROQ, completed.provider)
+        assertEquals("gpt-4.1-mini", completed.model)
         assertEquals(PromptVersion.of("news-summary-v1"), completed.promptVersion)
     }
 
@@ -59,8 +58,8 @@ class AiRunTest {
             succeededCount = 1,
             failureCount = 1,
             failureReason = AiFailureReason.INVALID_RESPONSE,
-            provider = LlmProviderName.of("openai"),
-            model = LlmModelName.of("gpt-4.1-mini"),
+            provider = LlmProvider.GROQ,
+            model = "gpt-4.1-mini",
             promptVersion = PromptVersion.of("news-summary-v1"),
             finishedAt = finishedAt
         )
@@ -151,8 +150,8 @@ class AiRunTest {
                 succeededCount = 1,
                 failureCount = 0,
                 failureReason = null,
-                provider = LlmProviderName.of("openai"),
-                model = LlmModelName.of("gpt-4.1-mini"),
+                provider = LlmProvider.GROQ,
+                model = "gpt-4.1-mini",
                 promptVersion = PromptVersion.of("news-summary-v1"),
                 finishedAt = startedAt.minusSeconds(1)
             )

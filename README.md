@@ -78,7 +78,7 @@ user-service
 | --- | --- | --- |
 | `user-service` | 사용자, canonical 키워드·구독, 채널 바인딩(암호화 주소, Telegram 연결 링크), 활성 키워드·구독·바인딩 internal API, OAuth2/JWT, refresh token, MySQL/Redis 저장소 구현 | [user-service README](./user-service/README.md) |
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점 구현 | [collector-service README](./collector-service/README.md) |
-| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, OpenAI 호환 provider 연동과 서킷 브레이커/failover, LLM 실패 분류와 키워드 격리, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox·LLM provider 운영 internal API | [ai-service README](./ai-service/README.md) |
+| `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, 용도별 후보 모델(enum)과 모델 단위 서킷·cooldown·hold, 순차 failover, 실패의 책임·지속 분류와 전 후보 합의 격리, 코드에 둔 프롬프트 버전, `src/realTest` 실호출 검증, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox 운영 internal API, LLM 모델 상태·reset·probe internal API | [ai-service README](./ai-service/README.md) |
 | `notification-service` | notification-routing/core/service/worker/contract 모듈 구성, `ai.summary.created`·`ai.keyword.quarantined` 소비와 구독자 x 채널 fan-out(`notification.requested` 발행, RoutingJob 멱등), 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
 | `history-service` | 미구현 | - |
 
@@ -149,7 +149,7 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 
 전체 사이클을 한 번에 띄워 실제 LLM·채널로 확인할 때는 `cycle.sh`를 쓴다.
 
-- 인프라 → Mongo index → user-service → 나머지 순으로 띄우고 ai-service의 이벤트 발행·relay를 켠다.
+- 인프라 → Mongo index → user-service → 나머지 순으로 기동한다. ai-service의 LLM 후보는 local 프로파일의 Ollama 하나라 먼저 준비됐는지 본다.
 - 확인 절차는 [docs/전체-사이클-스모크.md](./docs/전체-사이클-스모크.md)에 있다.
 
 ```sh
@@ -224,7 +224,7 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [018. 재시도 폭주 방지와 복구 트래픽 제어](./docs/decisions/018-재시도-폭주-방지와-복구-트래픽-제어.md) | retry storm, retry budget, 서킷 브레이커, slow start, bulkhead 공통 설계 원칙 |
 | [019. notification 운영 모니터링 및 관측성 설계](./docs/decisions/019-notification-운영-모니터링-및-observability-설계.md) | notification metric contract, Prometheus/Grafana, 후속 trace/log 설계 |
 | [020. ai-service scheduler 실행 모델과 요약 window](./docs/decisions/020-ai-service-scheduler-실행-모델과-요약-window.md) | scheduler/internal API 실행 모델, 중복 실행 방지, watermark 기반 요약 window, 실패 키워드 격리와 해제 |
-| [021. ai-service LLM 실패 분류와 provider 서킷 브레이커](./docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md) | LLM 실패 모델, 격리 카운트 규칙, provider 서킷 브레이커와 failover |
+| [021. ai-service LLM 실패 분류와 서킷 브레이커, failover, 키워드 격리](./docs/decisions/021-ai-service-llm-실패-분류와-provider-circuit-breaker.md) | 실패의 책임·지속 두 축을 소비처가 쓰는 규칙: 서킷 기록, hold, cooldown, 전 후보 합의 격리, skip 분리, tick 조기 중단, 순차 failover |
 | [022. ai-service outbox와 이벤트 발행 보장](./docs/decisions/022-ai-service-outbox와-이벤트-발행-보장.md) | 요약/격리 이벤트 outbox, claim/finalize CAS, publish 실패 분류와 재시도 |
 | [023. ai-service 도메인 이벤트 발행과 ai-contract](./docs/decisions/023-ai-service-도메인-이벤트-발행과-ai-contract.md) | `ai.*` topic과 계약 모듈, Kafka 발행 실패 분류, producer timeout, relay와 발행 어댑터 스위치 분리 |
 | [024. 상태 전이 aggregate 불변화와 finalize CAS](./docs/decisions/024-상태-전이-aggregate-불변화와-finalize-cas.md) | notification aggregate 불변 전환, outbox finalize의 claim CAS, ai-service와 남기는 차이 |
@@ -233,3 +233,4 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [027. 알림 라우팅 서비스](./docs/decisions/027-알림-라우팅.md) | routing을 독립 모듈·프로세스로, `notification.requested` 계약 연결, RoutingJob 멱등, 결정적 requestId, 키워드 격리 알림 수신자 |
 | [028. 발송 직전 주소 조회와 스킵](./docs/decisions/028-발송-직전-주소-조회와-스킵.md) | worker의 `(recipientId, channel)` 주소 조회와 Redis 캐시, 없는 수신자의 스킵(SUPPRESSED), `sent:{requestId}` 발송 직전 가드, 전역 webhook 설정 삭제 |
 | [029. 전체 사이클 검증과 e2e-test 모듈](./docs/decisions/029-전체-사이클-검증과-e2e-test-모듈.md) | 모듈별 Kafka 계약 통합 테스트, 서비스 다섯 개를 컨테이너로 띄우는 `e2e-test` 모듈과 별도 task, skip/실패 규칙, 스모크 절차 |
+| [030. ai-service LLM 호출 단위, 실패 분류, 실호출 검증](./docs/decisions/030-ai-service-llm-호출-단위와-실패-분류와-실호출-검증.md) | API 규격·제공자·모델·용도 enum과 yaml의 경계, 전략·데코레이터·컴포지트 세 층 조립, 실패의 책임·지속 두 축, 프롬프트 버전을 코드에, `src/realTest` 소스셋과 운영 API |

@@ -89,6 +89,9 @@ class JacksonAiOutboxEventSerializer(
             DomainFailureReason.NETWORK_ERROR -> AiFailureReason.NETWORK_ERROR
             DomainFailureReason.INVALID_RESPONSE -> AiFailureReason.INVALID_RESPONSE
             DomainFailureReason.PROVIDER_UNAVAILABLE -> AiFailureReason.PROVIDER_UNAVAILABLE
+            // 둘 다 4xx이고 격리 카운트는 입력 탓 실패만 올리므로 격리 이벤트에 실릴 경로가 없다. 계약에 값을 늘리지 않고 4xx로 보낸다.
+            DomainFailureReason.MODEL_NOT_FOUND,
+            DomainFailureReason.ACCOUNT_ERROR -> AiFailureReason.CLIENT_ERROR
             DomainFailureReason.EMPTY_INPUT -> AiFailureReason.EMPTY_INPUT
             DomainFailureReason.UNKNOWN -> AiFailureReason.UNKNOWN
         }

@@ -10,6 +10,13 @@ import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import me.rgunny.kachi.ai.config.AiOutboxRetryProperties
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
+import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
+import me.rgunny.kachi.ai.config.LlmCooldownProperties
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProbeResult
+import me.rgunny.kachi.ai.config.LlmHoldProperties
+import me.rgunny.kachi.ai.config.LlmProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
@@ -19,8 +26,12 @@ import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmBilling
+import me.rgunny.kachi.ai.domain.llm.LlmModel
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
+import me.rgunny.kachi.ai.domain.llm.LlmUse
+import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
+import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
@@ -47,10 +58,18 @@ object AiTestFixture {
     val NOW: Instant = Instant.parse("2026-06-03T00:00:00Z")
     val CLOCK: Clock = Clock.fixed(NOW, ZoneOffset.UTC)
 
-    val PROVIDER: LlmProviderName = LlmProviderName.of("openrouter")
-    val MODEL: LlmModelName = LlmModelName.of("test-model")
-    val NEWS_SUMMARY_PROMPT_VERSION: PromptVersion = PromptVersion.of("news-summary-v1")
-    val KEYWORD_EXPANSION_PROMPT_VERSION: PromptVersion = PromptVersion.of("keyword-expansion-v1")
+    /** 후보로 쓰는 모델 상수. 가드·라우터 테스트가 식별자로 쓴다. */
+    val LLM_MODEL: LlmModel = LlmModel.GROQ_QWEN3_27B
+    val DEFAULT_HOLD_REPROBE_AFTER: Duration = Duration.ofHours(1)
+    val PROVIDER: LlmProvider = LLM_MODEL.provider
+
+    /** 응답이 보고한 모델 이름. 요청한 code와 같지 않아도 된다는 것을 드러내려고 다른 값을 쓴다. */
+    const val MODEL: String = "test-model"
+
+    /** 요청에 실은 모델 code. */
+    val REQUESTED_MODEL: String = LLM_MODEL.code
+    val NEWS_SUMMARY_PROMPT_VERSION: PromptVersion = NewsSummaryPrompt.version
+    val KEYWORD_EXPANSION_PROMPT_VERSION: PromptVersion = KeywordExpansionPrompt.version
     val TOKEN_USAGE: TokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20)
 
     val NEWS_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
@@ -232,8 +251,9 @@ object AiTestFixture {
     fun keywordExpansion(
         keyword: AiKeyword = keyword(),
         expandedKeywords: List<String> = listOf("AI 반도체", "GPU"),
-        provider: LlmProviderName = PROVIDER,
-        model: LlmModelName = MODEL,
+        provider: LlmProvider = PROVIDER,
+        model: String = MODEL,
+        requestedModel: String = REQUESTED_MODEL,
         createdAt: Instant = NOW
     ): KeywordExpansion {
         return KeywordExpansion.create(
@@ -241,6 +261,7 @@ object AiTestFixture {
             expandedKeywords = expandedKeywords.map(ExpandedKeyword::of),
             provider = provider,
             model = model,
+            requestedModel = requestedModel,
             promptVersion = KEYWORD_EXPANSION_PROMPT_VERSION,
             createdAt = createdAt
         )
@@ -250,8 +271,9 @@ object AiTestFixture {
         keyword: AiKeyword = keyword(),
         sourceNewsIds: List<UUID> = listOf(NEWS_ID),
         newsHash: String = "news-hash",
-        provider: LlmProviderName = PROVIDER,
-        model: LlmModelName = MODEL,
+        provider: LlmProvider = PROVIDER,
+        model: String = MODEL,
+        requestedModel: String = REQUESTED_MODEL,
         createdAt: Instant = NOW
     ): NewsSummary {
         return NewsSummary.create(
@@ -263,6 +285,7 @@ object AiTestFixture {
             sentiment = NewsSummarySentiment.NEUTRAL,
             provider = provider,
             model = model,
+            requestedModel = requestedModel,
             promptVersion = NEWS_SUMMARY_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE,
             createdAt = createdAt
@@ -272,6 +295,7 @@ object AiTestFixture {
     fun newsSummaryMetadata(): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = PROVIDER,
+            requestedModel = REQUESTED_MODEL,
             model = MODEL,
             promptVersion = NEWS_SUMMARY_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE
@@ -281,6 +305,7 @@ object AiTestFixture {
     fun keywordExpansionMetadata(): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = PROVIDER,
+            requestedModel = REQUESTED_MODEL,
             model = MODEL,
             promptVersion = KEYWORD_EXPANSION_PROMPT_VERSION,
             tokenUsage = TOKEN_USAGE
@@ -372,6 +397,56 @@ object AiTestFixture {
         return LlmProviderException(llmFailure(code))
     }
 
+    /**
+     * 후보 여럿을 거친 뒤의 실패. 대표 실패는 마지막 시도이고 [codes]가 실제 호출 순서다. 격리 카운트가 전 후보 합의를 보는지 확인하는 데 쓴다.
+     */
+    fun llmProviderException(vararg codes: LlmFailureCode): LlmProviderException {
+        require(codes.isNotEmpty())
+        val attempts = codes.map { llmFailure(it) }
+
+        return LlmProviderException(failure = attempts.last(), attempts = attempts)
+    }
+
+    fun holdProperties(reprobeAfter: Duration = DEFAULT_HOLD_REPROBE_AFTER): LlmHoldProperties {
+        return LlmHoldProperties(reprobeAfter = reprobeAfter)
+    }
+
+    fun llmModelStatus(
+        model: LlmModel = LLM_MODEL,
+        billing: LlmBilling = LlmBilling.FREE_TIER,
+        circuitBreakerState: String = "CLOSED",
+        cooldownUntil: Instant? = null,
+        hold: LlmHold? = null
+    ): LlmModelStatus {
+        return LlmModelStatus(
+            model = model,
+            billing = billing,
+            circuitBreakerState = circuitBreakerState,
+            cooldownUntil = cooldownUntil,
+            hold = hold,
+            failureRate = 50f,
+            slowCallRate = -1f,
+            bufferedCalls = 4,
+            successfulCalls = 2,
+            failedCalls = 2,
+            notPermittedCalls = 3
+        )
+    }
+
+    fun llmProbeResult(
+        model: LlmModel = LLM_MODEL,
+        billing: LlmBilling = LlmBilling.FREE_TIER,
+        latency: Duration = Duration.ofMillis(1234)
+    ): LlmProbeResult {
+        return LlmProbeResult(
+            model = model,
+            billing = billing,
+            metadata = keywordExpansionMetadata(),
+            latency = latency,
+            expandedKeywords = listOf(ExpandedKeyword.of("AI 반도체"), ExpandedKeyword.of("GPU"))
+        )
+    }
+
     /** 429 응답. [retryAfterMillis]가 null이면 Retry-After 헤더가 없는 응답이다. */
     fun rateLimitedException(retryAfterMillis: Long?): LlmProviderException {
         return LlmProviderException(
@@ -387,6 +462,73 @@ object AiTestFixture {
         failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD
     ): KeywordQuarantineProperties {
         return KeywordQuarantineProperties(failureThreshold = failureThreshold)
+    }
+
+    fun circuitBreakerProperties(
+        slidingWindowSize: Int = 6,
+        minimumNumberOfCalls: Int = 3,
+        slowCallRateThreshold: Float = 80f
+    ): LlmCircuitBreakerProperties {
+        return LlmCircuitBreakerProperties(
+            slidingWindowSize = slidingWindowSize,
+            minimumNumberOfCalls = minimumNumberOfCalls,
+            failureRateThreshold = 50f,
+            slowCallRateThreshold = slowCallRateThreshold,
+            waitDurationInOpenState = Duration.ofSeconds(60),
+            permittedNumberOfCallsInHalfOpenState = 2
+        )
+    }
+
+    fun providerProperties(
+        billing: LlmBilling = LlmBilling.FREE_TIER,
+        apiKey: String = "test-key",
+        baseUrl: String = "https://llm.example.com/v1",
+        connectTimeout: Duration = Duration.ofSeconds(2)
+    ): LlmProperties.ProviderProperties {
+        return LlmProperties.ProviderProperties(
+            baseUrl = baseUrl,
+            apiKey = apiKey,
+            billing = billing,
+            connectTimeout = connectTimeout
+        )
+    }
+
+    fun modelProperties(
+        timeout: Duration = Duration.ofSeconds(10),
+        slowAfter: Duration = Duration.ofSeconds(8)
+    ): LlmProperties.ModelProperties {
+        return LlmProperties.ModelProperties(timeout = timeout, slowAfter = slowAfter)
+    }
+
+    /**
+     * 클라우드 둘을 후보로 두고 Ollama는 정의만 있는 설정. 참조되지 않은 항목이 걸러지는지 보는 데 쓴다.
+     */
+    fun llmProperties(
+        providers: Map<LlmProvider, LlmProperties.ProviderProperties> = mapOf(
+            LlmProvider.GROQ to providerProperties(),
+            LlmProvider.MISTRAL to providerProperties(),
+            LlmProvider.OLLAMA to providerProperties(billing = LlmBilling.SELF_HOSTED, apiKey = "")
+        ),
+        models: Map<LlmModel, LlmProperties.ModelProperties> = mapOf(
+            LlmModel.GROQ_QWEN3_27B to modelProperties(),
+            LlmModel.MISTRAL_SMALL_2603 to modelProperties(timeout = Duration.ofSeconds(20), slowAfter = Duration.ofSeconds(15)),
+            LlmModel.OLLAMA_QWEN3_27B to modelProperties(timeout = Duration.ofSeconds(150), slowAfter = Duration.ofSeconds(120))
+        ),
+        uses: Map<LlmUse, LlmProperties.UseProperties> = mapOf(
+            LlmUse.NEWS_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B, LlmModel.MISTRAL_SMALL_2603)),
+            LlmUse.KEYWORD_EXPANSION to LlmProperties.UseProperties(listOf(LlmModel.MISTRAL_SMALL_2603))
+        )
+    ): LlmProperties {
+        return LlmProperties(
+            providers = providers,
+            models = models,
+            uses = uses,
+            guard = LlmProperties.GuardProperties(
+                circuitBreaker = circuitBreakerProperties(),
+                cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
+                hold = holdProperties()
+            )
+        )
     }
 
     const val DEFAULT_QUARANTINE_FAILURE_THRESHOLD = 3

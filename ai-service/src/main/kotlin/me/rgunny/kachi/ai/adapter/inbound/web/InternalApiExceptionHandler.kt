@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.adapter.inbound.web
 
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
+import me.rgunny.kachi.ai.application.exception.AiCommonErrorCode
 import me.rgunny.kachi.ai.application.exception.AiErrorCode
 import me.rgunny.kachi.ai.application.exception.AiException
 import me.rgunny.kachi.ai.application.exception.AiOutboxErrorCode
@@ -56,7 +57,8 @@ class InternalApiExceptionHandler {
             AiQuarantineErrorCode.QUARANTINE_NOT_FOUND to ErrorCode.KEYWORD_QUARANTINE_NOT_FOUND,
             AiQuarantineErrorCode.QUARANTINE_NOT_RELEASABLE to ErrorCode.KEYWORD_QUARANTINE_NOT_RELEASABLE,
             AiOutboxErrorCode.OUTBOX_NOT_FOUND to ErrorCode.AI_OUTBOX_NOT_FOUND,
-            AiOutboxErrorCode.OUTBOX_NOT_RECOVERABLE to ErrorCode.AI_OUTBOX_NOT_RECOVERABLE
+            AiOutboxErrorCode.OUTBOX_NOT_RECOVERABLE to ErrorCode.AI_OUTBOX_NOT_RECOVERABLE,
+            AiCommonErrorCode.LLM_PROVIDER_CALL_FAILED to ErrorCode.LLM_CALL_FAILED
         )
     }
 }

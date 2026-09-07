@@ -1,8 +1,7 @@
 package me.rgunny.kachi.ai.domain.summary
 
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -30,6 +29,7 @@ class NewsSummaryTest {
             sentiment = NewsSummarySentiment.POSITIVE,
             provider = provider,
             model = model,
+            requestedModel = model,
             promptVersion = promptVersion,
             tokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20),
             createdAt = now
@@ -39,6 +39,27 @@ class NewsSummaryTest {
         assertEquals("NVIDIA 요약", summary.title)
         assertEquals("실적 발표 요약", summary.content)
         assertEquals(30, summary.tokenUsage.totalTokens)
+    }
+
+    @Test
+    @DisplayName("요청 모델이 비어 있으면 생성할 수 없다")
+    fun rejectBlankRequestedModel() {
+        assertFailsWith<IllegalArgumentException> {
+            NewsSummary.create(
+                keyword = AiKeyword.of("NVIDIA"),
+                sourceNewsIds = listOf(UUID.fromString("018f0000-0000-7000-8000-000000000001")),
+                newsHash = "hash",
+                title = "요약",
+                content = "본문",
+                sentiment = NewsSummarySentiment.NEUTRAL,
+                provider = provider,
+                model = model,
+                requestedModel = " ",
+                promptVersion = promptVersion,
+                tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0),
+                createdAt = now
+            )
+        }
     }
 
     @Test
@@ -54,6 +75,7 @@ class NewsSummaryTest {
                 sentiment = NewsSummarySentiment.NEUTRAL,
                 provider = provider,
                 model = model,
+                requestedModel = model,
                 promptVersion = promptVersion,
                 tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0),
                 createdAt = now
@@ -62,8 +84,8 @@ class NewsSummaryTest {
     }
 
     private companion object {
-        val provider = LlmProviderName.of("openai")
-        val model = LlmModelName.of("gpt-4.1-mini")
+        val provider = LlmProvider.GROQ
+        const val model = "gpt-4.1-mini"
         val promptVersion = PromptVersion.of("news-summary-v1")
         val now = AiTestFixture.NOW.minus(Duration.ofDays(1))
     }

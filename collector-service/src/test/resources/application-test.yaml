@@ -14,3 +14,8 @@ kachi:
     clients:
       user-service:
         base-url: http://user-service-test
+    providers:
+      naver:
+        enabled: false
+      finnhub:
+        enabled: false

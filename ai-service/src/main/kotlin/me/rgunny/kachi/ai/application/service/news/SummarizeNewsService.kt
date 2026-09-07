@@ -28,8 +28,7 @@ import me.rgunny.kachi.ai.application.port.outbound.persistence.SummaryWatermark
 import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
-import me.rgunny.kachi.ai.domain.llm.LlmFailureCategory
-import me.rgunny.kachi.ai.domain.llm.LlmFailureSource
+import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
@@ -142,8 +141,8 @@ class SummarizeNewsService(
     /**
      * 키워드를 순서대로 요약한다.
      *
-     * 전역 LLM 장애를 만나면 남은 키워드는 호출하지 않고 건너뛴다.
-     * 장애 중에 같은 호출을 반복해도 결과는 같고 provider 압력만 올라간다.
+     * 호출할 수 있는 모델이 하나도 없으면 남은 키워드는 호출하지 않고 건너뛴다.
+     * 그 상태에서 같은 호출을 반복해도 결과는 같다.
      * watermark는 실패 때문에 유지되므로, 건너뛴 키워드는 다음 실행이 그대로 다시 처리한다.
      */
     private suspend fun summarizeKeywords(
@@ -167,7 +166,7 @@ class SummarizeNewsService(
 
             if (outcome is FailedKeywordOutcome && outcome.abortsRun) {
                 log.warn(
-                    "Aborting remaining keywords in this run by global LLM failure: keyword={}, reason={}, remaining={}",
+                    "Aborting remaining keywords in this run because no LLM model can be called: keyword={}, reason={}, remaining={}",
                     keyword.value,
                     outcome.reason,
                     keywords.size - outcomes.size
@@ -217,10 +216,9 @@ class SummarizeNewsService(
     }
 
     /**
-     * 실패를 분류해 실행 기록에 남길 원인을 정하고, 키워드 귀속 실패일 때만 격리 카운트를 올린다.
+     * 실패를 분류해 실행 기록에 남길 원인을 정하고, 시도한 후보 전부가 입력 탓으로 끝났을 때만 격리 카운트를 올린다.
      *
-     * rate limit이나 timeout은 다음 실행이 같은 구간을 다시 처리하면 해소된다.
-     * 이런 실패까지 카운트하면 provider 장애 몇 번으로 정상 키워드가 영구 격리된다.
+     * 격리는 자동 해제가 없어 오판 비용이 호출 비용보다 크다. 한 모델의 거부나 provider 장애로 정상 키워드가 영구 격리되면 안 된다.
      */
     private suspend fun recordFailedKeyword(
         quarantine: KeywordQuarantine?,
@@ -277,6 +275,7 @@ class SummarizeNewsService(
             summary = SummarizedNewsResult.from(existingSummary, reused = true),
             metadata = LlmGenerationMetadata(
                 provider = existingSummary.provider,
+                requestedModel = existingSummary.requestedModel,
                 model = existingSummary.model,
                 promptVersion = existingSummary.promptVersion,
                 tokenUsage = TokenUsage(inputTokens = 0, outputTokens = 0)
@@ -304,6 +303,7 @@ class SummarizeNewsService(
             sentiment = llmResult.sentiment,
             provider = llmResult.metadata.provider,
             model = llmResult.metadata.model,
+            requestedModel = llmResult.metadata.requestedModel,
             promptVersion = llmResult.metadata.promptVersion,
             tokenUsage = llmResult.metadata.tokenUsage,
             createdAt = now
@@ -465,33 +465,35 @@ class SummarizeNewsService(
             }
         }
 
+        /** 실행 기록의 실패 원인. 실패 코드가 늘면 이 when이 컴파일에서 판정을 요구한다. */
         fun failureReasonOf(failure: LlmFailure): AiFailureReason {
-            return when (failure.category) {
-                LlmFailureCategory.TIMEOUT -> AiFailureReason.TIMEOUT
-                LlmFailureCategory.RATE_LIMITED -> AiFailureReason.RATE_LIMITED
-                LlmFailureCategory.TRANSIENT_ERROR -> when (failure.source) {
-                    LlmFailureSource.NETWORK -> AiFailureReason.NETWORK_ERROR
-                    else -> AiFailureReason.SERVER_ERROR
-                }
+            return when (failure.code) {
+                LlmFailureCode.LLM_TIMEOUT -> AiFailureReason.TIMEOUT
+                LlmFailureCode.LLM_RATE_LIMITED -> AiFailureReason.RATE_LIMITED
+                LlmFailureCode.LLM_REQUEST_REJECTED -> AiFailureReason.CLIENT_ERROR
+                LlmFailureCode.LLM_SERVER_ERROR -> AiFailureReason.SERVER_ERROR
+                LlmFailureCode.LLM_NETWORK_ERROR -> AiFailureReason.NETWORK_ERROR
+                LlmFailureCode.LLM_INVALID_RESPONSE -> AiFailureReason.INVALID_RESPONSE
+                LlmFailureCode.LLM_NOT_PERMITTED -> AiFailureReason.PROVIDER_UNAVAILABLE
+                LlmFailureCode.LLM_MODEL_NOT_FOUND -> AiFailureReason.MODEL_NOT_FOUND
 
-                LlmFailureCategory.UNAVAILABLE -> AiFailureReason.PROVIDER_UNAVAILABLE
+                LlmFailureCode.LLM_UNAUTHORIZED,
+                LlmFailureCode.LLM_PAYMENT_REQUIRED,
+                LlmFailureCode.LLM_FORBIDDEN -> AiFailureReason.ACCOUNT_ERROR
 
-                LlmFailureCategory.VALIDATION_ERROR,
-                LlmFailureCategory.AUTHORIZATION_ERROR -> AiFailureReason.CLIENT_ERROR
-
-                LlmFailureCategory.INVALID_RESPONSE -> AiFailureReason.INVALID_RESPONSE
-                LlmFailureCategory.UNKNOWN -> AiFailureReason.UNKNOWN
+                LlmFailureCode.LLM_UNKNOWN_ERROR -> AiFailureReason.UNKNOWN
             }
         }
 
         /**
          * 키워드에 책임을 물을 수 있는 실패인지 판단한다.
          *
+         * LLM 실패는 시도한 후보 전부가 입력 탓으로 끝났을 때만 키워드 탓이다.
          * 판별할 수 없는 실패는 인프라 쪽으로 본다. 잘못 세면 정상 키워드가 영구 격리되고, 놓치면 다음 실행이 다시 시도한다.
          */
         fun keywordBound(error: Throwable): Boolean {
             return when (error) {
-                is LlmProviderException -> error.failure.keywordBound
+                is LlmProviderException -> error.allInput
                 is NewsReaderException, is KeywordReaderException -> false
                 is IllegalArgumentException -> true
                 else -> false
@@ -499,17 +501,13 @@ class SummarizeNewsService(
         }
 
         /**
-         * 이번 실행의 남은 키워드까지 막는 전역 장애인지 판단한다.
+         * 이번 실행의 남은 키워드까지 막는 상태인지 판단한다.
          *
-         * 호출 가능한 provider가 하나도 없는 상태는 이번 tick 안에서 풀리지 않으므로 rate limit과 같이 다룬다.
+         * 실제 호출이 한 건도 나가지 못했다는 것은 후보 전부가 차단·hold·cooldown이라는 뜻이고, 이번 tick 안에서 풀리지 않는다.
+         * 실제 호출이 있었으면 한 모델이 rate limit이어도 다른 후보나 다음 키워드는 시도해 볼 수 있다.
          */
         fun abortsRun(failure: LlmFailure): Boolean {
-            return failure.category in ABORTING_CATEGORIES
+            return !failure.fromActualCall
         }
-
-        val ABORTING_CATEGORIES = setOf(
-            LlmFailureCategory.RATE_LIMITED,
-            LlmFailureCategory.UNAVAILABLE
-        )
     }
 }

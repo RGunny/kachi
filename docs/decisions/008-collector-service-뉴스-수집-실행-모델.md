@@ -67,13 +67,6 @@ application service는 포트와 도메인 규칙에 집중하고, 외부 실행
 단점은 여러 collector 인스턴스를 띄우면 인스턴스마다 lock이 따로 존재한다는 점이다.
 따라서 분산 환경에서는 이 결정을 그대로 유지할 수 없다.
 
-### Scheduler 기본값
-
-운영 기본 설정은 scheduler 활성화로 둔다.
-하지만 local/test 프로필에서는 자동 외부 호출을 피하기 위해 scheduler를 기본 비활성화한다.
-
-로컬에서 자동 수집을 확인해야 할 때만 `KACHI_COLLECTOR_NEWS_SCHEDULER_ENABLED=true`로 켠다.
-
 ## 결과
 
 - scheduler와 internal API가 같은 중복 실행 방지 규칙을 사용한다.

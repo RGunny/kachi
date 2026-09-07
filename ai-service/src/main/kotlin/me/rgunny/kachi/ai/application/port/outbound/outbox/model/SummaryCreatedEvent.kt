@@ -42,8 +42,8 @@ data class SummaryCreatedEvent(
                 content = summary.content,
                 sentiment = summary.sentiment,
                 sourceNewsCount = summary.sourceNewsIds.size,
-                provider = summary.provider.value,
-                model = summary.model.value,
+                provider = summary.provider.code,
+                model = summary.model,
                 promptVersion = summary.promptVersion.value,
                 createdAt = summary.createdAt
             )

@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.domain.keyword
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -26,11 +25,28 @@ class KeywordExpansionTest {
             ),
             provider = provider,
             model = model,
+            requestedModel = model,
             promptVersion = promptVersion,
             createdAt = now
         )
 
         assertEquals(listOf("AI 반도체", "GPU"), expansion.expandedKeywords.map { it.value })
+    }
+
+    @Test
+    @DisplayName("요청 모델이 비어 있으면 생성할 수 없다")
+    fun rejectBlankRequestedModel() {
+        assertFailsWith<IllegalArgumentException> {
+            KeywordExpansion.create(
+                keyword = AiKeyword.of("NVIDIA"),
+                expandedKeywords = listOf(ExpandedKeyword.of("GPU")),
+                provider = provider,
+                model = model,
+                requestedModel = " ",
+                promptVersion = promptVersion,
+                createdAt = now
+            )
+        }
     }
 
     @Test
@@ -42,6 +58,7 @@ class KeywordExpansionTest {
                 expandedKeywords = listOf(ExpandedKeyword.of("nvidia")),
                 provider = provider,
                 model = model,
+                requestedModel = model,
                 promptVersion = promptVersion,
                 createdAt = now
             )
@@ -49,8 +66,8 @@ class KeywordExpansionTest {
     }
 
     private companion object {
-        val provider = LlmProviderName.of("openai")
-        val model = LlmModelName.of("gpt-4.1-mini")
+        val provider = LlmProvider.GROQ
+        const val model = "gpt-4.1-mini"
         val promptVersion = PromptVersion.of("keyword-expansion-v1")
         val now = AiTestFixture.NOW.minus(Duration.ofDays(1))
     }

@@ -1,18 +1,21 @@
 package me.rgunny.kachi.ai.application.port.outbound.llm.model
 
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 
 /**
  * LLM 생성 결과의 출처와 사용량 메타데이터.
  *
- * provider routing이나 fallback이 생길 수 있으므로 provider port 속성이 아니라 응답에 포함해 전달한다.
+ * 후보 순회로 어느 모델이 답할지 호출 전에는 모르므로 포트 속성이 아니라 응답에 포함해 전달한다.
+ *
+ * 모델은 둘을 따로 둔다. [requestedModel]은 요청에 실은 wire id이고 [model]은 기록에 남기는 모델이다.
+ * [model]은 응답이 보고한 모델이고, 응답이 보고하지 않으면 요청한 모델이다. 둘이 다르면 제공자가 다른 모델로 대신 답한 것이다.
  */
 data class LlmGenerationMetadata(
-    val provider: LlmProviderName,
-    val model: LlmModelName,
+    val provider: LlmProvider,
+    val requestedModel: String,
+    val model: String,
     val promptVersion: PromptVersion,
     val tokenUsage: TokenUsage
 )

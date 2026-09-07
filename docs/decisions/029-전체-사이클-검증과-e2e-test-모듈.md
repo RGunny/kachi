@@ -110,7 +110,7 @@ user-service의 구독 조회가 ACTIVE 바인딩이 있는 채널만 돌려주�
 `./gradlew test`는 그대로 서비스·계약 모듈만 돈다.
 e2e는 `./gradlew :e2e-test:e2eTest`로 따로 돈다.
 
-- 컨테이너 아홉 개를 띄우는 데 몇 분이 걸려 커밋마다 worktree에서 전체 테스트를 도는 규칙과 맞지 않는다.
+- 컨테이너 아홉 개를 띄우는 데 몇 분이 걸려 평소의 `./gradlew test`에 넣기에는 무겁다.
 - JUnit 태그로 거르는 안은 아홉 모듈 전부에 필터를 심어야 하고 선례가 없다.
   task 분리는 모듈 하나의 빌드 파일로 닫힌다.
 - CI가 생기면 별도 job으로 붙인다.
@@ -118,24 +118,26 @@ e2e는 `./gradlew :e2e-test:e2eTest`로 따로 돈다.
 Docker가 없으면 e2e도 다른 통합 테스트처럼 실패한다.
 `assumeTrue`로 skip하지 않는다.
 
-### 인프라 부재는 실패, secret 부재는 skip
+### 인프라 부재는 실패, ~~secret 부재는 skip~~
 
-테스트전략은 "Docker가 없으면 skip하지 않고 실패"라고 정했고, worker의 `*RealIntegrationTest`는 webhook secret이 없으면 `assumeTrue`로 skip한다.
-둘은 다른 것이다.
+테스트전략은 "Docker가 없으면 skip하지 않고 실패"라고 정했다.
+인프라는 테스트가 직접 띄우는 것이라, 없으면 환경이 잘못된 것이다.
 
-- 인프라는 테스트가 직접 띄우는 것이라, 없으면 환경이 잘못된 것이다.
-- 외부 secret은 테스트가 만들 수 없는 것이라, 없으면 그 테스트가 검증 대상이 아닌 것이다.
+~~worker의 `*RealIntegrationTest`는 webhook secret이 없으면 `assumeTrue`로 skip한다.~~ ADR 030에서 폐지.
 
-실 vendor 테스트를 태그로 분리하는 안은 접었다.
-셋뿐이고 secret 유무가 이미 스위치다.
+- ~~외부 secret은 테스트가 만들 수 없는 것이라, 없으면 그 테스트가 검증 대상이 아닌 것이다.~~
+- ~~실 vendor 테스트를 태그로 분리하는 안은 접었다. 셋뿐이고 secret 유무가 이미 스위치다.~~
+
+실제 provider나 vendor를 부르는 테스트는 별도 소스셋 `src/realTest`에 두고, 일부러 실행한 테스트가 secret이 없으면 skip이 아니라 실패한다.
+ai-service는 옮겼고 worker의 `*RealIntegrationTest`는 같은 규칙으로 옮길 대상이다.
 
 ### 실제 LLM·실제 채널 확인은 사람이 하는 스모크다
 
-테스트전략대로 테스트는 실제 provider와 vendor를 부르지 않는다.
-대신 두 가지를 둔다.
+테스트전략대로 `src/test`는 실제 provider와 vendor를 부르지 않는다. 모델이 실제로 있는지는 `src/realTest`가 본다(ADR 030).
+사람이 끝까지 확인하는 절차로 두 가지를 둔다.
 
 - `scripts/cycle.sh`가 인프라 → Mongo index → user-service → 나머지 순으로 띄운다.
-- `docs/전체-사이클-스모크.md`가 실제 Groq와 3채널 webhook으로 수집 → 요약 → 수신을 확인하는 체크리스트다.
+- `docs/전체-사이클-스모크.md`가 실제 LLM과 3채널 webhook으로 수집 → 요약 → 수신을 확인하는 체크리스트다.
 
 요약 알림을 실주소로 받으려면 실주소 바인딩을 가진 사용자가 키워드를 구독해야 한다.
 그래서 local seed가 관리자 계정에도 seed 키워드를 3채널로 구독시킨다.

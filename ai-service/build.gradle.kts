@@ -56,3 +56,34 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// 실제 LLM을 부르는 테스트는 src/realTest에 둔다. test·check에 끼지 않는다.
+// 실행: ./gradlew :ai-service:realTest [-Pkachi.llm.profile=local]
+testing {
+    suites {
+        val realTest by registering(JvmTestSuite::class) {
+            dependencies {
+                implementation(project())
+                implementation(sourceSets.test.get().output)
+            }
+            targets.all {
+                testTask.configure {
+                    description = "설정된 후보 모델을 실제 제공자에 불러 확인한다."
+                    systemProperty("kachi.llm.profile", providers.gradleProperty("kachi.llm.profile").getOrElse("local"))
+                    outputs.upToDateWhen { false }
+                    testLogging {
+                        events("passed", "failed", "skipped")
+                        // 모델·latency·토큰 보고가 stdout으로 나온다.
+                        showStandardStreams = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 스위트는 main의 implementation 의존성을 물려받지 않는다. test와 같은 classpath로 맞춘다.
+configurations {
+    named("realTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
+    named("realTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
+}

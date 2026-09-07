@@ -3,7 +3,8 @@ package me.rgunny.kachi.ai
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiOutboxRelayScheduler
-import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmProvider
+import me.rgunny.kachi.ai.adapter.outbound.llm.GuardedLlmModel
+import me.rgunny.kachi.ai.adapter.outbound.llm.ProviderHoldRegistry
 import me.rgunny.kachi.ai.adapter.outbound.llm.RoutingLlmProvider
 import me.rgunny.kachi.ai.application.port.inbound.outbox.FindAiOutboxesUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RecoverAiOutboxUseCase
@@ -20,6 +21,9 @@ import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
 import me.rgunny.kachi.ai.application.service.outbox.RelayAiOutboxService
 import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
+import me.rgunny.kachi.ai.config.LlmProperties
+import me.rgunny.kachi.ai.domain.llm.LlmModel
+import me.rgunny.kachi.ai.domain.llm.LlmUse
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -50,6 +54,9 @@ class AiServiceApplicationTest {
 
     @Autowired
     private lateinit var llmProviderAdminPort: LlmProviderAdminPort
+
+    @Autowired
+    private lateinit var llmProperties: LlmProperties
 
     @Autowired
     private lateinit var transactionalOperator: TransactionalOperator
@@ -153,44 +160,66 @@ class AiServiceApplicationTest {
         }
     }
 
+    /**
+     * test 프로파일은 후보를 Ollama 하나로 덮는다. 참조되지 않은 클라우드 제공자는 클라이언트도 서킷도 없어야 한다.
+     */
     @Test
-    @DisplayName("provider 차단 상태 조회 포트는 router와 같은 provider 목록을 본다")
-    fun shareGuardedProvidersWithAdminPort() {
+    @DisplayName("test 프로파일의 후보는 모든 용도에서 Ollama 모델 하나다")
+    fun bindTestProfileCandidates() {
+        LlmUse.entries.forEach { use ->
+            assertEquals(listOf(LlmModel.OLLAMA_QWEN3_27B), llmProperties.candidates(use), use.name)
+        }
+        assertEquals(setOf(LlmModel.OLLAMA_QWEN3_27B), llmProperties.candidateModels)
+        assertEquals("http://llm-test", llmProperties.providerOf(LlmModel.OLLAMA_QWEN3_27B).baseUrl)
+    }
+
+    @Test
+    @DisplayName("모델 차단 상태 조회 포트는 router와 같은 후보 모델을 본다")
+    fun shareGuardedModelsWithAdminPort() {
         val router = assertIs<RoutingLlmProvider>(llmProviderPort)
 
         assertEquals(
-            router.providers.map { assertIs<GuardedLlmProvider>(it).provider.value },
-            llmProviderAdminPort.statuses().map { it.provider.value }
+            router.candidates.values.flatten().map { assertIs<GuardedLlmModel>(it).model }.toSet(),
+            llmProviderAdminPort.statuses().map { it.model }.toSet()
         )
     }
 
     @Test
-    @DisplayName("provider마다 서킷 브레이커 인스턴스가 등록된다")
-    fun registerCircuitBreakerPerProvider() {
-        val names = circuitBreakerRegistry.allCircuitBreakers.map { it.name }.toSet()
-
-        assertEquals(setOf("openrouter", "groq", "together", "cerebras", "mistral"), names)
+    @DisplayName("제공자 보류 registry는 컨텍스트에 하나다")
+    fun registerSingleProviderHoldRegistry() {
+        assertEquals(1, applicationContext.getBeansOfType(ProviderHoldRegistry::class.java).size)
     }
 
     @Test
-    @DisplayName("컨텍스트의 서킷 브레이커 설정은 운영 yaml 값과 같다")
+    @DisplayName("후보 모델마다 그 모델의 이름으로 서킷 브레이커 인스턴스가 등록된다")
+    fun registerCircuitBreakerPerCandidateModel() {
+        val names = circuitBreakerRegistry.allCircuitBreakers.map { it.name }.toSet()
+
+        assertEquals(setOf(LlmModel.OLLAMA_QWEN3_27B.qualifiedCode), names)
+    }
+
+    @Test
+    @DisplayName("컨텍스트의 서킷 브레이커 설정은 운영 yaml의 비율과 그 모델의 slow-after를 합친 값이다")
     fun bindProductionCircuitBreakerConfig() {
-        val config = circuitBreakerRegistry.circuitBreaker("groq").circuitBreakerConfig
+        val config = circuitBreakerRegistry.circuitBreaker(LlmModel.OLLAMA_QWEN3_27B.qualifiedCode).circuitBreakerConfig
 
         assertEquals(6, config.slidingWindowSize)
         assertEquals(3, config.minimumNumberOfCalls)
         assertEquals(50f, config.failureRateThreshold)
-        assertEquals(Duration.ofSeconds(8), config.slowCallDurationThreshold)
+        assertEquals(Duration.ofSeconds(120), config.slowCallDurationThreshold)
         assertEquals(80f, config.slowCallRateThreshold)
         assertEquals(2, config.permittedNumberOfCallsInHalfOpenState)
     }
 
     @Test
-    @DisplayName("LLM provider 포트는 회로로 감싼 provider를 순회하는 router다")
-    fun llmProviderPortRoutesGuardedProviders() {
+    @DisplayName("LLM 호출 포트는 회로로 감싼 모델을 용도별로 순회하는 router다")
+    fun llmProviderPortRoutesGuardedModels() {
         val router = assertIs<RoutingLlmProvider>(llmProviderPort)
 
-        assertTrue(router.providers.isNotEmpty())
-        router.providers.forEach { assertIs<GuardedLlmProvider>(it) }
+        assertEquals(LlmUse.entries.toSet(), router.candidates.keys)
+        router.candidates.values.forEach { candidates ->
+            assertTrue(candidates.isNotEmpty())
+            candidates.forEach { assertIs<GuardedLlmModel>(it) }
+        }
     }
 }

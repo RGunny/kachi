@@ -15,7 +15,7 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderAdminPort
 import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
 import me.rgunny.kachi.ai.contract.AiSummaryCreatedEvent
 import me.rgunny.kachi.ai.contract.AiTargetType
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxClaim
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -65,11 +65,7 @@ import kotlin.test.assertTrue
         "kachi.ai.outbox.relay.enabled=true",
         "kachi.ai.outbox.relay.initial-delay=1h",
         "kachi.ai.scheduler.news-summary.initial-delay=1h",
-        "kachi.ai.quarantine.failure-threshold=2",
-        "kachi.ai.providers.openrouter.enabled=false",
-        "kachi.ai.providers.together.enabled=false",
-        "kachi.ai.providers.cerebras.enabled=false",
-        "kachi.ai.providers.mistral.enabled=false"
+        "kachi.ai.quarantine.failure-threshold=2"
     ]
 )
 @Import(AiServiceTestContainersConfig::class)
@@ -100,7 +96,7 @@ class AiSummaryCycleIntegrationTest {
         llm.reset()
         upstream.reset()
         // 이전 테스트가 만든 cooldown이나 열린 회로가 다음 테스트의 호출을 막지 않게 한다.
-        providerAdmin.reset(LlmProviderName.of(PROVIDER))
+        providerAdmin.reset(MODEL)
         listOf(
             AiOutboxMongoDocument::class.java,
             NewsSummaryMongoDocument::class.java,
@@ -128,6 +124,9 @@ class AiSummaryCycleIntegrationTest {
 
         val summary = mongoTemplate.findAll(NewsSummaryMongoDocument::class.java).collectList().block()!!.single()
         assertEquals(newsIds.toSet(), summary.sourceNewsIds.toSet())
+        // stub은 요청과 다른 이름으로 답한다. 응답이 보고한 모델과 요청한 모델이 각자 남아야 한다.
+        assertEquals("test-model", summary.model)
+        assertEquals(MODEL.code, summary.requestedModel)
         assertEquals(AiOutboxStatus.PUBLISHED.name, outboxCollection.findAll().single().status)
         assertNotNull(mongoTemplate.findAll(SummaryWatermarkMongoDocument::class.java).blockFirst())
 
@@ -138,22 +137,26 @@ class AiSummaryCycleIntegrationTest {
         assertEquals(keyword, event.keyword)
         assertEquals("NVIDIA 요약", event.title)
         assertEquals(3, event.sourceNewsCount)
-        assertEquals(PROVIDER, event.provider)
+        assertEquals(MODEL.provider.code, event.provider)
     }
 
+    /**
+     * 후보가 하나라 429 뒤의 cooldown이 곧 "호출할 모델 없음"이다. 둘째 키워드가 차단 실패로 끝나면서 나머지를 중단시킨다.
+     */
     @Test
-    @DisplayName("rate limit을 만나면 남은 키워드를 호출하지 않고 이벤트도 watermark도 남기지 않는다")
-    fun stopEarlyOnRateLimit() = runBlocking {
+    @DisplayName("후보가 전부 쉬는 중이면 남은 키워드를 호출하지 않고 이벤트도 watermark도 남기지 않는다")
+    fun stopEarlyWhenNoCandidateCanBeCalled() = runBlocking {
         val first = uniqueKeyword("rate-a")
         val second = uniqueKeyword("rate-b")
+        val third = uniqueKeyword("rate-c")
         stubNews(count = 1)
         llm.enqueueRateLimited(retryAfterSeconds = 30)
 
-        val summarized = summarizeNewsUseCase.summarize(command(first, second))
+        val summarized = summarizeNewsUseCase.summarize(command(first, second, third))
         val relayed = relayUseCase.relay()
 
         assertEquals(1, llm.requests.size)
-        assertEquals(1, summarized.failureCount)
+        assertEquals(2, summarized.failureCount)
         assertEquals(1, summarized.skippedCount)
         assertFalse(summarized.watermarkAdvanced)
         assertEquals(0, relayed.published)
@@ -311,7 +314,7 @@ class AiSummaryCycleIntegrationTest {
     private fun uniqueKeyword(prefix: String): String = "$prefix-${UUID.randomUUID().toString().take(8)}"
 
     companion object {
-        private const val PROVIDER = "groq"
+        private val MODEL = LlmModel.OLLAMA_QWEN3_27B
         private const val NEWS_PATH = "/api/v1/internal/news"
         private val POLL_TIMEOUT: Duration = Duration.ofSeconds(20)
 
@@ -321,7 +324,7 @@ class AiSummaryCycleIntegrationTest {
         @JvmStatic
         @DynamicPropertySource
         fun stubUrls(registry: DynamicPropertyRegistry) {
-            registry.add("kachi.ai.providers.$PROVIDER.base-url") { llm.baseUrl }
+            registry.add("kachi.ai.llm.providers.${MODEL.provider.name}.base-url") { llm.baseUrl }
             registry.add("kachi.ai.clients.collector-service.base-url") { upstream.baseUrl }
             registry.add("kachi.ai.clients.user-service.base-url") { upstream.baseUrl }
         }

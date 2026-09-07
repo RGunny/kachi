@@ -13,10 +13,30 @@ data class OpenAiChatRequest(
     val messages: List<OpenAiChatMessage>,
     val temperature: Double = 0.2,
     val max_tokens: Int = 512,
-    val reasoning_effort: String? = null
+    val response_format: OpenAiResponseFormat? = null,
+    val reasoning_effort: String? = null,
+    val thinking: OpenAiThinking? = null
 )
 
 data class OpenAiChatMessage(
     val role: String,
     val content: String
+)
+
+/**
+ * 응답 형식 지정. `json_object`는 content가 JSON 하나임을 provider에 요구한다.
+ */
+data class OpenAiResponseFormat(
+    val type: String
+) {
+    companion object {
+        val JSON_OBJECT = OpenAiResponseFormat(type = "json_object")
+    }
+}
+
+/**
+ * 사고(thinking) 켜기·끄기. 이 규격에서 사고를 다루는 provider는 `{"type": "enabled"|"disabled"}`로 받는다.
+ */
+data class OpenAiThinking(
+    val type: String
 )

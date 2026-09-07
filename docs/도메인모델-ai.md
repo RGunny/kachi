@@ -4,8 +4,9 @@ ai-service의 도메인 모델이다. 수집된 뉴스를 키워드별로 LLM �
 window/watermark 기반 실행 모델과 키워드 격리로 운영을 지탱한다.
 공통 관례는 [도메인모델.md](도메인모델.md)를 따른다.
 
-관련 결정: ADR 010(초기 설계), 011(newsHash 중복 방지), 020(scheduler 실행 모델과 요약 window), 
-  021(LLM 실패 분류와 provider 서킷 브레이커).
+관련 결정: 
+  - ADR 010(초기 설계), 011(newsHash 중복 방지), 020(scheduler 실행 모델과 요약 window),
+  - 021(LLM 실패 분류·서킷·failover·격리), 030(LLM 호출 단위·실패 분류·실호출 검증).
 
 ## 요약 애그리거트
 
@@ -23,7 +24,9 @@ _Aggregate Root_
 - `newsHash`: 요약 대상 뉴스 묶음 중복 확인용 hash
 - `title` / `content`: 요약 제목·본문 (trim 저장)
 - `sentiment`: `NewsSummarySentiment` 감성
-- `provider`: `LlmProviderName` / `model`: `LlmModelName` / `promptVersion`: `PromptVersion`
+- `provider`: `LlmProvider` 응답한 제공자
+- `requestedModel`: 요청에 실은 모델 wire id / `model`: 응답이 보고한 모델 (보고가 없으면 요청 모델)
+- `promptVersion`: `PromptVersion`
 - `tokenUsage`: `TokenUsage` 사용 token 수
 - `createdAt`: 생성 시각
 
@@ -36,8 +39,8 @@ _Aggregate Root_
 
 - 요약 대상 뉴스는 하나 이상이어야 하고, news hash·제목·본문은 빈 값일 수 없다.
 - 요약은 어떤 뉴스 묶음에서 생성되었는지 추적할 수 있어야 한다.
-- 같은 키워드, news hash, prompt version, model 조합은 중복 저장하지 않는다
-  (저장소 unique index로 방어하며, 같은 hash의 기존 요약은 재사용한다 — ADR 011).
+- 같은 키워드, news hash, prompt version 조합은 중복 저장하지 않는다
+  (저장소 unique index로 방어하며, 같은 hash의 기존 요약은 재사용한다 — ADR 011). model은 기록 필드다.
 - LLM 응답이 비어 있거나 필수 필드를 파싱할 수 없으면 실패로 처리하고 결과를 저장하지 않는다.
 
 ### 요약 식별자(NewsSummaryId)
@@ -159,8 +162,9 @@ notification의 DEAD 처리(ADR 015)와 같은 방식이다 (ADR 020).
 - 격리된 키워드는 요약 대상과 watermark 전진 판단에서 제외된다. 
   격리 상태에서 들어온 실패/성공 기록은 무시한다 (격리 시점을 덮지 않는다).
 - 격리된 키워드만 해제할 수 있다. 자동 해제는 두지 않고 운영자가 원인 확인 후 해제한다.
-- 키워드 귀속 실패(`LlmFailure.keywordBound`)만 연속 실패로 센다. 
-  인프라 전역 실패는 세지 않는다 (ADR 021).
+- 키워드 탓 실패만 연속 실패로 센다 (ADR 021).
+  LLM 실패는 시도한 후보 전부가 입력 탓으로 끝났을 때(`LlmProviderException.allInput`), 도메인 불변식 위반은 항상이다.
+  모델·제공자·인프라 탓 실패는 세지 않는다.
 
 ### 격리 기록 식별자(KeywordQuarantineId)
 
@@ -243,7 +247,7 @@ _Enum_
 키워드를 요약하지 않고 건너뛴 이유 분류다. skip은 실패가 아니다 — 조치할 것이 없는 실행과 원인을 봐야 하는 실행을 실행 기록에서 구분한다 (ADR 021).
 
 - `NO_INPUT`: 이 구간에 요약할 뉴스가 없었다. collector가 정상 응답으로 빈 결과를 준 경우다.
-- `PROVIDER_UNAVAILABLE`: 전역 LLM 장애로 이번 실행에서 호출하지 않았다.
+- `PROVIDER_UNAVAILABLE`: 호출할 수 있는 후보 모델이 없어 이번 실행에서 호출하지 않았다.
 
 ### 실패 사유(AiFailureReason)
 
@@ -253,8 +257,78 @@ AI 처리 실패 사유 분류다. 실행 기록과 격리 기록에 남는다.
 
 - `TIMEOUT`, `RATE_LIMITED`, `CLIENT_ERROR`, `SERVER_ERROR`, `NETWORK_ERROR`,
   `INVALID_RESPONSE`, `UNKNOWN`
+- `PROVIDER_UNAVAILABLE`: 호출할 수 있는 LLM 모델이 없어 요청을 보내지 못했다.
+- `MODEL_NOT_FOUND`: 제공이 끝났거나 이름이 틀린 모델을 불렀다.
+- `ACCOUNT_ERROR`: 제공자 계정 문제. 인증 실패, 결제 필요, 권한이나 한도.
 - `EMPTY_INPUT`: 뉴스 없음은 skip으로 분리되어(ADR 021) 새 실행은 이 값을 쓰지 않는다.
   이전 실행 기록을 읽기 위해 남겨둔 값이다.
+
+## LLM 호출 단위
+
+`domain/llm`의 enum이 어느 규격의 어느 제공자·모델을 어느 용도로 부르는지 정한다. 주소·키·시간·후보 순서만 yaml이다 (ADR 030).
+
+### API 규격(LlmApi)
+
+_Enum_
+
+- `OPENAI_CHAT_COMPLETIONS`
+- 요청·응답 JSON의 모양. 코드가 분기하는 유일한 축이며 규격마다 adapter 하나가 있다.
+
+### 제공자(LlmProvider)
+
+_Enum_
+
+- `GROQ`, `MISTRAL`, `OLLAMA`, `OPENROUTER`, `TOGETHER`, `CEREBRAS`, `MOONSHOT`
+- 속성: `code`(영속 문서·이벤트·서킷 이름에 쓰는 고정 문자열), `api`
+- 한 계정으로 부르는 서비스 하나. 상수명은 회사명이고 과금 상태는 이름에 넣지 않는다.
+
+### 모델(LlmModel)
+
+_Enum_
+
+- `GROQ_QWEN3_27B`, `MISTRAL_SMALL_2603`, `OLLAMA_QWEN3_27B`
+- 속성: `provider`, `code`(요청에 싣는 wire id), `options`(`LlmRequestOptions`), `qualifiedCode`(`provider.code/code`, 파생)
+- 실호출 검증을 통과한 것만 둔다. 제공이 끝난 모델은 상수를 지운다.
+- `-latest` 같은 이동 alias는 쓰지 않는다. 어느 날 다른 모델이 응답해도 알 길이 없다.
+
+### 용도(LlmUse)
+
+_Enum_
+
+- `NEWS_SUMMARY`, `KEYWORD_EXPANSION`
+- `LlmProviderPort`의 메서드와 1:1이다. 용도마다 후보 모델의 순서가 따로 있다.
+
+### 과금 방식(LlmBilling)
+
+_Enum_
+
+- `FREE_TIER`, `METERED`, `SUBSCRIPTION`, `SELF_HOSTED`
+- 제공자 계정의 속성이라 yaml이 정한다. `SELF_HOSTED`만 인증 키가 없어도 된다.
+- `METERED`는 실호출 검증에서 별도 클래스로 opt-in한다.
+
+### 요청 옵션(LlmRequestOptions / ReasoningEffort / Thinking)
+
+_Value Object_
+
+- `reasoningEffort`: `OMIT`, `NONE`, `LOW`, `MEDIUM`, `HIGH`, `MAX`
+- `thinking`: `OMIT`, `ENABLED`, `DISABLED`
+- `OMIT`은 요청에 그 필드를 싣지 않는다. 모든 모델 상수가 모든 값을 명시하므로 새 값이 생기면 컴파일이 누락을 잡는다.
+
+### 프롬프트(LlmPrompt / NewsSummaryPrompt / KeywordExpansionPrompt)
+
+_Value Object_
+
+- `use`, `version`(`PromptVersion`), `system`, `maxTokens`
+- 용도마다 object 하나가 본문과 버전을 한 파일에 둔다. 본문·입력 모양·출력 형식이 바뀔 때만 버전을 올리고 모델 교체는 대상이 아니다 (ADR 030).
+- user 메시지는 자연어가 아니라 입력 객체의 JSON이다. system이 그 값을 인용 데이터로 선언해 기사 제목·키워드 속 지시문이 명령으로 읽히지 않게 한다.
+- 요약 입력은 `NewsSummaryPrompt.Article`(source·title·publishedAt)이다. domain이 application의 뉴스 모델을 import하지 않기 위해서다.
+
+### 프롬프트 버전(PromptVersion)
+
+_Value Object_
+
+- `of()`에서 trim, 빈 값 불가.
+- 요약·확장 저장 키의 일부다. 올리면 같은 입력도 새 프롬프트로 다시 생성되고, 올리지 않으면 옛 결과를 재사용한다.
 
 ## LLM 실패 모델
 
@@ -262,69 +336,66 @@ AI 처리 실패 사유 분류다. 실행 기록과 격리 기록에 남는다.
 
 _Value Object_
 
-LLM provider 호출 실패를 원천/성격과 함께 보존하는 값이다. 이 값 하나로 세 가지 판단이 갈린다: 
-실행 기록에 남길 실패 원인, 키워드 격리 카운트를 올릴 것인가(`keywordBound`),
-provider 서킷 브레이커에 실패로 기록할 것인가(`retryable`). (ADR 021)
+LLM 호출 실패 하나를 표준 코드와 함께 보존하는 값이다.
+소비처가 내리는 판단마다 파생 프로퍼티가 하나 있고, 판단 축은 모두 `code`에서 파생한다 (ADR 021·030).
 
 #### 속성(Attributes)
 
 - `code`: `LlmFailureCode` 표준 실패 코드
-- `provider`: `LlmProviderName`
+- `provider`: `LlmProvider?` 실패를 낸 제공자. 호출 전에 차단된 실패는 null
 - `message`: 실패 메시지 (기본값 `code.defaultMessage`, 빈 값 불가)
 - `statusCode`: 외부 HTTP status code
-- `retryAfterMillis`: provider가 알려준 재시도 대기 시간 (음수 불가)
-- `source`: `LlmFailureSource` — `code`에서 파생
-- `category`: `LlmFailureCategory` — `code`에서 파생
+- `retryAfterMillis`: 429의 Retry-After (음수 불가)
+- `attribution`: `LlmFailureAttribution` — `code`에서 파생
+- `transient`: 다음 tick이나 다음 후보에서 저절로 풀리는가 — `code`에서 파생
 
 #### 행위(Behaviors)
 
-- `retryable`: 다음 tick이 같은 구간을 다시 처리하면 해소될 수 있는 실패인가.
-  category가 `TIMEOUT`, `RATE_LIMITED`, `TRANSIENT_ERROR`일 때 true.
-- `keywordBound`: 키워드에 책임을 물을 수 있는 실패인가.
-  category가 `INVALID_RESPONSE`, `VALIDATION_ERROR`일 때 true.
+- `fromActualCall`: 실제로 제공자를 호출해서 얻은 실패인가. `attribution != NONE`
+- `recordsInCircuit`: 서킷 브레이커에 실패로 기록할 것인가. 실제 호출이고 transient
+- `holdsModel`: 이 모델을 한동안 후보에서 뺄 것인가. `MODEL`이고 transient가 아님
+- `holdsProvider`: 이 제공자의 모든 모델을 한동안 뺄 것인가. `PROVIDER`이고 transient가 아님
 
 #### 규칙(Rules)
 
-- 원천과 분류는 `code`에서 파생한다. 분류 축이 코드와 어긋난 실패를 만들 수 없다.
-- `INVALID_RESPONSE`와 `VALIDATION_ERROR`는 provider가 살아 있다는 증거이므로 retryable에 포함하지 않는다.
-- 격리는 재시도로 해결되지 않는 실패만 걷어내는 장치이므로, 재시도로 풀릴 실패는 keywordBound가 아니다.
-- provider 원문 실패 코드는 우리 분류 체계와 섞지 않는다. 보존이 필요해지면 별도 필드로 추가한다 (보류 — ADR 021).
+- 두 축은 `code`에서 파생한다. 코드와 어긋난 축을 가진 실패를 만들 수 없다.
+- 응답 계약 위반은 모델이 살아 있다는 증거이고, 404·402는 한 건으로 확정이라 서킷의 표본이 아니다.
+- 키워드 격리 판단은 여기 없다. 실패 하나가 아니라 시도한 후보 전부의 책임으로 정하므로 `LlmProviderException.allInput`이 맡는다.
+- provider 원문 실패 코드는 우리 분류 체계와 섞지 않는다. 보존이 필요해지면 별도 필드로 추가한다.
 
 ### LLM 실패 코드(LlmFailureCode)
 
 _Enum_
 
-ai-service가 정의한 표준 LLM 실패 코드다. 각 상수가 `code`, `defaultMessage`, `source`, `category`를 갖는 실패 분류의 유일한 기준이다.
+ai-service가 정의한 표준 LLM 실패 코드다. 각 상수가 `code`, `defaultMessage`, `attribution`, `transient`를 갖는 실패 분류의 유일한 기준이다.
 
-| 코드 | source | category |
-| --- | --- | --- |
-| `LLM_TIMEOUT` | NETWORK | TIMEOUT |
-| `LLM_RATE_LIMITED` | PROVIDER | RATE_LIMITED |
-| `LLM_TRANSIENT_ERROR` | PROVIDER | TRANSIENT_ERROR |
-| `LLM_NETWORK_ERROR` | NETWORK | TRANSIENT_ERROR |
-| `LLM_CLIENT_ERROR` | PROVIDER | VALIDATION_ERROR |
-| `LLM_AUTHORIZATION_ERROR` | PROVIDER | AUTHORIZATION_ERROR |
-| `LLM_INVALID_RESPONSE` | PROVIDER | INVALID_RESPONSE |
-| `LLM_UNKNOWN_ERROR` | PROVIDER | UNKNOWN |
+| 코드 | 상황 | attribution | transient |
+| --- | --- | --- | --- |
+| `LLM_MODEL_NOT_FOUND` | 404 | MODEL | false |
+| `LLM_REQUEST_REJECTED` | 400·413·422 | INPUT | false |
+| `LLM_UNAUTHORIZED` | 401 | PROVIDER | false |
+| `LLM_PAYMENT_REQUIRED` | 402 | PROVIDER | false |
+| `LLM_FORBIDDEN` | 403 | PROVIDER | false |
+| `LLM_RATE_LIMITED` | 429 | PROVIDER | true |
+| `LLM_SERVER_ERROR` | 5xx | PROVIDER | true |
+| `LLM_TIMEOUT` | timeout | PROVIDER | true |
+| `LLM_NETWORK_ERROR` | 연결·I/O | PROVIDER | true |
+| `LLM_INVALID_RESPONSE` | 200이지만 JSON 계약 위반, 빈 content | INPUT | false |
+| `LLM_NOT_PERMITTED` | 서킷·cooldown·hold가 호출 전에 막음 | NONE | true |
+| `LLM_UNKNOWN_ERROR` | 그 외 | PROVIDER | true |
 
-### LLM 실패 분류(LlmFailureCategory)
-
-_Enum_
-
-LLM 실패의 성격이다. LLM은 200 OK를 주면서 JSON 계약을 어기는 실패가 흔하므로 `INVALID_RESPONSE`를 별도로 둔다.
-
-- `TIMEOUT`, `RATE_LIMITED`, `TRANSIENT_ERROR`, `VALIDATION_ERROR`,
-  `AUTHORIZATION_ERROR`, `INVALID_RESPONSE`, `UNKNOWN`
-
-### LLM 실패 원천(LlmFailureSource)
+### LLM 실패 책임(LlmFailureAttribution)
 
 _Enum_
 
-LLM 실패가 발생한 원천이다. ai-service의 외부 I/O는 LLM provider와 MongoDB뿐이고 MongoDB 실패는 이 모델을 거치지 않는다.
+LLM 실패의 책임이 어디 있는가다. 같은 실패라도 책임에 따라 다음 판단이 갈린다.
 
-- `PROVIDER`, `NETWORK`, `APPLICATION`
+- `INPUT`: 이 키워드의 요청이나 응답. 다른 모델도 같은 결과를 줄 수 있다.
+- `MODEL`: 모델 하나. 그 모델만 빼면 된다.
+- `PROVIDER`: 계정과 endpoint. 그 제공자의 모든 모델이 같다.
+- `NONE`: 우리 가드가 호출 전에 막았다. 어느 쪽 상태도 말해 주지 않는다.
 
-notification의 `RetryFailure`/`FailureSource`/`FailureCategory`와 어휘를 정렬하되 코드는 공유하지 않는다 (bounded context 독립 — ADR 021).
+notification의 `RetryFailure`와 어휘를 맞추되 코드는 공유하지 않는다 (bounded context 독립 — ADR 021).
 
 ### 토큰 사용량(TokenUsage)
 
@@ -332,13 +403,6 @@ _Value Object_
 
 - `inputTokens` / `outputTokens`: 각 0 이상
 - `totalTokens`: 합계 (파생)
-
-### LLM 이름·버전(LlmProviderName / LlmModelName / PromptVersion)
-
-_Value Object_
-
-- 각각 provider 이름, model 이름, 프롬프트 버전 문자열. `of()`에서 trim, 빈 값 불가.
-- 프롬프트 버전은 AI 응답 재현성과 변경 추적을 위해 요약·확장 결과에 함께 저장한다.
 
 ## 키워드 확장 애그리거트
 
@@ -353,7 +417,7 @@ _Aggregate Root_
 - `id`: `KeywordExpansionId` 확장 식별자
 - `keyword`: `AiKeyword` 원본 키워드
 - `expandedKeywords`: `List<ExpandedKeyword>` 확장 키워드 목록
-- `provider` / `model` / `promptVersion`: 사용한 LLM 정보
+- `provider`: `LlmProvider` / `requestedModel` / `model` / `promptVersion`: 사용한 LLM 정보 (뉴스 요약과 같다)
 - `createdAt`: 생성 시각
 
 #### 행위(Behaviors)
@@ -365,7 +429,7 @@ _Aggregate Root_
 
 - 정규화 후 확장 키워드는 하나 이상이어야 한다.
 - 확장 키워드는 원본 키워드와 함께 추적되어야 한다.
-- 같은 원본 키워드, prompt version, model 조합은 중복 저장하지 않는다 (저장소 unique 제약).
+- 같은 원본 키워드, prompt version 조합은 중복 저장하지 않는다 (저장소 unique 제약 — ADR 011). model은 기록 필드다.
 - LLM 응답이 비어 있거나 파싱할 수 없으면 실패로 처리하고 결과를 저장하지 않는다.
 
 ### 확장 식별자(KeywordExpansionId)

@@ -69,12 +69,11 @@ class KachiCluster : AutoCloseable {
                 "KACHI_AI_OUTBOX_RELAY_INITIALDELAY" to "1s",
                 "KACHI_AI_OUTBOX_RELAY_FIXEDDELAY" to "1s",
                 "KACHI_AI_QUARANTINE_FAILURETHRESHOLD" to QUARANTINE_FAILURE_THRESHOLD.toString(),
-                "KACHI_AI_PROVIDERS_GROQ_BASEURL" to hostUrl(llm.port),
-                "GROQ_API_KEY" to "e2e",
-                "KACHI_AI_PROVIDERS_OPENROUTER_ENABLED" to "false",
-                "KACHI_AI_PROVIDERS_TOGETHER_ENABLED" to "false",
-                "KACHI_AI_PROVIDERS_CEREBRAS_ENABLED" to "false",
-                "KACHI_AI_PROVIDERS_MISTRAL_ENABLED" to "false"
+                // local 프로파일의 LLM 후보는 Ollama 하나다. 그 주소만 stub으로 돌린다. 인증이 없어 키도 없다.
+                "KACHI_AI_LLM_PROVIDERS_OLLAMA_BASEURL" to hostUrl(llm.port),
+                // tick은 테스트가 internal API로 돌린다. local 프로파일이 켜 둔 스케줄러가 도중에 끼어들지 않게 끈다.
+                "KACHI_AI_SCHEDULER_NEWSSUMMARY_ENABLED" to "false",
+                "KACHI_AI_SCHEDULER_KEYWORDEXPANSION_ENABLED" to "false"
             )
         )
         routing = KachiServiceContainer(

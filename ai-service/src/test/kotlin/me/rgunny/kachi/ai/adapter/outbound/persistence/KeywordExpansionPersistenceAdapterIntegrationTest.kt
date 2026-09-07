@@ -4,8 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.BeforeEach
@@ -62,7 +61,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
             adapter.save(keywordExpansion())
 
             assertFailsWith<DuplicateKeyException> {
-                adapter.save(keywordExpansion(provider = "groq", model = "llama-3.3-70b"))
+                adapter.save(keywordExpansion(provider = LlmProvider.GROQ, model = "llama-3.3-70b"))
             }
         }
     }
@@ -74,7 +73,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
         @Test
         @DisplayName("같은 keyword, promptVersion 조합이면 model이 달라도 기존 확장을 조회한다")
         fun findExistingExpansion() = runBlocking {
-            adapter.save(keywordExpansion(provider = "groq", model = "llama-3.3-70b"))
+            adapter.save(keywordExpansion(provider = LlmProvider.GROQ, model = "llama-3.3-70b"))
 
             val found = adapter.findByUniqueKey(
                 keyword = AiKeyword.of("NVIDIA"),
@@ -83,7 +82,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
 
             assertNotNull(found)
             assertEquals(listOf("AI 반도체", "GPU"), found.expandedKeywords.map { it.value })
-            assertEquals("llama-3.3-70b", found.model.value)
+            assertEquals("llama-3.3-70b", found.model)
         }
 
         @Test
@@ -107,7 +106,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
         fun returnExistingExpansionOnDuplicateSave() = runBlocking {
             val first = adapter.save(keywordExpansion())
 
-            val second = adapter.saveOrFindExisting(keywordExpansion(provider = "groq", model = "llama-3.3-70b"))
+            val second = adapter.saveOrFindExisting(keywordExpansion(provider = LlmProvider.GROQ, model = "llama-3.3-70b"))
 
             assertEquals(first.id, second.id)
             assertEquals(1, repository.count().block())
@@ -115,7 +114,7 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
     }
 
     private fun keywordExpansion(
-        provider: String = "openrouter",
+        provider: LlmProvider = LlmProvider.OPENROUTER,
         model: String = "openai/gpt-4o-mini"
     ): KeywordExpansion {
         return KeywordExpansion.create(
@@ -124,8 +123,9 @@ class KeywordExpansionPersistenceAdapterIntegrationTest : PersistenceAdapterInte
                 ExpandedKeyword.of("AI 반도체"),
                 ExpandedKeyword.of("GPU")
             ),
-            provider = LlmProviderName.of(provider),
-            model = LlmModelName.of(model),
+            provider = provider,
+            model = model,
+            requestedModel = model,
             promptVersion = PromptVersion.of("keyword-expansion-v1"),
             createdAt = createdAt
         )

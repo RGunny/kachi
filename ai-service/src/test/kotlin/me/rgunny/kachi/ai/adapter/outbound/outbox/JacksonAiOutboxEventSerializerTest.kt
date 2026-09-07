@@ -36,8 +36,8 @@ class JacksonAiOutboxEventSerializerTest {
         assertEquals(summary.content, payload["content"])
         assertEquals("NEUTRAL", payload["sentiment"])
         assertEquals(1, payload["sourceNewsCount"])
-        assertEquals(AiTestFixture.PROVIDER.value, payload["provider"])
-        assertEquals(AiTestFixture.MODEL.value, payload["model"])
+        assertEquals(AiTestFixture.PROVIDER.code, payload["provider"])
+        assertEquals(AiTestFixture.MODEL, payload["model"])
         assertEquals(AiTestFixture.NEWS_SUMMARY_PROMPT_VERSION.value, payload["promptVersion"])
         assertEquals("2026-06-03T00:00:00Z", payload["createdAt"])
     }

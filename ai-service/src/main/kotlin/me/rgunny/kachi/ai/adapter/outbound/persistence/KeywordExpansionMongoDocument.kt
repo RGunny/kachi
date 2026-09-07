@@ -4,8 +4,7 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansionId
-import me.rgunny.kachi.ai.domain.llm.LlmModelName
-import me.rgunny.kachi.ai.domain.llm.LlmProviderName
+import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
@@ -31,6 +30,7 @@ data class KeywordExpansionMongoDocument(
     val expandedKeywords: List<String>,
     val provider: String,
     val model: String,
+    val requestedModel: String,
     val promptVersion: String,
     @Indexed
     val createdAt: Instant
@@ -40,8 +40,9 @@ data class KeywordExpansionMongoDocument(
             id = KeywordExpansionId.of(id),
             keyword = AiKeyword.of(keyword),
             expandedKeywords = expandedKeywords.map(ExpandedKeyword::of),
-            provider = LlmProviderName.of(provider),
-            model = LlmModelName.of(model),
+            provider = LlmProvider.ofCode(provider),
+            model = model,
+            requestedModel = requestedModel,
             promptVersion = PromptVersion.of(promptVersion),
             createdAt = createdAt
         )
@@ -53,8 +54,9 @@ data class KeywordExpansionMongoDocument(
                 id = keywordExpansion.id.value,
                 keyword = keywordExpansion.keyword.value,
                 expandedKeywords = keywordExpansion.expandedKeywords.map { it.value },
-                provider = keywordExpansion.provider.value,
-                model = keywordExpansion.model.value,
+                provider = keywordExpansion.provider.code,
+                model = keywordExpansion.model,
+                requestedModel = keywordExpansion.requestedModel,
                 promptVersion = keywordExpansion.promptVersion.value,
                 createdAt = keywordExpansion.createdAt
             )
