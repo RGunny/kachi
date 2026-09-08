@@ -152,6 +152,6 @@ class InternalAiKeywordExpansionControllerTest {
 
         @Bean
         fun keywordExpansionExecutor(useCase: RecordingExpandKeywordsUseCase) =
-            AiKeywordExpansionExecutor(useCase, AiTestFixture.CLOCK)
+            AiKeywordExpansionExecutor(useCase, AiTestFixture.executionLock())
     }
 }

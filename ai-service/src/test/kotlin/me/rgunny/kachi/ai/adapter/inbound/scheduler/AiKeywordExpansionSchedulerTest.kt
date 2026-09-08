@@ -16,7 +16,6 @@ import kotlin.test.assertTrue
 
 @DisplayName("AiKeywordExpansionScheduler")
 class AiKeywordExpansionSchedulerTest {
-    private val clock = AiTestFixture.CLOCK
 
     @Test
     @DisplayName("scheduler가 비활성화되어 있으면 키워드 확장을 실행하지 않는다")
@@ -69,7 +68,7 @@ class AiKeywordExpansionSchedulerTest {
         properties: AiKeywordExpansionSchedulerProperties
     ): AiKeywordExpansionScheduler {
         return AiKeywordExpansionScheduler(
-            executor = AiKeywordExpansionExecutor(useCase, clock),
+            executor = AiKeywordExpansionExecutor(useCase, AiTestFixture.executionLock()),
             properties = properties
         )
     }

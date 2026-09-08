@@ -36,7 +36,7 @@ AiKeywordExpansionScheduler
       -> ExpandKeywordsUseCase
 ```
 
-scheduler는 `enabled` 확인, 실행 command 구성, 결과 로깅만 담당한다. 중복 실행 방지는 이미 구현된 `Executor`의 JVM lock에 위임하고, scheduler를 위한 별도 lock을 두지 않는다.
+scheduler는 `enabled` 확인, 실행 command 구성, 결과 로깅만 담당한다. 중복 실행 방지는 `Executor`에 위임하고, scheduler를 위한 별도 lock을 두지 않는다.
 
 중복 요청 처리도 ADR 008과 같다.
 
@@ -50,43 +50,39 @@ scheduler는 실행 결과 예외를 삼킨다. `@Scheduled` 메서드에서 예
 중복 실행 방지는 `adapter.in`의 `AiNewsSummaryExecutor`와 `AiKeywordExpansionExecutor`가 담당한다.
 scheduler와 internal API 모두 이 `Executor`를 거치므로, 두 진입점이 같은 규칙을 공유한다.
 
-lock은 `AtomicReference`의 CAS 연산으로 구현한다.
+`Executor`는 lock을 직접 구현하지 않고 `ExecutionLockPort`에 맡긴다(ADR 036).
 
 ```kotlin
-private val runningSummary = AtomicReference<RunningAiNewsSummary?>(null)
-
 suspend fun execute(command: SummarizeNewsCommand): AiNewsSummaryExecutionResult {
-    val currentSummary = RunningAiNewsSummary(startedAt = Instant.now(clock))
-
-    // 획득: null일 때만 내 값으로 바꾼다. 검사와 획득이 한 원자 연산이다.
-    if (!runningSummary.compareAndSet(null, currentSummary)) {
-        return AiNewsSummaryAlreadyRunning(
-            runningSummary = runningSummary.get() ?: currentSummary
-        )
+    val outcome = executionLock.withLock(AiExecutionLock.NEWS_SUMMARY) {
+        summarizeNewsUseCase.summarize(command)
     }
 
-    return try {
-        AiNewsSummaryStarted(summarizeNewsUseCase.summarize(command))
-    } finally {
-        // 해제: 내가 넣은 값일 때만 지운다.
-        runningSummary.compareAndSet(currentSummary, null)
+    return when (outcome) {
+        is Executed -> AiNewsSummaryStarted(outcome.value)
+        is AlreadyHeld -> AiNewsSummaryAlreadyRunning(RunningAiNewsSummary(outcome.holder.acquiredAt))
+        is Unavailable -> AiNewsSummaryLockUnavailable(outcome.cause)
     }
 }
 ```
 
-설계 요점은 네 가지다.
+`Executor`에는 실행 조정만 남는다. 무엇을 보호할지 고르고, lock의 결과를 이 진입점의 언어로 옮긴다.
+획득과 해제를 원자 연산으로 하는 것도, 자기가 얻은 lock만 푸는 것도, 작업이 예외로 끝나도 반드시 푸는 것도 포트의 약속이다.
+`withLock`이 작업을 감싸는 모양이므로 해제를 잊을 수가 없다.
 
-**획득을 CAS로 한다.** `get()`으로 비어 있는지 확인한 뒤 `set()`으로 채우면, 두 요청이 확인과 채움 사이에 끼어들어 둘 다 통과할 수 있다. `compareAndSet(null, current)`는 확인과 채움이 하나의 원자 연산이라 정확히 하나만 성공한다.
+막힌 요청에 실행 중인 작업의 시작 시각을 함께 주는 규칙은 그대로다.
+`ExecutionLockHolder.acquiredAt`이 그 값이며, skip 로그와 internal API의 `409 CONFLICT` 응답에 담긴다.
+tick이 계속 skip될 때 이 시각이 유일한 단서가 된다.
 
-**해제도 CAS로 한다.** `set(null)`로 무조건 비우지 않고 `compareAndSet(currentSummary, null)`로 "내가 넣은 그 값일 때만" 비운다. 자기가 획득한 lock만 해제한다는 보장이 생겨, 나중에 lock 해제 시점이 복잡해져도 남의 실행을 실수로 풀어버리지 않는다.
+lock을 확인할 수 없어 막히는 경우가 하나 더 있다.
+이미 실행 중이라 건너뛴 것과 달리 장애이므로, scheduler는 원인과 함께 경고를 남기고 internal API는 `503 SERVICE UNAVAILABLE`을 반환한다.
 
-**해제를 `finally`에 둔다.** 유스케이스가 예외로 끝나도 lock이 반드시 풀린다. 이게 없으면 LLM 호출 한 번의 실패로 이후 모든 tick이 영구히 skip된다.
+뉴스 요약과 키워드 확장은 서로 다른 lock 대상이라 서로를 막지 않는다.
+두 작업은 입력과 저장 대상이 겹치지 않으므로 동시에 실행되어도 문제가 없고, 24시간 주기의 키워드 확장이 10분 주기의 뉴스 요약을 막아서도 안 된다.
 
-**`AtomicBoolean`이 아니라 `AtomicReference`를 쓴다.** ADR 008의 `collector-service`는 참/거짓만 필요했지만, `ai-service`는 실행 중인 작업의 `startedAt`을 함께 보관한다. 이 값이 있어야 skip 로그와 internal API의 `409 CONFLICT` 응답에 "언제 시작된 작업 때문에 막혔는지"를 담을 수 있다. 운영 중 tick이 계속 skip될 때 이 시각이 유일한 단서가 된다.
-
-`Executor`는 뉴스 요약과 키워드 확장에 각각 하나씩 있고, lock도 서로 독립이다. 두 작업은 입력과 저장 대상이 겹치지 않으므로 동시에 실행되어도 문제가 없고, 24시간 주기의 키워드 확장이 10분 주기의 뉴스 요약을 막아서도 안 된다.
-
-이 lock은 JVM 내부에만 유효하다. `ai-service` 인스턴스를 여러 개 띄우면 인스턴스마다 별도 lock이 생겨 중복 실행을 막지 못한다. `Executor`가 lock 획득/해제 책임을 갖고 있으므로, 그때는 이 클래스만 distributed lock으로 교체하면 되고 유스케이스와 scheduler는 그대로 둔다.
+두 대상 모두 `CLUSTER` 범위다. LLM 호출 비용이 걸려 있어 어느 인스턴스에서든 한 번만 돌아야 한다.
+지금 그 범위를 맡은 구현은 이 인스턴스 안에서만 유효한 lock이므로, `ai-service`를 여러 개 띄우면 인스턴스마다 별도 lock이 생긴다.
+그때 바꾸는 것은 `CLUSTER` 범위의 연결뿐이고 `Executor`와 유스케이스와 scheduler는 그대로 둔다.
 
 ### 요약 window
 

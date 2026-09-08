@@ -18,7 +18,6 @@ import kotlin.test.assertTrue
 
 @DisplayName("AiNewsSummaryScheduler")
 class AiNewsSummarySchedulerTest {
-    private val clock = AiTestFixture.CLOCK
 
     @Test
     @DisplayName("scheduler가 비활성화되어 있으면 뉴스 요약을 실행하지 않는다")
@@ -106,7 +105,7 @@ class AiNewsSummarySchedulerTest {
         properties: AiNewsSummarySchedulerProperties
     ): AiNewsSummaryScheduler {
         return AiNewsSummaryScheduler(
-            executor = AiNewsSummaryExecutor(useCase, clock),
+            executor = AiNewsSummaryExecutor(useCase, AiTestFixture.executionLock()),
             properties = properties
         )
     }

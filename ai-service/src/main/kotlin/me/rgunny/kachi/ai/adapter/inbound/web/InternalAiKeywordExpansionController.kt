@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.adapter.inbound.web
 
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
@@ -61,6 +62,17 @@ class InternalAiKeywordExpansionController(
 
                 // 4. 실행이 시작되어 완료된 결과를 내부 API 응답 DTO로 변환한다.
                 ResponseEntity.ok(ApiResponse.success(KeywordExpansionRunResponse.from(result.result)))
+            }
+
+            is AiKeywordExpansionLockUnavailable -> {
+                log.warn(
+                    "Manual keyword expansion skipped because the execution lock could not be checked",
+                    result.cause
+                )
+
+                // 5. 이미 실행 중이라 막힌 것과 달리 장애이므로 503으로 구분해 알린다.
+                ResponseEntity.status(ErrorCode.KEYWORD_EXPANSION_LOCK_UNAVAILABLE.status)
+                    .body(ApiResponse.failure(ErrorCode.KEYWORD_EXPANSION_LOCK_UNAVAILABLE))
             }
         }
     }

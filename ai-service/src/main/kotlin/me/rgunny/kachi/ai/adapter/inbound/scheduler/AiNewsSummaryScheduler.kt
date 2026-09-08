@@ -3,6 +3,7 @@ package me.rgunny.kachi.ai.adapter.inbound.scheduler
 import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import org.slf4j.LoggerFactory
@@ -64,6 +65,13 @@ class AiNewsSummaryScheduler(
                     log.info(
                         "Skip scheduled news summary because another summary is running: startedAt={}",
                         result.runningSummary.startedAt
+                    )
+
+                // 4. lock을 확인할 수 없는 것은 건너뛴 것이 아니라 장애이므로 원인과 함께 남긴다.
+                is AiNewsSummaryLockUnavailable ->
+                    log.warn(
+                        "Skip scheduled news summary because the execution lock could not be checked",
+                        result.cause
                     )
 
                 is AiNewsSummaryStarted ->
