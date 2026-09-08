@@ -8,6 +8,8 @@ import me.rgunny.kachi.collector.application.port.outbound.keyword.KeywordReader
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
+import me.rgunny.kachi.collector.fake.FakeCollectorOutboxEventSerializer
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.CollectionRun
 import me.rgunny.kachi.collector.domain.CollectionRunId
@@ -189,6 +191,7 @@ class CollectNewsServiceTest {
             newsProviderPorts = providers.toList(),
             newsPersistencePort = newsPersistence,
             collectionRunPersistencePort = collectionRunPersistence,
+            eventSerializer = FakeCollectorOutboxEventSerializer(),
             clock = clock
         )
     }
@@ -197,7 +200,9 @@ class CollectNewsServiceTest {
         return CollectedArticle(
             source = source,
             title = title,
+            excerpt = "$title 발췌문",
             url = url,
+            language = "ko",
             publishedAt = CollectorTestFixture.NOW
         )
     }
@@ -248,7 +253,9 @@ class CollectNewsServiceTest {
             return savedNews.filter { keyword in it.matchedKeywords }.take(limit)
         }
 
-        override suspend fun save(news: News): SaveNewsResult {
+        val savedOutboxes: MutableList<CollectorOutbox> = mutableListOf()
+
+        override suspend fun save(news: News, outbox: CollectorOutbox): SaveNewsResult {
             val newsKey = news.source to news.urlHash
             if (newsKey in existingNewsKeys) {
                 return SaveNewsResult.DUPLICATED
@@ -256,6 +263,7 @@ class CollectNewsServiceTest {
 
             existingNewsKeys.add(newsKey)
             savedNews.add(news)
+            savedOutboxes.add(outbox)
             return SaveNewsResult.SAVED
         }
     }

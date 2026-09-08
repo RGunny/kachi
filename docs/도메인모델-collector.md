@@ -15,24 +15,26 @@ _Aggregate Root_
 - `id`: `NewsId` 뉴스 식별자
 - `source`: `NewsSource` 뉴스 출처 provider
 - `title`: `NewsTitle` 제목
+- `excerpt`: `NewsExcerpt` provider가 준 발췌문
 - `url`: `NewsUrl` 원문 URL
-- `urlHash`: URL 중복 확인용 hash (생성 시 `url.hash`에서 고정)
-- `titleFingerprint`: 제목 기반 중복 후보 확인용 fingerprint (생성 시 `title.fingerprint`에서 고정)
-- `publishedAt`: 발행 시각 (provider가 주지 않으면 null)
+- `urlHash`: 정규화 URL의 hash (생성 시 `url.hash`에서 고정)
+- `language`: `NewsLanguage` 기사 언어. provider 설정이 정한다
+- `publishedAt`: 발행 시각
 - `collectedAt`: 수집 시각
 - `matchedKeywords`: `List<CollectedKeyword>` 이 뉴스와 매칭된 수집 키워드 목록
 
 #### 행위(Behaviors)
 
-- `static create(source, title, url, publishedAt, collectedAt, matchedKeywords)`: 뉴스를 생성한다. 매칭 키워드 중복을 제거한다
+- `static create(source, title, excerpt, url, language, publishedAt, collectedAt, matchedKeywords)`: 뉴스를 생성한다. 매칭 키워드 중복을 제거한다
 - `static restore(...)`: 저장소 snapshot을 복원한다
 
 #### 규칙(Rules)
 
 - 매칭 키워드는 하나 이상이어야 한다. 같은 뉴스가 여러 키워드에 매칭될 수 있고, 중복 키워드는 제거한다.
-- URL hash와 제목 fingerprint는 중복 후보를 줄이기 위한 값이다. 
-  실제 저장 중복 방어는 persistence 계층의 unique index에서 처리한다.
-- 제목의 의미 기반 중복 판단은 collector 도메인에서 과하게 처리하지 않는다.
+- 모든 속성이 있어야 기사다. 도메인에 null 속성은 없다.
+  - 제목·발췌문·URL·언어·발행 시각 중 하나라도 없는 item은 provider adapter가 기사로 만들지 않는다.
+- URL hash는 같은 페이지의 재수집을 막는 값이다. 실제 저장 중복 방어는 persistence 계층의 `(source, urlHash)` unique index에서 처리한다.
+- 기사들 사이의 관계(같은 사건인가)는 collector가 판단하지 않는다. 그 일은 story 컨텍스트의 몫이다(ADR 031).
 - 저장 후 수정하는 행위는 없다. 수집된 뉴스는 불변 기록이다.
 
 ### 뉴스 식별자(NewsId)
@@ -47,18 +49,31 @@ _Value Object_
 _Value Object_
 
 - `value`: 뉴스 제목
-- `fingerprint`: 소문자화·연속 공백 축약 후 SHA-256으로 계산한 파생 프로퍼티
 - `of()`: trim 정규화. 빈 값 불가. 길이·금칙어·의미 정합성은 강하게 검증하지 않는다.
-- fingerprint는 URL이 다른 유사 제목 뉴스를 찾기 위한 후보값이며, 
-  저장을 막는 강한 중복 키로 직접 사용하지 않는다.
+
+### 발췌문(NewsExcerpt)
+
+_Value Object_
+
+- `value`: provider가 기사와 함께 준 짧은 설명. 본문이 아니다
+- `of()`: 연속 공백을 하나로 접고 앞뒤 공백을 지운다. 공백뿐이면 거부한다. 1,000자를 넘는 부분은 잘라 낸다
+- HTML 제거는 형식을 아는 provider adapter가 끝낸 뒤 넘긴다
+
+### 언어(NewsLanguage)
+
+_Value Object_
+
+- `value`: ISO 639 기본 부호(`ko`, `en`). `en-US`처럼 지역이 붙은 값은 앞부분만 남긴다
+- `of()`: 영문 2~3자가 아니면 거부한다. provider 설정이 정한 값을 기사에 옮긴 것이다
 
 ### 뉴스 URL(NewsUrl)
 
 _Value Object_
 
-- `value`: 뉴스 원문 URL
-- `hash`: URL 문자열의 SHA-256 파생 프로퍼티
-- `of()`: trim 정규화. 빈 값 불가. URL 문법은 강하게 검증하지 않고, provider별 URL 보정은 adapter 계층에서 처리한다.
+- `value`: 뉴스 원문 URL. provider가 준 그대로다
+- `canonical`: 같은 페이지의 URL 변형을 하나로 모은 값. scheme·host 소문자화, 기본 포트·fragment 제거, 추적 파라미터(`utm_*`, `fbclid`, `gclid` 등) 제거, 남은 파라미터 정렬, 끝 슬래시 제거, AMP 경로·`amp.` 서브도메인 원본화
+- `hash`: `canonical`의 SHA-256 파생 프로퍼티
+- `of()`: trim 정규화. 빈 값 불가. 파싱할 수 없는 URL은 원문을 그대로 `canonical`로 쓴다
 
 ### 수집 키워드(CollectedKeyword)
 

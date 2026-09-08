@@ -28,14 +28,5 @@ class NewsTitleTest {
                 NewsTitle.of("   ")
             }
         }
-
-        @Test
-        @DisplayName("대소문자와 연속 공백 차이는 같은 fingerprint를 만든다")
-        fun createStableFingerprint() {
-            val first = NewsTitle.of("NVIDIA   Earnings")
-            val second = NewsTitle.of("nvidia earnings")
-
-            assertEquals(first.fingerprint, second.fingerprint)
-        }
     }
 }

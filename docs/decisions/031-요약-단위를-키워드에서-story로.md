@@ -103,7 +103,7 @@ story-service는 임베딩 입력과 재처리에 필요한 기사 값을 자기
 같은 기사가 두 컨텍스트에 있는 것은 bounded context의 정상 상태이고, 기사 사실에 대해 story-service는 정본이 되지 않는다.
 기사에 새로 필요한 것이 생기면 collector 모델과 이벤트에 넣는다.
 
-### 이벤트는 상태를 싣고, 재처리는 로그 되감기다
+### 이벤트는 상태를 싣고, 재처리는 로그를 다시 읽는 것이다
 
 - `collector.news.collected`는 기사 내용을 다 싣는다. 소비자는 발행자의 DB도 API도 부르지 않는다(Event-Carried State Transfer).
 - topic은 newsId 키 compaction으로 기사당 최신 1건을 보존한다. 기사는 불변이라 compaction이 곧 전체 이력이다.
@@ -160,7 +160,7 @@ story-service는 임베딩 입력과 재처리에 필요한 기사 값을 자기
 - 장점:
   - 사건마다 요약 한 번, 수신자마다 사건 한 버전에 한 통이다.
   - 조립·요약·수집이 따로 확장되고 따로 죽는다. 임베딩 서빙이 죽어도 수집은 계속되고 기사는 Kafka에 쌓인다.
-  - 모델과 임계값을 바꿔도 로그 되감기 한 가지로 재처리한다.
+  - 모델과 임계값을 바꿔도 로그를 처음부터 다시 읽는 것 하나로 재처리한다.
 - 단점:
   - 모듈 둘(`story-service`, `story-contract`)과 계약 모듈 하나(`collector-contract`), topic 둘, 컴포넌트 둘(TEI, Qdrant)이 는다.
   - 오판이 남는다. 다른 사건이 한 story에 묶이면 요약 입력이 섞이고 keywords 합집합이 오염되어 엉뚱한 구독자에게 간다.

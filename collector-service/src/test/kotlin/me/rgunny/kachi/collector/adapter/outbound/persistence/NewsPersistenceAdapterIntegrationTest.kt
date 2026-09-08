@@ -2,8 +2,15 @@ package me.rgunny.kachi.collector.adapter.outbound.persistence
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
+import me.rgunny.kachi.collector.application.port.outbound.outbox.model.NewsCollectedEvent
+import me.rgunny.kachi.collector.application.port.outbound.outbox.model.toOutbox
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
+import me.rgunny.kachi.collector.support.CollectorOutboxCollection
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
+import me.rgunny.kachi.collector.domain.NewsExcerpt
+import me.rgunny.kachi.collector.domain.NewsLanguage
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
@@ -26,6 +33,9 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
     @Autowired
     private lateinit var repository: NewsMongoRepository
 
+    @Autowired
+    private lateinit var mongoTemplate: ReactiveMongoTemplate
+
     private val collectedAt = CollectorTestFixture.NOW
     private val publishedAt = collectedAt.minus(Duration.ofHours(14))
     private val keyword = CollectedKeyword.of("NVIDIA")
@@ -34,9 +44,12 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
     private val windowFrom = collectedAt.plus(Duration.ofDays(4))
     private val windowTo = windowFrom.plus(Duration.ofDays(1))
 
+    private val outboxCollection by lazy { CollectorOutboxCollection(mongoTemplate) }
+
     @BeforeEach
     fun cleanUp() {
         repository.deleteAll().block()
+        outboxCollection.clear()
     }
 
     @Nested
@@ -48,13 +61,26 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         fun saveNews() = runBlocking {
             val news = news(url = "https://kachi.com/news/1")
 
-            val result = adapter.save(news)
+            val result = adapter.save(news, outboxFor(news))
 
             assertEquals(SaveNewsResult.SAVED, result)
             assertEquals(
                 setOf(news.urlHash),
                 adapter.findExistingUrlHashes(NewsSource.GOOGLE, setOf(news.urlHash))
             )
+            assertEquals(news.id.value.toString(), outboxCollection.findAll().single().eventKey)
+        }
+
+        @Test
+        @DisplayName("저장된 문서에 발췌문과 언어가 남는다")
+        fun saveExcerptAndLanguage() = runBlocking {
+            val news = CollectorTestFixture.news(url = "https://kachi.com/news/9")
+
+            adapter.save(news, outboxFor(news))
+
+            val found = adapter.findByKeyword(keyword = keyword, from = null, to = null, limit = 1).single()
+            assertEquals(news.excerpt, found.excerpt)
+            assertEquals(news.language, found.language)
         }
 
         @Test
@@ -63,10 +89,24 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
             val first = news(url = "https://kachi.com/news/1")
             val second = news(url = "https://kachi.com/news/1")
 
-            val firstResult = adapter.save(first)
-            val secondResult = adapter.save(second)
+            val firstResult = adapter.save(first, outboxFor(first))
+            val secondResult = adapter.save(second, outboxFor(second))
 
             assertEquals(SaveNewsResult.SAVED, firstResult)
+            assertEquals(SaveNewsResult.DUPLICATED, secondResult)
+            // 중복으로 막힌 기사의 outbox 행은 트랜잭션과 함께 되돌아간다.
+            assertEquals(1, outboxCollection.findAll().size)
+        }
+
+        @Test
+        @DisplayName("같은 페이지의 URL 변형은 같은 hash라 중복으로 처리한다")
+        fun returnDuplicatedForCanonicalUrlVariant() = runBlocking {
+            val first = news(url = "https://kachi.com/news/1?utm_source=naver")
+            val second = news(url = "https://KACHI.com/news/1/")
+
+            adapter.save(first, outboxFor(first))
+            val secondResult = adapter.save(second, outboxFor(second))
+
             assertEquals(SaveNewsResult.DUPLICATED, secondResult)
         }
     }
@@ -80,7 +120,7 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         fun findExistingUrlHashes() = runBlocking {
             val saved = news(url = "https://kachi.com/news/1")
             val notSaved = news(url = "https://kachi.com/news/2")
-            adapter.save(saved)
+            adapter.save(saved, outboxFor(saved))
 
             val found = adapter.findExistingUrlHashes(
                 source = NewsSource.GOOGLE,
@@ -94,7 +134,7 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         @DisplayName("다른 source의 같은 URL hash는 반환하지 않는다")
         fun doesNotFindSameUrlHashWhenSourceIsDifferent() = runBlocking {
             val saved = news(url = "https://kachi.com/news/1", source = NewsSource.NAVER)
-            adapter.save(saved)
+            adapter.save(saved, outboxFor(saved))
 
             val found = adapter.findExistingUrlHashes(
                 source = NewsSource.GOOGLE,
@@ -136,9 +176,9 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
                 keyword = CollectedKeyword.of("TESLA"),
                 collectedAt = windowTo.plus(Duration.ofHours(1))
             )
-            adapter.save(older)
-            adapter.save(newer)
-            adapter.save(otherKeyword)
+            adapter.save(older, outboxFor(older))
+            adapter.save(newer, outboxFor(newer))
+            adapter.save(otherKeyword, outboxFor(otherKeyword))
 
             val found = adapter.findByKeyword(
                 keyword = keyword,
@@ -153,8 +193,8 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         @Test
         @DisplayName("limit만큼만 조회한다")
         fun limitResults() = runBlocking {
-            adapter.save(news(url = "https://kachi.com/news/1"))
-            adapter.save(news(url = "https://kachi.com/news/2"))
+            news(url = "https://kachi.com/news/1").let { adapter.save(it, outboxFor(it)) }
+            news(url = "https://kachi.com/news/2").let { adapter.save(it, outboxFor(it)) }
 
             val found = adapter.findByKeyword(
                 keyword = keyword,
@@ -167,6 +207,10 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         }
     }
 
+    private fun outboxFor(news: News): CollectorOutbox {
+        return NewsCollectedEvent.from(news).toOutbox(payload = "{}", now = CollectorTestFixture.NOW)
+    }
+
     private fun news(
         url: String,
         source: NewsSource = NewsSource.GOOGLE,
@@ -177,7 +221,9 @@ class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest(
         return News.create(
             source = source,
             title = NewsTitle.of(title),
+            excerpt = NewsExcerpt.of("$title 발췌문"),
             url = NewsUrl.of(url),
+            language = NewsLanguage.of("ko"),
             publishedAt = publishedAt,
             collectedAt = collectedAt,
             matchedKeywords = listOf(keyword)

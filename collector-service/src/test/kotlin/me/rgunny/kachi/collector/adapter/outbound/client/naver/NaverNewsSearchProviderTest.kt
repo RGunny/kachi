@@ -14,7 +14,6 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import java.time.Instant
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 @DisplayName("NaverNewsSearchProvider")
 class NaverNewsSearchProviderTest {
@@ -55,7 +54,7 @@ class NaverNewsSearchProviderTest {
                       "title": "<b>NVIDIA</b> 실적 발표",
                       "originallink": "https://kachi.com/news/1",
                       "link": "https://n.news.naver.com/1",
-                      "description": "NVIDIA 뉴스",
+                      "description": "<b>NVIDIA</b>가 &quot;실적&quot;을 발표했다",
                       "pubDate": "Wed, 27 May 2026 10:00:00 +0900"
                     },
                     {
@@ -78,6 +77,8 @@ class NaverNewsSearchProviderTest {
             assertEquals("NVIDIA 실적 발표", articles[0].title)
             assertEquals("https://kachi.com/news/1", articles[0].url)
             assertEquals(Instant.parse("2026-05-27T01:00:00Z"), articles[0].publishedAt)
+            assertEquals("NVIDIA가 \"실적\"을 발표했다", articles[0].excerpt)
+            assertEquals("ko", articles[0].language)
             assertEquals("https://n.news.naver.com/2", articles[1].url)
 
             val request = exchange.request
@@ -88,7 +89,7 @@ class NaverNewsSearchProviderTest {
         }
 
         @Test
-        @DisplayName("title 또는 URL이 비어 있는 item은 제외한다")
+        @DisplayName("title, URL, description 중 하나라도 비어 있는 item은 제외한다")
         fun skipItemsWithoutRequiredFields() = runBlocking {
             val provider = providerOf(
                 CapturingExchangeFunction(
@@ -99,19 +100,29 @@ class NaverNewsSearchProviderTest {
                           "title": "NVIDIA 정상 뉴스",
                           "originallink": "https://kachi.com/news/1",
                           "link": "",
-                          "pubDate": ""
+                          "description": "정상 설명",
+                          "pubDate": "Wed, 27 May 2026 10:00:00 +0900"
                         },
                         {
                           "title": "",
                           "originallink": "https://kachi.com/news/2",
                           "link": "",
-                          "pubDate": ""
+                          "description": "제목 없음",
+                          "pubDate": "Wed, 27 May 2026 10:00:00 +0900"
                         },
                         {
                           "title": "NVIDIA URL 없음",
                           "originallink": "",
                           "link": "",
-                          "pubDate": ""
+                          "description": "URL 없음",
+                          "pubDate": "Wed, 27 May 2026 10:00:00 +0900"
+                        },
+                        {
+                          "title": "NVIDIA 설명 없음",
+                          "originallink": "https://kachi.com/news/4",
+                          "link": "",
+                          "description": "<b></b>",
+                          "pubDate": "Wed, 27 May 2026 10:00:00 +0900"
                         }
                       ]
                     }
@@ -126,8 +137,8 @@ class NaverNewsSearchProviderTest {
         }
 
         @Test
-        @DisplayName("pubDate를 파싱할 수 없으면 publishedAt을 null로 둔다")
-        fun useNullPublishedAtWhenPubDateCannotBeParsed() = runBlocking {
+        @DisplayName("pubDate를 파싱할 수 없는 item은 제외한다")
+        fun skipItemWhenPubDateCannotBeParsed() = runBlocking {
             val provider = providerOf(
                 CapturingExchangeFunction(
                     """
@@ -137,6 +148,7 @@ class NaverNewsSearchProviderTest {
                           "title": "NVIDIA 날짜 형식 오류",
                           "originallink": "https://kachi.com/news/1",
                           "link": "",
+                          "description": "설명",
                           "pubDate": "not-a-date"
                         }
                       ]
@@ -147,8 +159,7 @@ class NaverNewsSearchProviderTest {
 
             val articles = provider.collect(keyword)
 
-            assertEquals(1, articles.size)
-            assertNull(articles.first().publishedAt)
+            assertEquals(0, articles.size)
         }
     }
 

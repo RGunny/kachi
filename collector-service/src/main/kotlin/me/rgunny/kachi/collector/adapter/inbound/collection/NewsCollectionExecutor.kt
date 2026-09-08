@@ -1,47 +1,41 @@
 package me.rgunny.kachi.collector.adapter.inbound.collection
 
-import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectNewsCommand
 import me.rgunny.kachi.collector.application.port.inbound.collection.CollectNewsUseCase
+import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectNewsCommand
+import me.rgunny.kachi.collector.application.port.outbound.lock.CollectorExecutionLock
+import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockOutcome
+import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockPort
 import org.springframework.stereotype.Component
-import java.time.Clock
-import java.time.Instant
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * scheduler와 internal API에서 들어온 뉴스 수집 요청을 받아 중복 실행을 막고 수집 유스케이스를 호출한다.
  *
- * 현재는 단일 인스턴스 실행을 가정하므로 JVM 내부 lock으로 중복 실행을 막는다.
- * 분산 실행이 필요해지면 이 클래스의 lock 획득/해제 책임을 distributed lock으로 교체한다.
+ * 무엇을 보호하는지는 [CollectorExecutionLock.NEWS_COLLECTION]이 말하고, 그 규칙을 무엇이 지키는지는 알지 않는다.
+ * 여기서는 lock의 결과를 수집 요청의 결과로 옮기는 일만 한다.
  */
 @Component
 class NewsCollectionExecutor(
     private val collectNewsUseCase: CollectNewsUseCase,
-    private val clock: Clock
+    private val executionLock: ExecutionLockPort
 ) {
-    private val runningCollection = AtomicReference<RunningNewsCollection?>(null)
-
     suspend fun execute(command: CollectNewsCommand): NewsCollectionExecutionResult {
-        val currentCollection = runningCollectionOf(command)
-
-        // 1. 이미 수집 중이면 유스케이스를 호출하지 않고 중복 실행 결과를 반환한다.
-        if (!runningCollection.compareAndSet(null, currentCollection)) {
-            return NewsCollectionExecutionResult.AlreadyRunning(
-                runningCollection = runningCollection.get() ?: currentCollection
-            )
+        // 1. lock을 얻은 요청만 수집 유스케이스를 실행한다. 해제는 포트가 보장한다.
+        val outcome = executionLock.withLock(CollectorExecutionLock.NEWS_COLLECTION) {
+            collectNewsUseCase.collect(command)
         }
 
-        // 2. lock을 획득한 요청만 실제 수집 유스케이스를 실행한다.
-        return try {
-            NewsCollectionExecutionResult.Started(collectNewsUseCase.collect(command))
-        } finally {
-            // 3. 성공/실패와 무관하게 다음 실행을 받을 수 있도록 lock을 해제한다.
-            runningCollection.compareAndSet(currentCollection, null)
-        }
-    }
+        // 2. lock의 결과를 이 진입점의 언어로 옮긴다.
+        return when (outcome) {
+            is ExecutionLockOutcome.Executed ->
+                NewsCollectionExecutionResult.Started(outcome.value)
 
-    private fun runningCollectionOf(command: CollectNewsCommand): RunningNewsCollection {
-        return RunningNewsCollection(
-            startedAt = Instant.now(clock)
-        )
+            is ExecutionLockOutcome.AlreadyHeld ->
+                NewsCollectionExecutionResult.AlreadyRunning(
+                    runningCollection = RunningNewsCollection(startedAt = outcome.holder.acquiredAt)
+                )
+
+            is ExecutionLockOutcome.Unavailable ->
+                NewsCollectionExecutionResult.LockUnavailable(outcome.cause)
+        }
     }
 }

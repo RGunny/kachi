@@ -6,6 +6,9 @@ import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistenceP
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
+import org.springframework.transaction.reactive.TransactionalOperator
+import org.springframework.transaction.reactive.executeAndAwait
 import me.rgunny.kachi.collector.domain.NewsSource
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.data.domain.Sort
@@ -18,7 +21,8 @@ import java.time.Instant
 @Component
 class NewsPersistenceAdapter(
     private val repository: NewsMongoRepository,
-    private val mongoTemplate: ReactiveMongoTemplate
+    private val mongoTemplate: ReactiveMongoTemplate,
+    private val transactionalOperator: TransactionalOperator
 ) : NewsPersistencePort {
 
     override suspend fun findExistingUrlHashes(source: NewsSource, urlHashes: Set<String>): Set<String> {
@@ -62,10 +66,16 @@ class NewsPersistenceAdapter(
             ?: emptyList()
     }
 
-    override suspend fun save(news: News): SaveNewsResult {
+    /**
+     * 기사 insert와 outbox insert를 한 트랜잭션에 둔다. 트랜잭션은 replica set 전제다(ADR 017).
+     * 같은 출처·URL의 unique index 충돌은 트랜잭션 전체를 되돌리므로 outbox 행도 남지 않는다.
+     */
+    override suspend fun save(news: News, outbox: CollectorOutbox): SaveNewsResult {
         return try {
-            repository.save(NewsMongoDocument.fromDomain(news))
-                .awaitSingle()
+            transactionalOperator.executeAndAwait {
+                mongoTemplate.insert(NewsMongoDocument.fromDomain(news)).awaitSingle()
+                mongoTemplate.insert(CollectorOutboxMongoDocument.fromDomain(outbox)).awaitSingle()
+            }
             SaveNewsResult.SAVED
         } catch (e: DuplicateKeyException) {
             SaveNewsResult.DUPLICATED

@@ -20,13 +20,12 @@ import kotlin.test.assertIs
 
 @DisplayName("InternalCollectionController")
 class InternalCollectionControllerTest {
-    private val clock = CollectorTestFixture.CLOCK
 
     @Test
     @DisplayName("수동 뉴스 수집 요청을 command로 변환해 실행한다")
     fun collectNews() = kotlinx.coroutines.runBlocking {
         val useCase = CountingCollectNewsUseCase()
-        val controller = InternalCollectionController(NewsCollectionExecutor(useCase, clock))
+        val controller = InternalCollectionController(NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()))
 
         val response = controller.collectNews(
             CollectNewsRequest(
@@ -49,7 +48,7 @@ class InternalCollectionControllerTest {
     @DisplayName("요청 body가 없으면 전체 활성 키워드 수집 command로 실행한다")
     fun collectNewsWithEmptyBody() = kotlinx.coroutines.runBlocking {
         val useCase = CountingCollectNewsUseCase()
-        val controller = InternalCollectionController(NewsCollectionExecutor(useCase, clock))
+        val controller = InternalCollectionController(NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()))
 
         val response = controller.collectNews(null)
 
@@ -62,7 +61,7 @@ class InternalCollectionControllerTest {
     @DisplayName("수집 실행 중이면 409 응답을 반환한다")
     fun returnConflictWhenCollectionIsAlreadyRunning() = kotlinx.coroutines.runBlocking {
         val useCase = AlwaysSuspendingCollectNewsUseCase()
-        val executor = NewsCollectionExecutor(useCase, clock)
+        val executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock())
         val controller = InternalCollectionController(executor)
         val running = async { controller.collectNews(null) }
 

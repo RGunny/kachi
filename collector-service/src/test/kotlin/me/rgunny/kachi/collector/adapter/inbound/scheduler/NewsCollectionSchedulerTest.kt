@@ -17,14 +17,13 @@ import kotlin.test.assertEquals
 
 @DisplayName("NewsCollectionScheduler")
 class NewsCollectionSchedulerTest {
-    private val clock = CollectorTestFixture.CLOCK
 
     @Test
     @DisplayName("enabled=false이면 수집을 실행하지 않는다")
     fun doNotCollectWhenDisabled() = runBlocking {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
-            executor = NewsCollectionExecutor(useCase, clock),
+            executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
             properties = schedulerProperties(enabled = false)
         )
 
@@ -38,7 +37,7 @@ class NewsCollectionSchedulerTest {
     fun collectWhenEnabled() = runBlocking {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
-            executor = NewsCollectionExecutor(useCase, clock),
+            executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
             properties = schedulerProperties(enabled = true)
         )
 
@@ -54,7 +53,7 @@ class NewsCollectionSchedulerTest {
     fun swallowCollectionFailure() = runBlocking {
         val useCase = FailingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
-            executor = NewsCollectionExecutor(useCase, clock),
+            executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
             properties = schedulerProperties(enabled = true)
         )
 

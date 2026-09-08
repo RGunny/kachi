@@ -9,10 +9,15 @@ import me.rgunny.kachi.collector.application.port.outbound.keyword.KeywordReader
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxEventSerializer
+import me.rgunny.kachi.collector.application.port.outbound.outbox.model.NewsCollectedEvent
+import me.rgunny.kachi.collector.application.port.outbound.outbox.model.toOutbox
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.CollectionRun
 import me.rgunny.kachi.collector.domain.CollectionTargetType
 import me.rgunny.kachi.collector.domain.News
+import me.rgunny.kachi.collector.domain.NewsExcerpt
+import me.rgunny.kachi.collector.domain.NewsLanguage
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
 import me.rgunny.kachi.collector.domain.ProviderFailureReason
@@ -27,6 +32,7 @@ class CollectNewsService(
     private val newsProviderPorts: List<NewsProviderPort>,
     private val newsPersistencePort: NewsPersistencePort,
     private val collectionRunPersistencePort: CollectionRunPersistencePort,
+    private val eventSerializer: CollectorOutboxEventSerializer,
     private val clock: Clock
 ) : CollectNewsUseCase {
 
@@ -102,7 +108,11 @@ class CollectNewsService(
 
         // 4. 저장 중 unique 충돌이 나면 실패가 아니라 중복으로 집계한다.
         for (news in newCandidates) {
-            when (newsPersistencePort.save(news)) {
+            // 기사 저장과 발행 대기 행 기록이 한 트랜잭션이다. 소비자는 이 행의 payload만으로 기사를 안다.
+            val event = NewsCollectedEvent.from(news)
+            val outbox = event.toOutbox(payload = eventSerializer.serialize(event), now = Instant.now(clock))
+
+            when (newsPersistencePort.save(news, outbox)) {
                 SaveNewsResult.SAVED -> savedCount += 1
                 SaveNewsResult.DUPLICATED -> duplicateCount += 1
             }
@@ -124,7 +134,9 @@ class CollectNewsService(
             return News.create(
                 source = article.source,
                 title = NewsTitle.of(article.title),
+                excerpt = NewsExcerpt.of(article.excerpt),
                 url = NewsUrl.of(article.url),
+                language = NewsLanguage.of(article.language),
                 publishedAt = article.publishedAt,
                 collectedAt = collectedAt,
                 matchedKeywords = listOf(keyword)
@@ -141,7 +153,9 @@ class CollectNewsService(
                 News.create(
                     source = first.source,
                     title = first.title,
+                    excerpt = first.excerpt,
                     url = first.url,
+                    language = first.language,
                     publishedAt = first.publishedAt,
                     collectedAt = first.collectedAt,
                     matchedKeywords = sameUrlNews.flatMap { it.matchedKeywords }.distinct()

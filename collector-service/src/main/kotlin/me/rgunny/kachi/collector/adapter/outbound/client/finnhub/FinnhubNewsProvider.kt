@@ -42,24 +42,31 @@ class FinnhubNewsProvider(
         return response.mapNotNull { toCollectedArticleOrNull(it) }
     }
 
+    /**
+     * 제목·URL·발췌문·발행 시각 중 하나라도 없는 item은 제외한다. 도메인 News는 넷을 모두 요구한다.
+     */
     private fun toCollectedArticleOrNull(item: FinnhubNewsItem): CollectedArticle? {
         val title = item.headline.orEmpty().trim()
         val url = item.url.orEmpty().trim()
+        val excerpt = item.summary.orEmpty().trim()
+        val publishedAt = parsePublishedAt(item.datetime) ?: return null
 
-        if (title.isBlank() || url.isBlank()) {
+        if (title.isBlank() || url.isBlank() || excerpt.isBlank()) {
             return null
         }
 
         return CollectedArticle(
             source = NewsSource.FINNHUB,
             title = title,
+            excerpt = excerpt,
             url = url,
-            publishedAt = parsePublishedAt(item.datetime)
+            language = LANGUAGE,
+            publishedAt = publishedAt
         )
     }
 
     /**
-     * Finnhub datetime은 UNIX timestamp 초 단위다. 값이 없거나 epoch 이전이면 해당 기사 시각만 null로 둔다.
+     * Finnhub datetime은 UNIX timestamp 초 단위다. 값이 없거나 epoch 이전이면 null이고 그 item은 제외된다.
      */
     private fun parsePublishedAt(datetime: Long?): Instant? {
         if (datetime == null || datetime < 0) return null
@@ -68,6 +75,8 @@ class FinnhubNewsProvider(
     }
 
     private companion object {
+        // Finnhub company news는 영문 기사만 준다.
+        private const val LANGUAGE = "en"
         private const val FINNHUB_TOKEN_HEADER = "X-Finnhub-Token"
     }
 }

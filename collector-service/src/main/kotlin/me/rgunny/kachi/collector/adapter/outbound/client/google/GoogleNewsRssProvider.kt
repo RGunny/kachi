@@ -1,6 +1,7 @@
 package me.rgunny.kachi.collector.adapter.outbound.client.google
 
 import kotlinx.coroutines.reactor.awaitSingle
+import me.rgunny.kachi.collector.adapter.outbound.client.HtmlText
 import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedArticle
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
@@ -39,11 +40,8 @@ class GoogleNewsRssProvider(
         // 2. parseRss(xml)로 RSS item 목록을 만든다.
         val rssItems = parseRss(xml)
 
-        // 3. 제목이나 URL이 비어 있는 item은 adapter 안에서 제외한다.
-        // TODO: 상세 실패분리는 추후 고도화
-        return rssItems
-            .filter { it.title.isNotBlank() && it.link.isNotBlank() }
-            .map { toCollectedArticle(it) }
+        // 3. 제목·URL·발췌문·발행 시각 중 하나라도 없는 item은 adapter 안에서 제외한다. 도메인 News는 넷을 모두 요구한다.
+        return rssItems.mapNotNull { toCollectedArticleOrNull(it) }
     }
 
     private fun parseRss(xml: String): List<GoogleRssItem> {
@@ -80,6 +78,7 @@ class GoogleNewsRssProvider(
                 GoogleRssItem(
                     title = title,
                     link = link,
+                    description = item.textContentOf("description"),
                     pubDate = item.textContentOf("pubDate"),
                     sourceName = item.textContentOf("source")
                 )
@@ -91,18 +90,32 @@ class GoogleNewsRssProvider(
 
     /**
      * Google RSS item을 application 계층이 사용하는 수집 기사 DTO로 변환한다.
+     *
+     * 발췌문은 RSS description의 평문이다. 기사 하나면 제목과 매체명, 묶인 기사면 관련 제목 목록이 들어 있다.
+     * 언어는 요청에 보낸 `hl` 값이다.
      */
-    private fun toCollectedArticle(item: GoogleRssItem): CollectedArticle {
+    private fun toCollectedArticleOrNull(item: GoogleRssItem): CollectedArticle? {
+        val title = item.title.trim()
+        val url = item.link.trim()
+        val excerpt = HtmlText.toPlain(item.description.orEmpty())
+        val publishedAt = parsePublishedAt(item.pubDate) ?: return null
+
+        if (title.isBlank() || url.isBlank() || excerpt.isBlank()) {
+            return null
+        }
+
         return CollectedArticle(
             source = NewsSource.GOOGLE,
-            title = item.title.trim(),
-            url = item.link,
-            publishedAt = parsePublishedAt(item.pubDate)
+            title = title,
+            excerpt = excerpt,
+            url = url,
+            language = properties.languageCode,
+            publishedAt = publishedAt
         )
     }
 
     /**
-     * Google RSS pubDate를 Instant로 변환한다. 파싱할 수 없으면 해당 기사 시각만 null로 둔다.
+     * Google RSS pubDate를 Instant로 변환한다. 파싱할 수 없으면 null이고 그 item은 제외된다.
      */
     private fun parsePublishedAt(pubDate: String?): Instant? {
         if (pubDate.isNullOrBlank()) return null
