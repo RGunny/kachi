@@ -29,7 +29,9 @@ class InternalNewsControllerTest {
                     id = UUID.fromString("018f0000-0000-7000-8000-000000000001"),
                     source = "GOOGLE",
                     title = "NVIDIA 실적 발표",
+                    excerpt = "엔비디아 실적",
                     url = "https://kachi.com/news/1",
+                    language = "ko",
                     publishedAt = from.plus(Duration.ofHours(10)),
                     collectedAt = from.plus(Duration.ofHours(10)).plusSeconds(300),
                     matchedKeywords = listOf("NVIDIA")

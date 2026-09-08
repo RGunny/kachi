@@ -6,6 +6,17 @@ spring:
   mongodb:
     representation:
       uuid: standard
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        enable.idempotence: true
+        # relay의 publishing-visibility-timeout(60s)에서 역산한 값이다. max.block + delivery = 15s < 60s.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
 
 server:
   port: 8082
@@ -19,6 +30,25 @@ management:
 
 kachi:
   collector:
+    outbox:
+      relay:
+        enabled: true
+        publisher-id: ${HOSTNAME:collector-service-${random.uuid}}
+        fixed-delay: 5s
+        initial-delay: 15s
+        batch-size: 50
+        publishing-visibility-timeout: 60s
+        retry:
+          max-attempts: 5
+          base-delay: 1s
+          max-delay: 1m
+          multiplier: 2.0
+    events:
+      enabled: true
+      topics:
+        news-collected: collector.news.collected
+      # 기사 id compaction과 함께 걸리는 삭제 기간. 이 안에서 처음부터 다시 읽어 재처리할 수 있다.
+      retention: 30d
     scheduler:
       news:
         enabled: true

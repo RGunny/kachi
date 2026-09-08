@@ -18,7 +18,6 @@ import kotlin.test.assertTrue
 
 @DisplayName("AiOutboxRelayScheduler")
 class AiOutboxRelaySchedulerTest {
-    private val clock = AiTestFixture.CLOCK
 
     @Test
     @DisplayName("처리한 행이 있으면 tick 집계를 남긴다")
@@ -78,7 +77,7 @@ class AiOutboxRelaySchedulerTest {
 
     private fun schedulerOf(useCase: RelayAiOutboxUseCase): AiOutboxRelayScheduler {
         return AiOutboxRelayScheduler(
-            executor = AiOutboxRelayExecutor(useCase, clock),
+            executor = AiOutboxRelayExecutor(useCase, AiTestFixture.executionLock()),
             properties = AiTestFixture.relayProperties()
         )
     }

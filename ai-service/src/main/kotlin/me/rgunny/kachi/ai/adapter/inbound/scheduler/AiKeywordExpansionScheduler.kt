@@ -3,6 +3,7 @@ package me.rgunny.kachi.ai.adapter.inbound.scheduler
 import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
+import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
 import org.slf4j.LoggerFactory
@@ -55,6 +56,13 @@ class AiKeywordExpansionScheduler(
                     log.info(
                         "Skip scheduled keyword expansion because another expansion is running: startedAt={}",
                         result.runningExpansion.startedAt
+                    )
+
+                // 4. lock을 확인할 수 없는 것은 건너뛴 것이 아니라 장애이므로 원인과 함께 남긴다.
+                is AiKeywordExpansionLockUnavailable ->
+                    log.warn(
+                        "Skip scheduled keyword expansion because the execution lock could not be checked",
+                        result.cause
                     )
 
                 is AiKeywordExpansionStarted ->

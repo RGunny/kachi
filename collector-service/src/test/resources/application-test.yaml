@@ -8,6 +8,11 @@ spring:
 
 kachi:
   collector:
+    outbox:
+      relay:
+        enabled: false
+    events:
+      enabled: false
     scheduler:
       news:
         enabled: false

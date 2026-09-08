@@ -5,6 +5,8 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
 import me.rgunny.kachi.ai.fake.BlockingRelayAiOutboxUseCase
 import me.rgunny.kachi.ai.fake.FailingRelayAiOutboxUseCase
+import me.rgunny.kachi.ai.application.port.outbound.lock.ExecutionLockOutcome
+import me.rgunny.kachi.ai.fake.FakeExecutionLockPort
 import me.rgunny.kachi.ai.fake.RecordingRelayAiOutboxUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import org.junit.jupiter.api.DisplayName
@@ -15,7 +17,6 @@ import kotlin.test.assertIs
 
 @DisplayName("AiOutboxRelayExecutor")
 class AiOutboxRelayExecutorTest {
-    private val clock = AiTestFixture.CLOCK
 
     @Test
     @DisplayName("실행 중인 relay가 있으면 중복 요청을 건너뛴다")
@@ -71,7 +72,21 @@ class AiOutboxRelayExecutorTest {
         assertEquals(2, useCase.invokeCount)
     }
 
+    @Test
+    @DisplayName("lock을 확인할 수 없으면 relay를 실행하지 않는다")
+    fun doNotRelayWhenLockIsUnavailable() = runBlocking {
+        val useCase = RecordingRelayAiOutboxUseCase()
+        val cause = IllegalStateException("lock 저장소 장애")
+        val executor = AiOutboxRelayExecutor(useCase, FakeExecutionLockPort(ExecutionLockOutcome.Unavailable(cause)))
+
+        val result = executor.execute()
+
+        val unavailable = assertIs<AiOutboxRelayLockUnavailable>(result)
+        assertEquals(cause, unavailable.cause)
+        assertEquals(0, useCase.invokeCount)
+    }
+
     private fun executorOf(useCase: RelayAiOutboxUseCase): AiOutboxRelayExecutor {
-        return AiOutboxRelayExecutor(useCase, clock)
+        return AiOutboxRelayExecutor(useCase, AiTestFixture.executionLock())
     }
 }

@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.adapter.inbound.web
 
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
+import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ApiResponse
 import me.rgunny.kachi.ai.adapter.inbound.web.response.ErrorCode
@@ -62,6 +63,17 @@ class InternalAiNewsSummaryController(
 
                 // 4. 실행이 시작되어 완료된 결과를 내부 API 응답 DTO로 변환한다.
                 ResponseEntity.ok(ApiResponse.success(NewsSummaryRunResponse.from(result.result)))
+            }
+
+            is AiNewsSummaryLockUnavailable -> {
+                log.warn(
+                    "Manual news summary skipped because the execution lock could not be checked",
+                    result.cause
+                )
+
+                // 5. 이미 실행 중이라 막힌 것과 달리 장애이므로 503으로 구분해 알린다.
+                ResponseEntity.status(ErrorCode.NEWS_SUMMARY_LOCK_UNAVAILABLE.status)
+                    .body(ApiResponse.failure(ErrorCode.NEWS_SUMMARY_LOCK_UNAVAILABLE))
             }
         }
     }

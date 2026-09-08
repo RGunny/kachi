@@ -3,9 +3,12 @@ package me.rgunny.kachi.collector.application.service
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.application.port.inbound.news.model.ListNewsQuery
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
+import me.rgunny.kachi.collector.domain.NewsExcerpt
+import me.rgunny.kachi.collector.domain.NewsLanguage
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
@@ -75,7 +78,7 @@ class NewsQueryServiceTest {
             return news
         }
 
-        override suspend fun save(news: News): SaveNewsResult {
+        override suspend fun save(news: News, outbox: CollectorOutbox): SaveNewsResult {
             return SaveNewsResult.SAVED
         }
     }
@@ -84,7 +87,9 @@ class NewsQueryServiceTest {
         return News.create(
             source = NewsSource.GOOGLE,
             title = NewsTitle.of(title),
+            excerpt = NewsExcerpt.of("$title 발췌문"),
             url = NewsUrl.of(url),
+            language = NewsLanguage.of("ko"),
             publishedAt = from.plus(Duration.ofHours(10)),
             collectedAt = from.plus(Duration.ofHours(10)).plusSeconds(300),
             matchedKeywords = listOf(keyword)

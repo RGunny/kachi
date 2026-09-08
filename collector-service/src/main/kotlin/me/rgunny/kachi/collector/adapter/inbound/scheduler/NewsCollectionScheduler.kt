@@ -53,6 +53,13 @@ class NewsCollectionScheduler(
                         result.runningCollection.startedAt
                     )
 
+                // 4. lock을 확인할 수 없는 것은 건너뛴 것이 아니라 장애이므로 원인과 함께 남긴다.
+                is NewsCollectionExecutionResult.LockUnavailable ->
+                    log.warn(
+                        "Skip scheduled news collection because the execution lock could not be checked",
+                        result.cause
+                    )
+
                 is NewsCollectionExecutionResult.Started ->
                     log.info(
                         "Scheduled news collection finished: runId={}, status={}, collected={}, duplicated={}, failures={}",

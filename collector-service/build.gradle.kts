@@ -15,6 +15,9 @@ java {
 }
 
 dependencies {
+    // Contract
+    implementation(project(":collector-contract"))
+
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
@@ -24,6 +27,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("tools.jackson.module:jackson-module-kotlin")
+
+    // Kafka
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
 
     // Resilience
     implementation("io.github.resilience4j:resilience4j-reactor:2.3.0")
@@ -40,10 +47,13 @@ dependencies {
     testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.junit.jupiter:junit-jupiter-params")
+    testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
 
     // TestContainers
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-mongodb")
+    testImplementation("org.testcontainers:testcontainers-kafka")
 }
 
 tasks.withType<Test> {

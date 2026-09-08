@@ -1,21 +1,12 @@
 package me.rgunny.kachi.collector.domain
 
-import java.security.MessageDigest
-
+/**
+ * 기사 제목. 앞뒤 공백을 지운 원문이며 비어 있을 수 없다.
+ */
 @JvmInline
 value class NewsTitle private constructor(
     val value: String
 ) {
-    // URL이 다른 유사 제목 뉴스를 빠르게 찾기 위한 후보값이다.
-    val fingerprint: String
-        get() {
-            val normalized = value
-                .lowercase()
-                .replace(Regex("\\s+"), " ")
-                .trim()
-            return sha256(normalized.toByteArray())
-        }
-
     companion object {
 
         fun of(value: String): NewsTitle {
@@ -25,10 +16,5 @@ value class NewsTitle private constructor(
 
             return NewsTitle(normalized)
         }
-
-        private fun sha256(input: ByteArray): String =
-            MessageDigest.getInstance("SHA-256")
-                .digest(input)
-                .joinToString("") { "%02x".format(it) }
     }
 }

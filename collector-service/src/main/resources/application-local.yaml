@@ -6,6 +6,8 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
 
 kachi:
   collector:

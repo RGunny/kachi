@@ -12,7 +12,9 @@ import kotlin.test.assertNotNull
 @DisplayName("News")
 class NewsTest {
     private val title = NewsTitle.of("NVIDIA 실적 발표")
+    private val excerpt = NewsExcerpt.of("엔비디아가 2분기 실적을 발표했다")
     private val url = NewsUrl.of("https://kachi.com/news/1")
+    private val language = NewsLanguage.of("ko")
     private val publishedAt = CollectorTestFixture.NOW
     private val collectedAt = publishedAt.plusSeconds(60)
     private val keyword = CollectedKeyword.of("NVIDIA")
@@ -24,14 +26,15 @@ class NewsTest {
         @Test
         @DisplayName("뉴스를 생성한다")
         fun createNews() {
-            val news = createNewsFixture()
+            val news = createNewsFixture(listOf(keyword))
 
             assertNotNull(news.id.value)
             assertEquals(NewsSource.GOOGLE, news.source)
             assertEquals(title, news.title)
+            assertEquals(excerpt, news.excerpt)
             assertEquals(url, news.url)
             assertEquals(url.hash, news.urlHash)
-            assertEquals(title.fingerprint, news.titleFingerprint)
+            assertEquals(language, news.language)
             assertEquals(publishedAt, news.publishedAt)
             assertEquals(collectedAt, news.collectedAt)
             assertEquals(listOf(keyword), news.matchedKeywords)
@@ -40,14 +43,7 @@ class NewsTest {
         @Test
         @DisplayName("중복 키워드는 제거한다")
         fun removeDuplicatedKeywords() {
-            val news = News.create(
-                source = NewsSource.GOOGLE,
-                title = title,
-                url = url,
-                publishedAt = publishedAt,
-                collectedAt = collectedAt,
-                matchedKeywords = listOf(keyword, keyword)
-            )
+            val news = createNewsFixture(listOf(keyword, keyword))
 
             assertEquals(listOf(keyword), news.matchedKeywords)
         }
@@ -56,26 +52,21 @@ class NewsTest {
         @DisplayName("매칭 키워드는 하나 이상이어야 한다")
         fun rejectEmptyMatchedKeywords() {
             assertFailsWith<IllegalArgumentException> {
-                News.create(
-                    source = NewsSource.GOOGLE,
-                    title = title,
-                    url = url,
-                    publishedAt = publishedAt,
-                    collectedAt = collectedAt,
-                    matchedKeywords = emptyList()
-                )
+                createNewsFixture(emptyList())
             }
         }
     }
 
-    private fun createNewsFixture(): News {
+    private fun createNewsFixture(matchedKeywords: List<CollectedKeyword>): News {
         return News.create(
             source = NewsSource.GOOGLE,
             title = title,
+            excerpt = excerpt,
             url = url,
+            language = language,
             publishedAt = publishedAt,
             collectedAt = collectedAt,
-            matchedKeywords = listOf(keyword)
+            matchedKeywords = matchedKeywords
         )
     }
 
@@ -92,9 +83,10 @@ class NewsTest {
                 id = id,
                 source = NewsSource.NAVER,
                 title = title,
+                excerpt = excerpt,
                 url = url,
                 urlHash = "url-hash",
-                titleFingerprint = "title-fingerprint",
+                language = language,
                 publishedAt = publishedAt,
                 collectedAt = collectedAt,
                 matchedKeywords = listOf(keyword)
@@ -102,8 +94,9 @@ class NewsTest {
 
             assertEquals(id, news.id)
             assertEquals(NewsSource.NAVER, news.source)
+            assertEquals(excerpt, news.excerpt)
             assertEquals("url-hash", news.urlHash)
-            assertEquals("title-fingerprint", news.titleFingerprint)
+            assertEquals(language, news.language)
         }
     }
 }

@@ -1,5 +1,7 @@
 package me.rgunny.kachi.ai.fixture
 
+import me.rgunny.kachi.ai.adapter.outbound.lock.InMemoryExecutionLockAdapter
+import me.rgunny.kachi.ai.application.port.outbound.lock.ExecutionLockPort
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
@@ -57,6 +59,13 @@ import java.util.UUID
 object AiTestFixture {
     val NOW: Instant = Instant.parse("2026-06-03T00:00:00Z")
     val CLOCK: Clock = Clock.fixed(NOW, ZoneOffset.UTC)
+
+    /**
+     * 이 인스턴스 안에서만 유효한 실행 lock.
+     *
+     * 테스트마다 새로 만들어 앞선 테스트가 쥔 lock이 다음 테스트에 남지 않게 한다.
+     */
+    fun executionLock(): ExecutionLockPort = InMemoryExecutionLockAdapter(CLOCK)
 
     /** 후보로 쓰는 모델 상수. 가드·라우터 테스트가 식별자로 쓴다. */
     val LLM_MODEL: LlmModel = LlmModel.GROQ_QWEN3_27B

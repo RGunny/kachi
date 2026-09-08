@@ -15,7 +15,6 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
 import java.time.Instant
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 @DisplayName("FinnhubNewsProvider")
 class FinnhubNewsProviderTest {
@@ -80,6 +79,8 @@ class FinnhubNewsProviderTest {
             assertEquals("NVIDIA announces earnings", articles[0].title)
             assertEquals("https://kachi.com/news/1", articles[0].url)
             assertEquals(Instant.parse("2026-05-26T10:00:00Z"), articles[0].publishedAt)
+            assertEquals("NVIDIA news", articles[0].excerpt)
+            assertEquals("en", articles[0].language)
 
             val request = exchange.request
             assertEquals("api-key", request.headers().getFirst("X-Finnhub-Token"))
@@ -88,7 +89,7 @@ class FinnhubNewsProviderTest {
         }
 
         @Test
-        @DisplayName("headline 또는 URL이 비어 있는 item은 제외한다")
+        @DisplayName("headline, URL, summary 중 하나라도 비어 있는 item은 제외한다")
         fun skipItemsWithoutRequiredFields() = runBlocking {
             val provider = providerOf(
                 CapturingExchangeFunction(
@@ -97,17 +98,26 @@ class FinnhubNewsProviderTest {
                       {
                         "datetime": 1779789600,
                         "headline": "NVIDIA 정상 뉴스",
+                        "summary": "정상 요약",
                         "url": "https://kachi.com/news/1"
                       },
                       {
                         "datetime": 1779789600,
                         "headline": "",
+                        "summary": "제목 없음",
                         "url": "https://kachi.com/news/2"
                       },
                       {
                         "datetime": 1779789600,
                         "headline": "NVIDIA URL 없음",
+                        "summary": "URL 없음",
                         "url": ""
+                      },
+                      {
+                        "datetime": 1779789600,
+                        "headline": "NVIDIA 요약 없음",
+                        "summary": " ",
+                        "url": "https://kachi.com/news/4"
                       }
                     ]
                     """.trimIndent()
@@ -121,8 +131,8 @@ class FinnhubNewsProviderTest {
         }
 
         @Test
-        @DisplayName("datetime이 없거나 epoch 이전이면 publishedAt을 null로 둔다")
-        fun useNullPublishedAtWhenDatetimeIsInvalid() = runBlocking {
+        @DisplayName("datetime이 없거나 epoch 이전인 item은 제외한다")
+        fun skipItemsWhenDatetimeIsInvalid() = runBlocking {
             val provider = providerOf(
                 CapturingExchangeFunction(
                     """
@@ -130,11 +140,13 @@ class FinnhubNewsProviderTest {
                       {
                         "datetime": null,
                         "headline": "NVIDIA 날짜 없음",
+                        "summary": "요약",
                         "url": "https://kachi.com/news/1"
                       },
                       {
                         "datetime": -1,
                         "headline": "NVIDIA 날짜 오류",
+                        "summary": "요약",
                         "url": "https://kachi.com/news/2"
                       }
                     ]
@@ -144,9 +156,7 @@ class FinnhubNewsProviderTest {
 
             val articles = provider.collect(keyword)
 
-            assertEquals(2, articles.size)
-            assertNull(articles[0].publishedAt)
-            assertNull(articles[1].publishedAt)
+            assertEquals(0, articles.size)
         }
     }
 

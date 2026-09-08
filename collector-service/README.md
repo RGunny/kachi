@@ -7,8 +7,8 @@
 ## 현재 구현 상태
 
 - `News`, `CollectionRun`, `ProviderCollectionResult` 도메인 모델
-- 뉴스 URL hash 기반 중복 방어
-- 제목 fingerprint 생성
+- 정규화 URL hash 기반 중복 방어
+- provider 발췌문·언어 보존
 - 수집 키워드 기준 provider 호출
 - 같은 수집 batch 안의 동일 URL 병합
 - 저장 전 기존 URL hash 조회
@@ -22,6 +22,7 @@
 - internal API 기반 수동 수집 진입점
 - 단일 인스턴스 기준 중복 실행 방지
 - MongoDB reactive persistence adapter
+- 기사 저장과 한 트랜잭션인 outbox 기록, relay의 Kafka 발행
 
 ## 수집 흐름
 
@@ -36,9 +37,15 @@ Scheduler 또는 Internal API
               -> Naver Search API
               -> Finnhub Company News
           -> NewsPersistencePort
-              -> MongoDB news
+              -> MongoDB news + collector_outbox (한 트랜잭션)
           -> CollectionRunPersistencePort
               -> MongoDB collection_runs
+
+CollectorOutboxRelayScheduler
+  -> CollectorOutboxRelayExecutor
+      -> RelayCollectorOutboxUseCase
+          -> CollectorOutboxPublisherPort
+              -> Kafka collector.news.collected
 ```
 
 `CollectNewsCommand.keywords`가 비어 있으면 `user-service`에서 활성 키워드를 조회한다.
@@ -129,7 +136,8 @@ GET /api/v1/internal/news?keyword=NVIDIA&from=2026-06-01T00:00:00Z&to=2026-06-02
 
 이 API는 `ai-service`가 요약 대상 뉴스를 읽기 위한 내부 계약이다.
 `keyword`는 필수이고, `from`, `to`, `limit`은 선택값이다.
-응답은 AI 요약 입력에 필요한 최소 필드를 반환한다.
+`excerpt`는 provider가 준 발췌문이고 `language`는 provider 설정이 정한 언어다.
+모든 필드가 항상 있다. 제목·발췌문·URL·발행 시각 중 하나라도 없는 provider item은 수집 시점에 제외된다.
 
 ```json
 {
@@ -137,9 +145,11 @@ GET /api/v1/internal/news?keyword=NVIDIA&from=2026-06-01T00:00:00Z&to=2026-06-02
   "data": [
     {
       "id": "018f...",
-      "source": "GOOGLE",
+      "source": "NAVER",
       "title": "NVIDIA ...",
-      "url": "https://news.google.com/...",
+      "excerpt": "엔비디아가 ...",
+      "url": "https://n.news.naver.com/...",
+      "language": "ko",
       "publishedAt": "2026-06-01T10:00:00Z",
       "collectedAt": "2026-06-01T10:05:00Z",
       "matchedKeywords": ["NVIDIA"]
@@ -148,6 +158,39 @@ GET /api/v1/internal/news?keyword=NVIDIA&from=2026-06-01T00:00:00Z&to=2026-06-02
   "error": null
 }
 ```
+
+outbox 조회와 복구:
+
+```http
+GET /api/v1/internal/collector/outboxes?status=DEAD&limit=50
+POST /api/v1/internal/collector/outboxes/{outboxId}/recover
+```
+
+조회 기본값은 `status=DEAD`, `limit=50`이고 payload는 응답에 넣지 않는다.
+복구는 DEAD 행을 PENDING으로 되돌리기만 하고 발행은 다음 relay tick이 한다. 없는 행은 `404`, DEAD가 아닌 행은 `409`다.
+
+## 이벤트 발행
+
+기사 한 건이 저장되면 같은 트랜잭션으로 outbox에 기록되고, relay가 그 행을 Kafka topic으로 내보낸다(ADR 022, 032).
+outbox 행 하나가 레코드 하나다. key는 기사 id, value는 기록 시점의 계약 JSON이다.
+계약 타입은 `collector-contract` 모듈에 있다.
+
+| eventType | topic | 계약 |
+| --- | --- | --- |
+| `NEWS_COLLECTED` | `collector.news.collected` | `CollectorNewsCollectedEvent` |
+
+이벤트는 제목·발췌문·URL·출처·언어·시각·매칭 키워드를 다 싣는다. 소비자는 이 값만으로 처리하고 collector의 저장소나 조회 API를 부르지 않는다.
+topic은 기사 id compaction과 `kachi.collector.events.retention`(기본 30일) 삭제를 함께 건다. 기사는 저장 후 바뀌지 않으므로 그 기간 안에서는 처음부터 다시 읽어 재처리할 수 있다.
+topic 선언은 `NewTopic` 빈으로 두고, 이미 있는 topic의 설정은 바꾸지 않는다.
+
+스위치는 둘이고 뜻이 다르다.
+
+| 키 | 뜻 | 기본값 |
+| --- | --- | --- |
+| `kachi.collector.outbox.relay.enabled` | outbox를 읽어 발행 포트로 넘기는 relay | `true` |
+| `kachi.collector.events.enabled` | Kafka 발행 어댑터와 topic 선언 | `true` |
+
+relay만 켜고 어댑터가 없으면 기동에 실패한다. local은 둘 다 켜고 test 프로파일은 둘 다 `false`다.
 
 ## Scheduler
 
@@ -247,8 +290,11 @@ kachi:
 
 저장 대상:
 
-- `news`: 수집된 뉴스
+- `news`: 수집된 뉴스. `urlHash`는 정규화 URL의 SHA-256이고 `(source, urlHash)`가 unique다
 - `collection_runs`: 수집 실행 기록
+- `collector_outbox`: 발행 대기 이벤트. `eventKey`(기사 id)가 unique다
+
+MongoDB는 replica set이어야 한다(ADR 017). 기사와 outbox를 한 트랜잭션으로 쓴다.
 
 로컬 MongoDB는 `infra/docker-compose.mongo.yml`로 실행한다.
 
@@ -314,7 +360,6 @@ curl -X POST "http://localhost:8082/api/v1/internal/collections/news" \
 
 - `CollectionRun` 조회 API 추가
 - provider 실패 사유 세분화
-- Google RSS 원문 URL 정규화
+- Google RSS 리다이렉트 URL을 원문 URL로 해석
 - Google RSS 제목/언론사명 정규화
-- Google RSS 동일 기사 URL 변형 보정
 - 분산 실행이 필요해지는 시점에 distributed lock 도입

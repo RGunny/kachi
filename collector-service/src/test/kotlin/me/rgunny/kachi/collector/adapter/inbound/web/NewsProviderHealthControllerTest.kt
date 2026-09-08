@@ -83,7 +83,9 @@ class NewsProviderHealthControllerTest {
         return CollectedArticle(
             source = NewsSource.GOOGLE,
             title = title,
+            excerpt = "$title 발췌문",
             url = url,
+            language = "ko",
             publishedAt = CollectorTestFixture.NOW
         )
     }

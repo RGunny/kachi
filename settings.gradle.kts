@@ -2,6 +2,7 @@ rootProject.name = "kachi"
 
 include("user-service")
 include("collector-service")
+include("collector-contract")
 include("ai-service")
 include("ai-contract")
 include("notification-contract")

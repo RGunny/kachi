@@ -183,6 +183,6 @@ class InternalAiNewsSummaryControllerTest {
 
         @Bean
         fun newsSummaryExecutor(useCase: RecordingSummarizeNewsUseCase) =
-            AiNewsSummaryExecutor(useCase, AiTestFixture.CLOCK)
+            AiNewsSummaryExecutor(useCase, AiTestFixture.executionLock())
     }
 }

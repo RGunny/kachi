@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayFinished
+import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayLockUnavailable
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -53,7 +54,14 @@ class AiOutboxRelayScheduler(
                         result.runningRelay.startedAt
                     )
 
-                // 2. 다룰 행이 없는 tick이 대부분이므로 처리한 행이 있을 때만 집계를 남긴다.
+                // 2. lock을 확인할 수 없는 것은 건너뛴 것이 아니라 장애이므로 원인과 함께 남긴다.
+                is AiOutboxRelayLockUnavailable ->
+                    log.warn(
+                        "Skip scheduled outbox relay because the execution lock could not be checked",
+                        result.cause
+                    )
+
+                // 3. 다룰 행이 없는 tick이 대부분이므로 처리한 행이 있을 때만 집계를 남긴다.
                 is AiOutboxRelayFinished ->
                     if (result.result.processed > 0) {
                         log.info(
@@ -68,7 +76,7 @@ class AiOutboxRelayScheduler(
                     }
             }
         }.onFailure { error ->
-            // 3. scheduler 루프가 중단되지 않도록 예외는 로그로 남기고 삼킨다.
+            // 4. scheduler 루프가 중단되지 않도록 예외는 로그로 남기고 삼킨다.
             log.warn("Scheduled outbox relay failed", error)
         }
     }

@@ -11,8 +11,10 @@ data class ListNewsResult(
     val id: UUID,
     val source: String,
     val title: String,
+    val excerpt: String,
     val url: String,
-    val publishedAt: Instant?,
+    val language: String,
+    val publishedAt: Instant,
     val collectedAt: Instant,
     val matchedKeywords: List<String>
 ) {
@@ -22,7 +24,9 @@ data class ListNewsResult(
                 id = news.id.value,
                 source = news.source.name,
                 title = news.title.value,
+                excerpt = news.excerpt.value,
                 url = news.url.value,
+                language = news.language.value,
                 publishedAt = news.publishedAt,
                 collectedAt = news.collectedAt,
                 matchedKeywords = news.matchedKeywords.map { it.value }
