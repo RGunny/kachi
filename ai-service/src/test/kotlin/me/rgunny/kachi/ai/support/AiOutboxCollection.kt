@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.support
 
-import me.rgunny.kachi.ai.adapter.outbound.persistence.AiOutboxMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.outbox.AiOutboxMongoDocument
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 

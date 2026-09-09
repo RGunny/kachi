@@ -1,15 +1,15 @@
 package me.rgunny.kachi.ai.application.service.watermark
 
-import me.rgunny.kachi.ai.application.port.inbound.watermark.FindSummaryWatermarksUseCase
-import me.rgunny.kachi.ai.application.port.inbound.watermark.model.FindSummaryWatermarksResult
-import me.rgunny.kachi.ai.application.port.inbound.watermark.model.SummaryWatermarkLag
-import me.rgunny.kachi.ai.application.port.outbound.persistence.SummaryWatermarkPersistencePort
-import me.rgunny.kachi.ai.domain.run.AiRunTargetType
-import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
-import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import me.rgunny.kachi.ai.application.port.inbound.watermark.FindSummaryWatermarksUseCase
+import me.rgunny.kachi.ai.application.port.inbound.watermark.model.FindSummaryWatermarksResult
+import me.rgunny.kachi.ai.application.port.inbound.watermark.model.SummaryWatermarkLag
+import me.rgunny.kachi.ai.application.port.outbound.watermark.SummaryWatermarkPersistencePort
+import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
+import org.springframework.stereotype.Service
 
 /**
  * 대상 종류마다 저장된 진행 지점을 읽어 조회 시점까지 벌어진 폭과 함께 돌려주는 조회 유스케이스.

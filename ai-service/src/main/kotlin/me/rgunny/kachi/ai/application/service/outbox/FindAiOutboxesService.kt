@@ -4,7 +4,7 @@ import me.rgunny.kachi.ai.application.port.inbound.outbox.FindAiOutboxesUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.AiOutboxSummary
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.FindAiOutboxesQuery
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.FindAiOutboxesResult
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import org.springframework.stereotype.Service
 
 /**

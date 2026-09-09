@@ -1,6 +1,12 @@
 package me.rgunny.kachi.ai.adapter.outbound.persistence
 
 import me.rgunny.kachi.ai.AiServiceTestContainersConfig
+import me.rgunny.kachi.ai.adapter.outbound.persistence.keyword.KeywordExpansionPersistenceAdapter
+import me.rgunny.kachi.ai.adapter.outbound.persistence.outbox.AiOutboxPersistenceAdapter
+import me.rgunny.kachi.ai.adapter.outbound.persistence.quarantine.KeywordQuarantinePersistenceAdapter
+import me.rgunny.kachi.ai.adapter.outbound.persistence.run.AiRunPersistenceAdapter
+import me.rgunny.kachi.ai.adapter.outbound.persistence.summary.NewsSummaryPersistenceAdapter
+import me.rgunny.kachi.ai.adapter.outbound.persistence.watermark.SummaryWatermarkPersistenceAdapter
 import me.rgunny.kachi.ai.config.AiMongoTransactionConfig
 import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest
 import org.springframework.context.annotation.Import

@@ -1,12 +1,19 @@
 package me.rgunny.kachi.ai
 
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.ai.adapter.outbound.persistence.AiOutboxMongoDocument
-import me.rgunny.kachi.ai.adapter.outbound.persistence.AiRunMongoDocument
-import me.rgunny.kachi.ai.adapter.outbound.persistence.KeywordQuarantineMongoDocument
-import me.rgunny.kachi.ai.adapter.outbound.persistence.NewsSummaryMongoDocument
-import me.rgunny.kachi.ai.adapter.outbound.persistence.SummaryWatermarkMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.outbox.AiOutboxMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.quarantine.KeywordQuarantineMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.run.AiRunMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.summary.NewsSummaryMongoDocument
+import me.rgunny.kachi.ai.adapter.outbound.persistence.watermark.SummaryWatermarkMongoDocument
 import me.rgunny.kachi.ai.application.port.inbound.news.SummarizeNewsUseCase
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
@@ -40,13 +47,6 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.json.JsonMapper
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 /**
  * 요약 한 건이 LLM 호출 → 저장 → outbox → relay → broker까지 실제 인프라 위에서 완주하는지 본다.

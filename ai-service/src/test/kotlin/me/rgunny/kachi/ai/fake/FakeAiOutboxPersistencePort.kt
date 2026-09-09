@@ -1,12 +1,12 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxClaim
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxId
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 /**
  * outbox 저장소를 메모리로 대신하면서 조회 인자와 호출 순서를 남기는 fake.

@@ -1,17 +1,17 @@
 package me.rgunny.kachi.ai.application.service.quarantine
 
+import java.time.Clock
+import java.time.Instant
 import me.rgunny.kachi.ai.application.exception.KeywordQuarantineNotFoundException
 import me.rgunny.kachi.ai.application.exception.KeywordQuarantineNotReleasableException
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.ReleaseKeywordQuarantineUseCase
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.KeywordQuarantineSummary
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.ReleaseKeywordQuarantineCommand
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.ReleaseKeywordQuarantineResult
-import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.quarantine.KeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.domain.quarantine.KeywordQuarantine
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.time.Clock
-import java.time.Instant
 
 /**
  * 격리된 키워드를 다시 실행 대상으로 되돌리는 유스케이스.

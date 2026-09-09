@@ -4,7 +4,7 @@ import me.rgunny.kachi.ai.application.port.inbound.quarantine.FindKeywordQuarant
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.FindKeywordQuarantinesQuery
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.FindKeywordQuarantinesResult
 import me.rgunny.kachi.ai.application.port.inbound.quarantine.model.KeywordQuarantineSummary
-import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordQuarantinePersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.quarantine.KeywordQuarantinePersistencePort
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import org.springframework.stereotype.Service
 

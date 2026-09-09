@@ -1,18 +1,18 @@
 package me.rgunny.kachi.ai.application.service.outbox
 
+import java.time.Clock
+import java.time.Instant
 import me.rgunny.kachi.ai.application.exception.AiOutboxNotFoundException
 import me.rgunny.kachi.ai.application.exception.AiOutboxNotRecoverableException
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RecoverAiOutboxUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.AiOutboxSummary
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RecoverAiOutboxCommand
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RecoverAiOutboxResult
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.time.Clock
-import java.time.Instant
 
 /**
  * DEAD로 남은 행을 다시 발행 대상으로 되돌리는 유스케이스.

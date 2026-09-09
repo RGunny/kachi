@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.outbound.persistence.SummaryWatermarkPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.watermark.SummaryWatermarkPersistencePort
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
 

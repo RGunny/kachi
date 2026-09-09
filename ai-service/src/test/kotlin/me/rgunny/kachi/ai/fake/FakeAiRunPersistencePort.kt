@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiRunPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.run.AiRunPersistencePort
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunId
 

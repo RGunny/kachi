@@ -1,13 +1,15 @@
 package me.rgunny.kachi.ai.application.service.keyword
 
+import java.time.Clock
+import java.time.Instant
+import me.rgunny.kachi.ai.application.port.inbound.keyword.ExpandKeywordsUseCase
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsResult
-import me.rgunny.kachi.ai.application.port.inbound.keyword.ExpandKeywordsUseCase
+import me.rgunny.kachi.ai.application.port.outbound.keyword.KeywordExpansionPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.keyword.KeywordReaderPort
-import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
 import me.rgunny.kachi.ai.application.port.outbound.llm.LlmProviderPort
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiRunPersistencePort
-import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordExpansionPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.outbound.run.AiRunPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
 import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
@@ -16,8 +18,6 @@ import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
 import org.springframework.stereotype.Service
-import java.time.Clock
-import java.time.Instant
 
 @Service
 class ExpandKeywordsService(
