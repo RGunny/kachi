@@ -1,10 +1,10 @@
-package me.rgunny.kachi.collector.application.port.outbound.persistence
+package me.rgunny.kachi.collector.application.port.outbound.outbox
 
+import java.time.Instant
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxClaim
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxId
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxStatus
-import java.time.Instant
 
 /**
  * outbox 행 저장소 출력 포트.

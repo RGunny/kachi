@@ -1,12 +1,13 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.news
 
+import java.time.Duration
+import java.time.Instant
+import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.collector.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.application.port.outbound.outbox.model.NewsCollectedEvent
 import me.rgunny.kachi.collector.application.port.outbound.outbox.model.toOutbox
-import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
-import me.rgunny.kachi.collector.support.CollectorOutboxCollection
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsExcerpt
@@ -14,15 +15,15 @@ import me.rgunny.kachi.collector.domain.NewsLanguage
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.domain.NewsTitle
 import me.rgunny.kachi.collector.domain.NewsUrl
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.fixture.CollectorTestFixture
+import me.rgunny.kachi.collector.support.CollectorOutboxCollection
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.Duration
-import java.time.Instant
-import kotlin.test.assertEquals
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 
 @DisplayName("NewsPersistenceAdapter 통합 테스트")
 class NewsPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {

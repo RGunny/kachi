@@ -1,5 +1,7 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.collection
 
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.collector.domain.CollectionRun
 import me.rgunny.kachi.collector.domain.CollectionRunId
 import me.rgunny.kachi.collector.domain.CollectionRunStatus
@@ -7,8 +9,6 @@ import me.rgunny.kachi.collector.domain.CollectionTargetType
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
-import java.time.Instant
-import java.util.UUID
 
 @Document(collection = "collection_runs")
 data class CollectionRunMongoDocument(

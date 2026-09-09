@@ -1,15 +1,15 @@
 package me.rgunny.kachi.collector.config
 
+import java.time.Clock
 import me.rgunny.kachi.collector.application.port.inbound.outbox.RelayCollectorOutboxUseCase
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPublisherPort
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.application.service.outbox.CollectorOutboxRelayPolicy
 import me.rgunny.kachi.collector.application.service.outbox.RelayCollectorOutboxService
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.time.Clock
 
 /**
  * relay가 켜져 있을 때만 relay 유스케이스와 실행 정책을 조립한다.

@@ -1,10 +1,19 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.outbox
 
+import java.time.Duration
+import java.time.Instant
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.collector.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxClaim
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxEventType
@@ -20,14 +29,6 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
-import java.time.Duration
-import java.time.Instant
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @DisplayName("CollectorOutboxPersistenceAdapter 통합 테스트")
 class CollectorOutboxPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {

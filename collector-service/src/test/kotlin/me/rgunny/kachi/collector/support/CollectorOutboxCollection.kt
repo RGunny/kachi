@@ -1,6 +1,6 @@
 package me.rgunny.kachi.collector.support
 
-import me.rgunny.kachi.collector.adapter.outbound.persistence.CollectorOutboxMongoDocument
+import me.rgunny.kachi.collector.adapter.outbound.persistence.outbox.CollectorOutboxMongoDocument
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 

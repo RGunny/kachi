@@ -4,7 +4,7 @@ import me.rgunny.kachi.collector.application.port.inbound.outbox.FindCollectorOu
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.CollectorOutboxSummary
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.FindCollectorOutboxesQuery
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.FindCollectorOutboxesResult
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import org.springframework.stereotype.Service
 
 /**

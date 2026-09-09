@@ -1,4 +1,4 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.collection
 
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull

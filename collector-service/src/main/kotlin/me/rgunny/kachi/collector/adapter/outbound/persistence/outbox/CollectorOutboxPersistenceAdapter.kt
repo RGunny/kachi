@@ -1,8 +1,9 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.outbox
 
+import java.time.Instant
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxClaim
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxId
@@ -14,7 +15,6 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Component
-import java.time.Instant
 
 /**
  * outbox 저장소 출력 포트의 MongoDB 구현.

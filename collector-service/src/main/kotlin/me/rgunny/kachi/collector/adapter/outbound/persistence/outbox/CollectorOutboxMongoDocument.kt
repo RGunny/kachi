@@ -1,5 +1,7 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.outbox
 
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxClaim
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxEventType
@@ -9,8 +11,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.index.CompoundIndexes
 import org.springframework.data.mongodb.core.mapping.Document
-import java.time.Instant
-import java.util.UUID
 
 /**
  * outbox 행의 MongoDB Document.

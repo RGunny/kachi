@@ -1,22 +1,23 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.news
 
+import java.time.Instant
 import kotlinx.coroutines.reactor.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingleOrNull
+import me.rgunny.kachi.collector.adapter.outbound.persistence.outbox.CollectorOutboxMongoDocument
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.news.model.SaveNewsResult
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
-import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
-import org.springframework.transaction.reactive.TransactionalOperator
-import org.springframework.transaction.reactive.executeAndAwait
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.stereotype.Component
-import java.time.Instant
+import org.springframework.transaction.reactive.TransactionalOperator
+import org.springframework.transaction.reactive.executeAndAwait
 
 @Component
 class NewsPersistenceAdapter(

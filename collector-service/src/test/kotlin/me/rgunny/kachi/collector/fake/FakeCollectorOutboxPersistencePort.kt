@@ -1,12 +1,12 @@
 package me.rgunny.kachi.collector.fake
 
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxClaim
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxId
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxStatus
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 /**
  * outbox 저장소를 메모리로 대신하면서 조회 인자와 호출 순서를 남기는 fake.

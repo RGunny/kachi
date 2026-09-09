@@ -1,5 +1,7 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.news
 
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.News
 import me.rgunny.kachi.collector.domain.NewsExcerpt
@@ -12,8 +14,6 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
-import java.time.Instant
-import java.util.UUID
 
 /**
  * `news` 컬렉션 문서. 도메인 `News`와 1:1이고 `urlHash`는 정규화 URL의 해시다.

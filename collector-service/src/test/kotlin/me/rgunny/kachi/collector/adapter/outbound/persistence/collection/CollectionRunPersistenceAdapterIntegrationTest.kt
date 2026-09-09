@@ -1,6 +1,10 @@
-package me.rgunny.kachi.collector.adapter.outbound.persistence
+package me.rgunny.kachi.collector.adapter.outbound.persistence.collection
 
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.collector.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.collector.domain.CollectionRun
 import me.rgunny.kachi.collector.domain.CollectionRunStatus
 import me.rgunny.kachi.collector.domain.CollectionTargetType
@@ -13,9 +17,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 @DisplayName("CollectionRunPersistenceAdapter 통합 테스트")
 class CollectionRunPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {
