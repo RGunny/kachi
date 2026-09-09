@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.binding
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -7,6 +7,8 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import me.rgunny.kachi.user.domain.ChannelAddress
 import me.rgunny.kachi.user.domain.ChannelBinding
@@ -15,8 +17,6 @@ import me.rgunny.kachi.user.domain.ChannelBindingStatus
 import me.rgunny.kachi.user.domain.LinkTokenHash
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.UserId
-import java.time.Instant
-import java.util.UUID
 
 /**
  * `channel_bindings` 테이블.

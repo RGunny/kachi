@@ -1,9 +1,9 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.user
 
+import java.util.UUID
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.UserRole
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.UUID
 
 interface UserJpaRepository : JpaRepository<UserJpaEntity, UUID> {
     fun findByAuthProviderAndProviderUserId(authProvider: AuthProvider, providerUserId: String): UserJpaEntity?

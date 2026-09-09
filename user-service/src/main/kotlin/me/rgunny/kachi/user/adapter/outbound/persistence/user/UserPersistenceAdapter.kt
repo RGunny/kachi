@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.user
 
 import me.rgunny.kachi.user.application.port.outbound.user.UserPersistencePort
 import me.rgunny.kachi.user.domain.AuthProvider

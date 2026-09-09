@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.subscription
 
 import me.rgunny.kachi.user.application.port.outbound.subscription.SubscriptionPersistencePort
 import me.rgunny.kachi.user.domain.KeywordId

@@ -1,5 +1,8 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.user
 
+import java.time.Duration
+import java.util.UUID
+import kotlin.test.assertEquals
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
@@ -12,9 +15,6 @@ import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import java.util.UUID
-import kotlin.test.assertEquals
 
 @DisplayName("UserJpaEntity")
 class UserJpaEntityTest {

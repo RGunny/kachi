@@ -1,13 +1,15 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.outbound.persistence.ChannelBindingJpaEntity
-import me.rgunny.kachi.user.adapter.outbound.persistence.ChannelBindingJpaRepository
-import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaEntity
-import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaRepository
-import me.rgunny.kachi.user.adapter.outbound.persistence.SubscriptionJpaEntity
-import me.rgunny.kachi.user.adapter.outbound.persistence.SubscriptionJpaRepository
-import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaEntity
-import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaRepository
+import java.time.Clock
+import java.time.Instant
+import me.rgunny.kachi.user.adapter.outbound.persistence.binding.ChannelBindingJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.binding.ChannelBindingJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.keyword.KeywordJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.keyword.KeywordJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.user.UserJpaEntity
+import me.rgunny.kachi.user.adapter.outbound.persistence.user.UserJpaRepository
 import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.CanonicalKey
@@ -29,8 +31,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import java.time.Clock
-import java.time.Instant
 
 /**
  * 로컬 개발용 시드 데이터.

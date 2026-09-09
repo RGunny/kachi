@@ -1,7 +1,7 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.subscription
 
-import org.springframework.data.jpa.repository.JpaRepository
 import java.util.UUID
+import org.springframework.data.jpa.repository.JpaRepository
 
 /**
  * `subscriptions` 테이블 Spring Data 저장소.

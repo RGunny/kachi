@@ -1,16 +1,16 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.keyword
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.KeywordName
-import java.time.Instant
-import java.util.UUID
 
 /** `keywords` 테이블. `canonical_key`는 binary collation unique라 동등성 판단이 코드의 정규화와 같다. */
 @Entity

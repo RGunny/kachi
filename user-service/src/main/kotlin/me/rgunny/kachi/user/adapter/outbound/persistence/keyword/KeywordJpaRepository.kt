@@ -1,8 +1,9 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.keyword
 
+import java.util.UUID
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionJpaEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
-import java.util.UUID
 
 /**
  * `keywords` 테이블 Spring Data 저장소.

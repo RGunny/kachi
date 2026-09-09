@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.binding
 
 import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import me.rgunny.kachi.user.application.port.outbound.binding.ChannelBindingPersistencePort

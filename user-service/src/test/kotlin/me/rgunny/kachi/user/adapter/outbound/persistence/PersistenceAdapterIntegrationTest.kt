@@ -2,6 +2,10 @@ package me.rgunny.kachi.user.adapter.outbound.persistence
 
 import jakarta.persistence.EntityManager
 import me.rgunny.kachi.user.adapter.outbound.crypto.AesGcmAddressCipher
+import me.rgunny.kachi.user.adapter.outbound.persistence.binding.ChannelBindingPersistenceAdapter
+import me.rgunny.kachi.user.adapter.outbound.persistence.keyword.KeywordPersistenceAdapter
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionPersistenceAdapter
+import me.rgunny.kachi.user.adapter.outbound.persistence.user.UserPersistenceAdapter
 import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest

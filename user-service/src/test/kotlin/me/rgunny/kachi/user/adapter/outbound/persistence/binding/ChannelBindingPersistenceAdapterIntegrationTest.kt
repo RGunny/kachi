@@ -1,6 +1,13 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.binding
 
 import jakarta.persistence.PersistenceException
+import java.time.Duration
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import me.rgunny.kachi.user.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.user.domain.ChannelAddress
 import me.rgunny.kachi.user.domain.ChannelBinding
 import me.rgunny.kachi.user.domain.ChannelBindingStatus
@@ -14,12 +21,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.time.Duration
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 @DisplayName("ChannelBindingPersistenceAdapter 통합 테스트")
 class ChannelBindingPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {

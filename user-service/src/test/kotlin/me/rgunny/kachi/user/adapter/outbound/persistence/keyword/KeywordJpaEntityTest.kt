@@ -1,5 +1,6 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.keyword
 
+import kotlin.test.assertEquals
 import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordId
@@ -7,7 +8,6 @@ import me.rgunny.kachi.user.domain.KeywordName
 import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
 
 @DisplayName("KeywordJpaEntity")
 class KeywordJpaEntityTest {

@@ -1,7 +1,13 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.keyword
 
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceException
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import me.rgunny.kachi.user.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionPersistenceAdapter
 import me.rgunny.kachi.user.domain.CanonicalKey
 import me.rgunny.kachi.user.domain.Keyword
 import me.rgunny.kachi.user.domain.KeywordName
@@ -13,10 +19,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 @DisplayName("KeywordPersistenceAdapter 통합 테스트")
 class KeywordPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {

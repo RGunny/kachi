@@ -1,20 +1,21 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.user
 
 import jakarta.persistence.PersistenceException
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import me.rgunny.kachi.user.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.user.domain.AuthProvider
 import me.rgunny.kachi.user.domain.Email
 import me.rgunny.kachi.user.domain.Nickname
 import me.rgunny.kachi.user.domain.ProviderUserId
 import me.rgunny.kachi.user.domain.User
 import me.rgunny.kachi.user.fixture.UserTestFixture
-import org.springframework.beans.factory.annotation.Autowired
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import org.springframework.beans.factory.annotation.Autowired
 
 @DisplayName("UserPersistenceAdapter 통합 테스트")
 class UserPersistenceAdapterIntegrationTest : PersistenceAdapterIntegrationTest() {

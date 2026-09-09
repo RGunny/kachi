@@ -1,5 +1,7 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.subscription
 
+import java.time.Duration
+import kotlin.test.assertEquals
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.Subscription
 import me.rgunny.kachi.user.domain.SubscriptionChannel
@@ -8,8 +10,6 @@ import me.rgunny.kachi.user.domain.UserId
 import me.rgunny.kachi.user.fixture.UserTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import java.time.Duration
-import kotlin.test.assertEquals
 
 @DisplayName("SubscriptionJpaEntity")
 class SubscriptionJpaEntityTest {

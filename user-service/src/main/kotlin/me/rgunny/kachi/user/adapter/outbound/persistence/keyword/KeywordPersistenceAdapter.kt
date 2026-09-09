@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.keyword
 
 import me.rgunny.kachi.user.application.port.outbound.keyword.KeywordPersistencePort
 import me.rgunny.kachi.user.domain.CanonicalKey

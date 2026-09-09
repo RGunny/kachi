@@ -1,4 +1,4 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.subscription
 
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
@@ -11,13 +11,13 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import java.time.Instant
+import java.util.UUID
 import me.rgunny.kachi.user.domain.KeywordId
 import me.rgunny.kachi.user.domain.Subscription
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import me.rgunny.kachi.user.domain.SubscriptionId
 import me.rgunny.kachi.user.domain.UserId
-import java.time.Instant
-import java.util.UUID
 
 /**
  * `subscriptions` 테이블과 채널 컬렉션 테이블 `subscription_channels`.

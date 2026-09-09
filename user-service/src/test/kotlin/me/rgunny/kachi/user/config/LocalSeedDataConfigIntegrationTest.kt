@@ -1,10 +1,17 @@
 package me.rgunny.kachi.user.config
 
-import me.rgunny.kachi.user.adapter.outbound.persistence.ChannelBindingJpaRepository
-import me.rgunny.kachi.user.adapter.outbound.persistence.KeywordJpaRepository
+import java.time.Clock
+import java.time.Duration
+import java.time.ZoneOffset
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import me.rgunny.kachi.user.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
-import me.rgunny.kachi.user.adapter.outbound.persistence.SubscriptionJpaRepository
-import me.rgunny.kachi.user.adapter.outbound.persistence.UserJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.binding.ChannelBindingJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.keyword.KeywordJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.subscription.SubscriptionJpaRepository
+import me.rgunny.kachi.user.adapter.outbound.persistence.user.UserJpaRepository
 import me.rgunny.kachi.user.application.port.outbound.binding.AddressCipherPort
 import me.rgunny.kachi.user.domain.ChannelBinding
 import me.rgunny.kachi.user.domain.ChannelBindingStatus
@@ -15,13 +22,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.DefaultApplicationArguments
-import java.time.Clock
-import java.time.Duration
-import java.time.ZoneOffset
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 /**
  * 시드 runner를 실제 저장소 위에서 돌려 관리자 바인딩 주소가 설정값을 따르는지 본다.

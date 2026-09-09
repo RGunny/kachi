@@ -1,8 +1,8 @@
-package me.rgunny.kachi.user.adapter.outbound.persistence
+package me.rgunny.kachi.user.adapter.outbound.persistence.binding
 
+import java.util.UUID
 import me.rgunny.kachi.user.domain.SubscriptionChannel
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.UUID
 
 /**
  * `channel_bindings` 테이블 Spring Data 저장소.
