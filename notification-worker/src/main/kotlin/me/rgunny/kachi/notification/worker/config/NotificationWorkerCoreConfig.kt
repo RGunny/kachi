@@ -1,13 +1,14 @@
 package me.rgunny.kachi.notification.worker.config
 
+import java.time.Clock
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
-import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.RecoverStaleProcessingDispatchUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
+import me.rgunny.kachi.notification.application.port.outbound.dlt.NotificationDltMessagePersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDltMessagePersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
 import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.application.service.DispatchNotificationPolicy
@@ -21,7 +22,6 @@ import me.rgunny.kachi.notification.worker.adapter.outbound.sender.MeteredNotifi
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.time.Clock
 
 /**
  * notification-core dispatch use case를 worker 런타임에 조립하는 composition root.

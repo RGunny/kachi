@@ -1,11 +1,16 @@
 package me.rgunny.kachi.notification.routing
 
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
 import me.rgunny.kachi.ai.contract.AiSummaryCreatedEvent
 import me.rgunny.kachi.notification.contract.NotificationChannel
 import me.rgunny.kachi.notification.contract.NotificationRequestedEvent
 import me.rgunny.kachi.notification.routing.adapter.inbound.messaging.AiKeywordQuarantinedEventMapper
-import me.rgunny.kachi.notification.routing.adapter.outbound.persistence.document.RoutingJobDocument
+import me.rgunny.kachi.notification.routing.adapter.outbound.persistence.job.RoutingJobDocument
 import me.rgunny.kachi.notification.routing.application.service.RoutingRequestId
 import me.rgunny.kachi.notification.routing.config.NotificationRoutingProperties
 import me.rgunny.kachi.notification.routing.support.RoutingTestFixture
@@ -29,11 +34,6 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.kafka.KafkaContainer
 import tools.jackson.databind.json.JsonMapper
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * routing이 `ai.*` 레코드를 실제 broker에서 소비해 `notification.requested`로 발행하는 계약을 본다.

@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.fake
 
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationAdminPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationAdminPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationHistory
 import me.rgunny.kachi.notification.domain.NotificationId

@@ -1,10 +1,10 @@
 package me.rgunny.kachi.notification.fake
 
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import java.time.Instant
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import java.time.Instant
 
 class FakeNotificationPersistencePort : NotificationPersistencePort {
     val saved = mutableListOf<Notification>()

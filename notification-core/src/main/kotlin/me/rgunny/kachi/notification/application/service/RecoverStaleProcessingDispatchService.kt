@@ -1,16 +1,16 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
+import java.time.Clock
+import java.time.Instant
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.RecoverStaleProcessingDispatchUseCase
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.retry.RetryDecision
 import me.rgunny.kachi.notification.retry.RetryFailure
 import me.rgunny.kachi.notification.retry.RetryFailureCode
-import java.time.Clock
-import java.time.Instant
 
 /**
  * PROCESSING 상태로 멈춘 dispatch 회수 application service.
