@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.server.ServerWebInputException
 
 /**
- * 내부 API가 던진 예외를 `ApiResponse` 오류 응답으로 옮긴다.
+ * 내부 API가 던진 예외를 `ApiResponse` 오류 응답으로 옮기는 예외 핸들러.
  *
  * application 예외는 전부 [CollectorException]이고 [CollectorErrorCode]를 가지므로 타입이 아니라 코드로 분기한다.
  * HTTP status는 application이 아니라 web [ErrorCode]가 갖는다.

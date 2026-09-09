@@ -8,7 +8,7 @@ import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockPor
 import org.springframework.stereotype.Component
 
 /**
- * scheduler와 internal API에서 들어온 뉴스 수집 요청을 받아 중복 실행을 막고 수집 유스케이스를 호출한다.
+ * scheduler와 internal API에서 들어온 뉴스 수집 요청을 받아 중복 실행을 막고 수집 유스케이스를 호출하는 실행기.
  *
  * 무엇을 보호하는지는 [CollectorExecutionLock.NEWS_COLLECTION]이 말하고, 그 규칙을 무엇이 지키는지는 알지 않는다.
  * 여기서는 lock의 결과를 수집 요청의 결과로 옮기는 일만 한다.

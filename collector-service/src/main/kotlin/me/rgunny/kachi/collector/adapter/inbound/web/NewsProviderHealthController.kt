@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * 외부 뉴스 provider가 실제로 응답하는지 확인하는 internal/admin API다.
+ * 외부 뉴스 provider가 실제로 응답하는지 확인하는 internal/admin API.
  *
  * 저장은 하지 않고 provider 호출과 응답 파싱까지만 확인한다.
  */

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * collector-service 내부 운영용 수집 실행 API를 제공한다.
+ * collector-service 내부 운영용 수집 실행 API.
  *
  * 외부 사용자 API가 아니라 서비스 운영자나 내부 시스템이 수동 수집을 트리거하는 진입점이다.
  */
