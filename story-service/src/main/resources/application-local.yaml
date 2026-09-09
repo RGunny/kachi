@@ -1,0 +1,10 @@
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/kachi_story?replicaSet=rs0
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092

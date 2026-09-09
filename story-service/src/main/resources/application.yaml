@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: story-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mongodb:
+    representation:
+      uuid: standard
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        enable.idempotence: true
+
+server:
+  port: 8087
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
