@@ -1,4 +1,4 @@
-package me.rgunny.kachi.story.application.port.outbound.persistence
+package me.rgunny.kachi.story.application.port.outbound.outbox
 
 import java.time.Instant
 import me.rgunny.kachi.story.domain.outbox.StoryOutbox

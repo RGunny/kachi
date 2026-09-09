@@ -2,7 +2,7 @@ package me.rgunny.kachi.story.fake
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import me.rgunny.kachi.story.application.port.outbound.persistence.StoryOutboxPersistencePort
+import me.rgunny.kachi.story.application.port.outbound.outbox.StoryOutboxPersistencePort
 import me.rgunny.kachi.story.domain.outbox.StoryOutbox
 import me.rgunny.kachi.story.domain.outbox.StoryOutboxClaim
 import me.rgunny.kachi.story.domain.outbox.StoryOutboxId
