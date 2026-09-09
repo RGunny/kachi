@@ -6,7 +6,7 @@ import org.junit.jupiter.params.provider.EnumSource
 import kotlin.test.assertEquals
 
 /**
- * 코드마다 책임·지속 두 축이 결정 표(ADR 030)와 같은지 본다. 코드가 늘면 기대값 `when`이 컴파일에서 판정을 요구한다.
+ * 코드마다 책임·지속 두 축이 결정 표(ADR 030)와 같은지 보는 테스트.
  */
 @DisplayName("LlmFailureCode")
 class LlmFailureCodeTest {

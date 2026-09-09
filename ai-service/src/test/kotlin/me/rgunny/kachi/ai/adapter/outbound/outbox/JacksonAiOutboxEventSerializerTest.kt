@@ -10,7 +10,7 @@ import tools.jackson.databind.json.JsonMapper
 import kotlin.test.assertEquals
 
 /**
- * payload 형식은 곧 발행 계약이다. 소비자가 읽는 필드명과 값 표현을 여기서 고정한다.
+ * payload 형식을 발행 계약으로 고정하는 테스트.
  *
  * outbox 행의 키(type, eventKey, partitionKey)는 payload에 들어가지 않고, 발행자가 행에서 읽는다.
  */

@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /**
- * 항목 하나 안의 검증, 항목 사이의 참조 검증, 운영 yaml 바인딩을 본다.
+ * 항목 하나 안의 검증, 항목 사이의 참조 검증, 운영 yaml 바인딩을 보는 테스트.
  */
 @DisplayName("LlmProperties")
 class LlmPropertiesTest {

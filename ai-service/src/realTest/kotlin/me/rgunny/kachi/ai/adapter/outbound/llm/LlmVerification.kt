@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 import kotlin.time.measureTimedValue
 
 /**
- * 프로파일의 후보 모델을 실제 제공자에 불러 확인한다. 과금 여부로 나뉜 두 테스트 클래스가 이 본문을 공유한다.
+ * 프로파일의 후보 모델을 실제 제공자에 불러 확인하는 테스트 본문.
  *
  * 모델마다 제공자의 모델 목록에 code가 있는지(토큰 0), 후보로 오른 용도마다 생성 1회가 계약대로 돌아오는지 본다.
  * Ollama는 tag가 이동 alias라 digest도 남긴다. 서버나 secret이 없으면 skip하지 않고 실패한다.

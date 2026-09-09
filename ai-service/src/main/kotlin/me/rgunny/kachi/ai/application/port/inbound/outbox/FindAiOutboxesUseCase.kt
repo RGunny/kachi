@@ -4,7 +4,7 @@ import me.rgunny.kachi.ai.application.port.inbound.outbox.model.FindAiOutboxesQu
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.FindAiOutboxesResult
 
 /**
- * 발행 상태별 outbox 행을 조회한다.
+ * 발행 상태별 outbox 행을 조회하는 유스케이스.
  */
 interface FindAiOutboxesUseCase {
 

@@ -5,7 +5,7 @@ import java.security.MessageDigest
 import java.util.UUID
 
 /**
- * 뉴스 요약 입력 묶음을 식별하는 hash를 계산한다.
+ * 뉴스 요약 입력 묶음을 식별하는 hash 계산기.
  *
  * 이 hash는 뉴스 제목/본문의 유사도를 판단하지 않는다.
  * 같은 키워드, 같은 뉴스 id 묶음으로 만든 요약인지 판별하기 위한 중복 저장 방지 키다.

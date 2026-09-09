@@ -10,7 +10,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * 소비처가 내리는 판단 프로퍼티가 코드의 두 축에서 맞게 파생되는지 본다. 목록은 allowlist와 EXCLUDE 쌍으로 두어 코드가 늘면 판정을 요구한다.
+ * 소비처가 내리는 판단 프로퍼티가 코드의 두 축에서 맞게 파생되는지 보는 테스트.
  */
 @DisplayName("LlmFailure")
 class LlmFailureTest {

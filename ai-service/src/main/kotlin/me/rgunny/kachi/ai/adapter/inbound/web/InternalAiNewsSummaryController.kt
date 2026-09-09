@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 
 /**
- * ai-service 내부 운영용 뉴스 요약 실행 API를 제공한다.
+ * ai-service 내부 운영용 뉴스 요약 실행 API.
  */
 @RestController
 class InternalAiNewsSummaryController(

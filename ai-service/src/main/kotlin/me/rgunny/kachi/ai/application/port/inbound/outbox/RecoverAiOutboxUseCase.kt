@@ -4,7 +4,7 @@ import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RecoverAiOutboxC
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RecoverAiOutboxResult
 
 /**
- * 운영자가 원인을 확인한 DEAD 행을 다시 발행 대상으로 되돌린다.
+ * 운영자가 원인을 확인한 DEAD 행을 다시 발행 대상으로 되돌리는 유스케이스.
  */
 interface RecoverAiOutboxUseCase {
 

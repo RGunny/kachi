@@ -17,7 +17,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * 제공자 층과 모델 층의 값이 각자 자리에 붙는지 실제 HTTP로 본다. mock exchange로는 헤더와 timeout이 보이지 않는다.
+ * 제공자 층과 모델 층의 값이 각자 자리에 붙는지 실제 HTTP로 보는 테스트.
  */
 @DisplayName("LlmWebClients")
 class LlmWebClientsTest {

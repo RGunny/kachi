@@ -8,7 +8,7 @@ import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersiste
 import org.springframework.stereotype.Service
 
 /**
- * 상태별 outbox 행을 오래된 순으로 읽는다.
+ * 상태별 outbox 행을 오래된 순으로 읽는 조회 유스케이스.
  */
 @Service
 class FindAiOutboxesService(

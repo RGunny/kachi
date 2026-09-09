@@ -4,7 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * 실호출 테스트가 secret을 찾는 순서를 정한다. 환경변수 → `.env.<profile>` → `.env`.
+ * 실호출 테스트가 secret을 찾는 순서.
  *
  * 기동 스크립트가 env 파일을 읽는 순서와 같다. env 파일은 작업 디렉토리에서 상위로 올라가며 찾으므로
  * Gradle과 IDE의 작업 디렉토리가 달라도 저장소 루트에 닿는다. 없는 값은 null이다.
