@@ -7,7 +7,7 @@ import org.springframework.web.reactive.config.PathMatchConfigurer
 import org.springframework.web.reactive.config.WebFluxConfigurer
 
 /**
- * notification HTTP API에 path segment 기반 버전 정책을 적용한다.
+ * notification HTTP API에 path segment 기반 버전 정책을 적용하는 설정.
  *
  * controller는 resource path와 지원 version만 선언하고,
  * 공통 `/api/{version}` prefix는 여기서 조합한다.
