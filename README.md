@@ -169,9 +169,10 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 ```
 
 `user`는 MySQL·Redis, `collector`는 MongoDB, `ai`는 MongoDB·Kafka,
-`notification`은 MongoDB·Redis·Kafka를 선택한다. `core`는 네 가지 공통 인프라,
-`all`은 core에 Prometheus·Grafana까지 포함한다. 여러 애플리케이션이 같은 인프라를
-공유하므로 그룹 `stop`은 해당 그룹에 속한 다른 애플리케이션에도 영향을 줄 수 있다.
+`notification`은 MongoDB·Redis·Kafka, `story`는 MongoDB·Kafka·TEI 둘·Qdrant를 선택한다.
+`tei`는 임베딩·판정기 컨테이너 둘이며 첫 기동에 가중치(각 2.3GB)를 받아 수 분이 걸린다.
+`core`는 MySQL·Redis·MongoDB·Kafka, `all`은 core에 TEI·Qdrant·Prometheus·Grafana까지 포함한다.
+여러 애플리케이션이 같은 인프라를 공유하므로 그룹 `stop`은 해당 그룹에 속한 다른 애플리케이션에도 영향을 줄 수 있다.
 
 프로세스 ID는 `.run/`, 출력은 `logs/`에 저장하며 두 디렉터리는 Git에서 제외한다.
 `stop`은 Spring의 graceful shutdown을 위해 `SIGTERM`을 보내고 최대 30초 기다린 뒤 강제 종료한다.
