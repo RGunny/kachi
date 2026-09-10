@@ -200,8 +200,9 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [문서 지도](./docs/README.md) | docs/ 각 문서의 책임, 축 분담, 갱신 규칙 |
 | [용어사전](./docs/용어사전.md) | Kachi 도메인 용어 정의 |
 | [도메인 모델](./docs/도메인모델.md) | 도메인 이야기, 컨텍스트 맵, 컨텍스트별 상세 문서 index |
-| [아키텍처](./docs/아키텍처.md) | 헥사고날 패키지 구조, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
-| [개발가이드](./docs/개발가이드.md) | 도메인/예외/패키지/어댑터/테스트 코드 관례와 네이밍 |
+| [아키텍처](./docs/아키텍처.md) | 헥사고날 층 책임, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
+| [패키지 구조](./docs/패키지구조.md) | 층·포트·어댑터·config·테스트 소스셋의 패키지 배치 규칙 |
+| [개발가이드](./docs/개발가이드.md) | 도메인/예외/어댑터/테스트 코드 관례와 네이밍 |
 | [포트 구성](./docs/포트-구성.md) | 로컬 호스트 공개 포트, 컨테이너 인바운드 포트, 서비스 간 연결 계약 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
 | [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |
