@@ -26,3 +26,30 @@ management:
     web:
       exposure:
         include: health,prometheus
+
+kachi:
+  story:
+    # 모델과 판정기의 정체는 enum이 갖고 여기는 주소·시간·배치만 갖는다. slow-after는 timeout보다 짧아야 한다.
+    inference:
+      embedding:
+        model: BGE_M3
+        base-url: ${KACHI_STORY_TEI_EMBEDDING_BASE_URL:http://localhost:8090}
+        connect-timeout: 2s
+        timeout: 10s
+        slow-after: 5s
+        # 요청당 입력 수. 서버의 max_client_batch_size 이하여야 하며 기동 probe가 대조한다.
+        batch-size: 32
+      judge:
+        kind: BGE_RERANKER_V2_M3
+        base-url: ${KACHI_STORY_TEI_RERANKER_BASE_URL:http://localhost:8091}
+        connect-timeout: 2s
+        timeout: 10s
+        slow-after: 5s
+      # failure rate·slow call rate·wait duration은 서버 둘이 공유한다. slow call duration threshold는 각 서버의 slow-after다.
+      circuit-breaker:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3

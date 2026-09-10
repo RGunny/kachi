@@ -5,3 +5,18 @@ spring:
   data:
     mongodb:
       auto-index-creation: true
+
+kachi:
+  story:
+    # 서버 주소는 StoryServiceTestContainersConfig의 stub이 넣는다. 실 host를 향한 클라이언트를 만들지 않는다.
+    inference:
+      embedding:
+        base-url: http://tei-embedding-test
+        connect-timeout: 1s
+        timeout: 5s
+        slow-after: 2s
+      judge:
+        base-url: http://tei-reranker-test
+        connect-timeout: 1s
+        timeout: 5s
+        slow-after: 2s

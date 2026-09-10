@@ -1,5 +1,6 @@
 package me.rgunny.kachi.story.application.port.outbound.judge
 
+import me.rgunny.kachi.story.application.port.outbound.judge.model.JudgeCandidate
 import me.rgunny.kachi.story.domain.EmbeddingText
 import me.rgunny.kachi.story.domain.StoryJudge
 
@@ -10,5 +11,10 @@ interface StoryLinkJudge {
 
     val judge: StoryJudge
 
-    suspend fun score(subject: EmbeddingText, candidates: List<EmbeddingText>): List<Double>
+    /**
+     * [candidates] 순서대로 0~1 점수를 돌려준다.
+     *
+     * 후보가 비면 빈 목록이다.
+     */
+    suspend fun score(subject: EmbeddingText, candidates: List<JudgeCandidate>): List<Double>
 }

@@ -8,3 +8,15 @@ spring:
       auto-index-creation: true
   kafka:
     bootstrap-servers: localhost:9092
+
+kachi:
+  story:
+    # 로컬은 CPU 추론이라 시간이 길다. realTest 실측(2026-09-10, arm64 8코어)은 batch 32 임베딩 p95 6.6초, 후보 10 판정 p95 4.3초(float16)이고
+    # 첫 호출은 그 두 배까지 걸린다. slow-after는 그 두 배, timeout은 네 배 자리에 둔다.
+    inference:
+      embedding:
+        timeout: 30s
+        slow-after: 15s
+      judge:
+        timeout: 30s
+        slow-after: 15s

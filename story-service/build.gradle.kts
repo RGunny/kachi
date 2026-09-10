@@ -33,6 +33,9 @@ dependencies {
     // Messaging
     implementation("org.springframework.boot:spring-boot-starter-kafka")
 
+    // Resilience
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
+
     // UUID v7
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
 
@@ -55,4 +58,34 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// 실제 추론 서버를 부르는 테스트는 src/realTest에 둔다. test·check에 끼지 않는다.
+// 실행: ./scripts/infra.sh tei start && ./gradlew :story-service:realTest
+testing {
+    suites {
+        val realTest by registering(JvmTestSuite::class) {
+            dependencies {
+                implementation(project())
+                implementation(sourceSets.test.get().output)
+            }
+            targets.all {
+                testTask.configure {
+                    description = "로컬 TEI 서버 둘을 실제로 불러 모델 정체와 골드셋 재현을 확인한다."
+                    outputs.upToDateWhen { false }
+                    testLogging {
+                        events("passed", "failed", "skipped")
+                        // 골드셋 대조·지연 보고가 stdout으로 나온다.
+                        showStandardStreams = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 스위트는 main의 implementation 의존성을 물려받지 않는다. test와 같은 classpath로 맞춘다.
+configurations {
+    named("realTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
+    named("realTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
 }
