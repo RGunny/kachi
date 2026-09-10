@@ -4,7 +4,7 @@ import java.time.Clock
 import me.rgunny.kachi.story.adapter.outbound.lock.InMemoryExecutionLockAdapter
 import me.rgunny.kachi.story.adapter.outbound.lock.RoutingExecutionLockAdapter
 import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockPort
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockScope
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutionLockScope
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 

@@ -6,10 +6,10 @@ import kotlin.test.assertIs
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
-import me.rgunny.kachi.story.application.port.outbound.lock.AlreadyHeldExecutionLockOutcome
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutedExecutionLockOutcome
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockOutcome
-import me.rgunny.kachi.story.application.port.outbound.lock.StoryExecutionLock
+import me.rgunny.kachi.story.application.port.outbound.lock.model.AlreadyHeldExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutedExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.StoryExecutionLock
 import me.rgunny.kachi.story.fixture.StoryTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

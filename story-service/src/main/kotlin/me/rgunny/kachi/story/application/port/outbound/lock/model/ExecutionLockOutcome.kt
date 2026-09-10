@@ -1,4 +1,4 @@
-package me.rgunny.kachi.story.application.port.outbound.lock
+package me.rgunny.kachi.story.application.port.outbound.lock.model
 
 /**
  * 실행 lock을 거친 요청의 결과.

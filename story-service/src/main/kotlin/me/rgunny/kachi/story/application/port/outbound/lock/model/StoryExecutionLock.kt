@@ -1,4 +1,4 @@
-package me.rgunny.kachi.story.application.port.outbound.lock
+package me.rgunny.kachi.story.application.port.outbound.lock.model
 
 /**
  * story-service가 lock으로 보호하는 실행 단위.

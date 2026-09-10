@@ -3,12 +3,12 @@ package me.rgunny.kachi.story.adapter.outbound.lock
 import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
-import me.rgunny.kachi.story.application.port.outbound.lock.AlreadyHeldExecutionLockOutcome
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutedExecutionLockOutcome
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockHolder
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.AlreadyHeldExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutedExecutionLockOutcome
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutionLockHolder
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutionLockOutcome
 import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockPort
-import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockTarget
+import me.rgunny.kachi.story.application.port.outbound.lock.model.ExecutionLockTarget
 
 /**
  * 이 인스턴스 안에서만 유효한 실행 lock.
