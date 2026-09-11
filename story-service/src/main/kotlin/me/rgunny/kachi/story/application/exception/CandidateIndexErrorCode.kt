@@ -1,7 +1,7 @@
 package me.rgunny.kachi.story.application.exception
 
 /**
- * 벡터 색인 호출 층의 오류 코드.
+ * 벡터 색인 호출 층의 에러 코드.
  */
 enum class CandidateIndexErrorCode(
     override val code: String,

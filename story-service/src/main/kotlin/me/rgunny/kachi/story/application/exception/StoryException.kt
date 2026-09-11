@@ -12,7 +12,7 @@ abstract class StoryException(
     companion object {
 
         /**
-         * 오류 코드와 선택적 상세를 외부 노출 메시지로 조립한다.
+         * 에러 코드와 선택적 상세를 외부 노출 메시지로 조립한다.
          */
         fun messageOf(errorCode: StoryErrorCode, detail: String?): String {
             return detail

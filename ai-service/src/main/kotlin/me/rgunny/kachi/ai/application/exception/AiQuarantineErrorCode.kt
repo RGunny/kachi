@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.application.exception
 
 /**
- * 키워드 격리 운영 오류 코드.
+ * 키워드 격리 운영 에러 코드.
  *
  * 격리 기록을 다루는 요청이 대상 기록을 찾지 못했거나, 찾은 기록이 해제할 수 있는 상태가 아닐 때 쓴다.
  */

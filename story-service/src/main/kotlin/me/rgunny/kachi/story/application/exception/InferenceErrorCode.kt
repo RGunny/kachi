@@ -1,7 +1,7 @@
 package me.rgunny.kachi.story.application.exception
 
 /**
- * 추론 서버 호출 층의 오류 코드.
+ * 추론 서버 호출 층의 에러 코드.
  */
 enum class InferenceErrorCode(
     override val code: String,
