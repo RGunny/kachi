@@ -53,3 +53,10 @@ kachi:
         slow-call-rate-threshold: 80
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
+    # 컬렉션 이름: <collection-prefix>-<임베딩 모델 code>
+    index:
+      host: ${KACHI_STORY_QDRANT_HOST:localhost}
+      grpc-port: ${KACHI_STORY_QDRANT_GRPC_PORT:6334}
+      tls: false
+      timeout: 5s
+      collection-prefix: story-articles

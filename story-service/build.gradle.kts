@@ -36,6 +36,10 @@ dependencies {
     // Resilience
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.3.0")
 
+    // Vector index (gRPC client. Boot BOM 밖이라 버전을 명시한다)
+    implementation("io.qdrant:client:1.19.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava")
+
     // UUID v7
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
 
@@ -54,6 +58,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-mongodb")
     testImplementation("org.testcontainers:testcontainers-kafka")
+    testImplementation("org.testcontainers:testcontainers-qdrant")
 }
 
 tasks.withType<Test> {

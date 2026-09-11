@@ -20,3 +20,8 @@ kachi:
         connect-timeout: 1s
         timeout: 5s
         slow-after: 2s
+    # 색인 주소는 StoryServiceTestContainersConfig의 Qdrant 컨테이너가 넣는다.
+    index:
+      host: qdrant-test
+      grpc-port: 6334
+      timeout: 5s
