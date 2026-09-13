@@ -19,9 +19,11 @@ class FakeEmbeddingPort(
 
     val fixed: MutableMap<EmbeddingText, Embedding> = mutableMapOf()
     val embeddedTexts: MutableList<EmbeddingText> = mutableListOf()
+    var failure: Throwable? = null
 
     override suspend fun embed(texts: List<EmbeddingText>): List<Embedding> {
         embeddedTexts += texts
+        failure?.let { throw it }
 
         return texts.map { text -> fixed[text] ?: deterministic(text) }
     }

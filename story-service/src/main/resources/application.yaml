@@ -29,15 +29,15 @@ management:
 
 kachi:
   story:
-    # 모델과 판정기의 정체는 enum이 갖고 여기는 주소·시간·배치만 갖는다. slow-after는 timeout보다 짧아야 한다.
     inference:
       embedding:
         model: BGE_M3
         base-url: ${KACHI_STORY_TEI_EMBEDDING_BASE_URL:http://localhost:8090}
         connect-timeout: 2s
         timeout: 10s
+        # 서킷의 slow call duration threshold(timeout 미만)
         slow-after: 5s
-        # 요청당 입력 수. 서버의 max_client_batch_size 이하여야 하며 기동 probe가 대조한다.
+        # 요청당 입력 수(서버 max_client_batch_size 이하, 기동 probe 대조)
         batch-size: 32
       judge:
         kind: BGE_RERANKER_V2_M3
@@ -45,7 +45,7 @@ kachi:
         connect-timeout: 2s
         timeout: 10s
         slow-after: 5s
-      # failure rate·slow call rate·wait duration은 서버 둘이 공유한다. slow call duration threshold는 각 서버의 slow-after다.
+      # embedding·judge TEI 서버가 공유하는 서킷 정책
       circuit-breaker:
         sliding-window-size: 20
         minimum-number-of-calls: 10
@@ -53,10 +53,26 @@ kachi:
         slow-call-rate-threshold: 80
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
-    # 컬렉션 이름: <collection-prefix>-<임베딩 모델 code>
     index:
       host: ${KACHI_STORY_QDRANT_HOST:localhost}
       grpc-port: ${KACHI_STORY_QDRANT_GRPC_PORT:6334}
       tls: false
       timeout: 5s
+      # 컬렉션 이름 = <collection-prefix>-<임베딩 모델 code>
       collection-prefix: story-articles
+    assembly:
+      # θ 셋: 골드셋 250쌍 측정값(2026-09-08, 정밀도 0.969·재현율 0.816)
+      theta-high: 0.70
+      theta-low: 0.60
+      # TEI rerank sigmoid 공간(0~1)의 값
+      theta-judge: 0.30
+      # 후보 검색 top-k
+      candidate-limit: 10
+      # 후보 story마다 비교하는 최근 기사 수
+      recent-articles: 5
+      # 후보 검색 창(색인 보관 창과 동일)
+      candidate-window: 72h
+      # 병합 대상 story의 기사 수 상한
+      max-articles: 500
+      # story 갱신 경합에서 검색부터 다시 하는 횟수
+      max-cas-retries: 3

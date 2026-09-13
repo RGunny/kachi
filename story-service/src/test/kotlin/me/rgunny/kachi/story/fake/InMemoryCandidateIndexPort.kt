@@ -16,12 +16,15 @@ import me.rgunny.kachi.story.domain.StoryId
 class InMemoryCandidateIndexPort : CandidateIndexPort {
 
     val points: MutableMap<NewsId, IndexedArticle> = linkedMapOf()
+    val searches: MutableList<CandidateQuery> = mutableListOf()
 
     override suspend fun upsert(articles: List<IndexedArticle>) {
         articles.forEach { points[it.newsId] = it }
     }
 
     override suspend fun search(query: CandidateQuery): List<CandidateHit> {
+        searches += query
+
         return points.values
             .asSequence()
             .filter { !it.collectedAt.isBefore(query.collectedAfter) }

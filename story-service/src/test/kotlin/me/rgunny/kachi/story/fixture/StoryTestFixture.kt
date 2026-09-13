@@ -6,7 +6,9 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import me.rgunny.kachi.story.adapter.outbound.lock.InMemoryExecutionLockAdapter
+import me.rgunny.kachi.story.application.port.inbound.assembly.model.AttachArticleCommand
 import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockPort
+import me.rgunny.kachi.story.application.service.assembly.AssemblyPolicy
 import me.rgunny.kachi.story.domain.ArticleLanguage
 import me.rgunny.kachi.story.domain.ArticleSource
 import me.rgunny.kachi.story.domain.Embedding
@@ -173,5 +175,55 @@ object StoryTestFixture {
         parentStoryId: StoryId? = null
     ): Story {
         return Story.open(first, now, parentStoryId)
+    }
+
+    // ---- assembly ----
+
+    /** 운영 yaml과 같은 기본값의 조립 규칙. */
+    fun assemblyPolicy(
+        thetaHigh: Double = 0.70,
+        thetaLow: Double = 0.60,
+        thetaJudge: Double = 0.30,
+        candidateLimit: Int = 10,
+        recentArticles: Int = 5,
+        candidateWindow: Duration = Duration.ofHours(72),
+        maxArticles: Int = 500,
+        maxCasRetries: Int = 3
+    ): AssemblyPolicy {
+        return AssemblyPolicy(
+            thetaHigh = thetaHigh,
+            thetaLow = thetaLow,
+            thetaJudge = thetaJudge,
+            candidateLimit = candidateLimit,
+            recentArticles = recentArticles,
+            candidateWindow = candidateWindow,
+            maxArticles = maxArticles,
+            maxCasRetries = maxCasRetries
+        )
+    }
+
+    /** [article]과 같은 값의 붙일 기사 명령. */
+    fun command(
+        newsId: NewsId = NEWS_ID,
+        title: String = "NVIDIA 실적 발표",
+        excerpt: String = "엔비디아가 2분기 실적을 발표했다",
+        url: String = "https://kachi.com/news/1",
+        source: ArticleSource = ArticleSource.NAVER,
+        language: String = "ko",
+        publishedAt: Instant = NOW.minus(Duration.ofHours(1)),
+        collectedAt: Instant = NOW,
+        keywords: List<String> = listOf("nvidia")
+    ): AttachArticleCommand {
+        return AttachArticleCommand(
+            newsId = newsId,
+            source = source,
+            title = title,
+            excerpt = excerpt,
+            url = url,
+            language = ArticleLanguage.of(language),
+            publishedAt = publishedAt,
+            collectedAt = collectedAt,
+            matchedKeywords = keywords.map { StoryKeyword.of(it) }
+        )
     }
 }

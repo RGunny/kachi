@@ -17,10 +17,12 @@ class FakeStoryLinkJudge(
 
     val scores: MutableMap<EmbeddingText, Double> = mutableMapOf()
     val scoredSubjects: MutableList<EmbeddingText> = mutableListOf()
+    val scoredCandidates: MutableList<List<JudgeCandidate>> = mutableListOf()
     var failure: Throwable? = null
 
     override suspend fun score(subject: EmbeddingText, candidates: List<JudgeCandidate>): List<Double> {
         scoredSubjects += subject
+        scoredCandidates += candidates
         failure?.let { throw it }
 
         return candidates.map { scores[it.text] ?: defaultScore }
