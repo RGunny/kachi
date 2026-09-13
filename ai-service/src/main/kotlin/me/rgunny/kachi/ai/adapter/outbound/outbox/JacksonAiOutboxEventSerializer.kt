@@ -19,8 +19,6 @@ import me.rgunny.kachi.ai.domain.run.AiFailureReason as DomainFailureReason
  * application 이벤트를 계약 객체로 옮긴 뒤 JSON으로 쓰는 serializer.
  *
  * 계약 객체로 한 번 옮기는 이유는 payload 형식을 application 모델에서 떼어 두기 위해서다.
- * enum은 이름 문자열로 넘기지 않고 값마다 짝을 지어, 도메인 enum이 바뀌면 여기서 컴파일이 멈춘다.
- * 소비자가 읽는 값은 계약 enum이 정한다.
  */
 @Component
 class JacksonAiOutboxEventSerializer(
