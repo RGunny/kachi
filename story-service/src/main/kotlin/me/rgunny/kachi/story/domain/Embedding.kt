@@ -28,7 +28,9 @@ class Embedding private constructor(
     }
 
     /**
-     * 코사인 유사도. 어느 한쪽이 영벡터면 0이다.
+     * 코사인 유사도.
+     *
+     * 어느 한쪽이 영벡터면 0이고, 부동소수 오차로 범위를 벗어난 값은 -1과 1로 자른다.
      */
     fun cosine(other: Embedding): Double {
         requireSameModel(other)
@@ -47,7 +49,7 @@ class Embedding private constructor(
             return 0.0
         }
 
-        return dot / (sqrt(normA) * sqrt(normB))
+        return (dot / (sqrt(normA) * sqrt(normB))).coerceIn(-1.0, 1.0)
     }
 
     /**

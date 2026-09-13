@@ -3,6 +3,8 @@ package me.rgunny.kachi.story.domain
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+import kotlin.random.Random
 import me.rgunny.kachi.story.fixture.StoryTestFixture.embedding
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -58,6 +60,22 @@ class EmbeddingTest {
         @DisplayName("영벡터와의 유사도는 0이다")
         fun zeroVector() {
             assertEquals(0.0, embedding(1f, 0f).cosine(embedding()), 1e-6)
+        }
+
+        @Test
+        @DisplayName("자기 자신과의 유사도는 부동소수 오차가 있어도 1을 넘지 않는다")
+        fun selfCosineNeverExceedsOne() {
+            val random = Random(20260912)
+
+            repeat(1_000) {
+                val values = FloatArray(EmbeddingModel.BGE_M3.dimension) { random.nextFloat() * 2 - 1 }
+                val embedding = Embedding.of(EmbeddingModel.BGE_M3, values)
+
+                val similarity = embedding.cosine(embedding)
+
+                assertTrue(similarity <= 1.0, "자기 유사도가 1을 넘었습니다: $similarity")
+                assertEquals(1.0, similarity, 1e-9)
+            }
         }
     }
 
