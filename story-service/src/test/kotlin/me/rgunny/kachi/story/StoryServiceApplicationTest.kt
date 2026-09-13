@@ -5,13 +5,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.guava.await
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.story.adapter.outbound.outbox.JacksonStoryOutboxEventSerializer
 import me.rgunny.kachi.story.adapter.outbound.qdrant.index.QdrantCandidateIndexAdapter
 import me.rgunny.kachi.story.adapter.outbound.qdrant.index.QdrantCollection
 import me.rgunny.kachi.story.adapter.outbound.tei.TeiHttpClient
 import me.rgunny.kachi.story.adapter.outbound.tei.judge.TeiRerankJudge
+import me.rgunny.kachi.story.application.port.inbound.assembly.AssembleStoryUseCase
 import me.rgunny.kachi.story.application.port.outbound.embedding.EmbeddingPort
 import me.rgunny.kachi.story.application.port.outbound.index.CandidateIndexPort
 import me.rgunny.kachi.story.application.port.outbound.judge.StoryLinkJudge
+import me.rgunny.kachi.story.application.port.outbound.outbox.StoryOutboxEventSerializer
+import me.rgunny.kachi.story.application.service.assembly.AssembleStoryService
 import me.rgunny.kachi.story.domain.EmbeddingModel
 import me.rgunny.kachi.story.support.TestStubServer
 import org.junit.jupiter.api.Test
@@ -21,6 +25,7 @@ import org.springframework.boot.health.registry.ReactiveHealthContributorRegistr
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Import
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry
 import org.springframework.test.context.ActiveProfiles
 
 @ActiveProfiles("test")
@@ -58,5 +63,10 @@ class StoryServiceApplicationTest {
         val collection = context.getBean(QdrantCollection::class.java)
         assertEquals("story-articles-bge-m3", collection.name)
         assertTrue(runBlocking { context.getBean(QdrantClient::class.java).collectionExistsAsync(collection.name).await() })
+
+        assertTrue(context.getBean(AssembleStoryUseCase::class.java) is AssembleStoryService)
+        assertTrue(context.getBean(StoryOutboxEventSerializer::class.java) is JacksonStoryOutboxEventSerializer)
+        val listeners = context.getBean(KafkaListenerEndpointRegistry::class.java).listenerContainers
+        assertEquals(listOf("collector.news.collected"), listeners.single().containerProperties.topics?.toList())
     }
 }

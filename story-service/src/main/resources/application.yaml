@@ -76,3 +76,19 @@ kachi:
       max-articles: 500
       # story 갱신 경합에서 검색부터 다시 하는 횟수
       max-cas-retries: 3
+    consumer:
+      group-id: story-service
+      auto-offset-reset: earliest
+      concurrency: 1
+      # poll 한 번의 레코드 수(처리 시간 + max-backoff < max.poll.interval.ms 5분)
+      max-poll-records: 10
+      topics:
+        news-collected: collector.news.collected
+      dlt:
+        # 기사 결함(payload·schemaVersion·TEI INPUT 거부) 전용
+        topic: story.assembly.dlt
+      # 서버·구성·경합 실패의 같은 offset 재처리 간격(횟수 상한 없음)
+      retry:
+        initial-backoff: 1s
+        max-backoff: 30s
+        multiplier: 2.0

@@ -8,20 +8,26 @@ spring:
 
 kachi:
   story:
-    # 서버 주소는 StoryServiceTestContainersConfig의 stub이 넣는다. 실 host를 향한 클라이언트를 만들지 않는다.
     inference:
       embedding:
+        # 자리표시(StoryServiceTestContainersConfig의 stub 주소로 대체)
         base-url: http://tei-embedding-test
         connect-timeout: 1s
         timeout: 5s
         slow-after: 2s
       judge:
+        # 자리표시(StoryServiceTestContainersConfig의 stub 주소로 대체)
         base-url: http://tei-reranker-test
         connect-timeout: 1s
         timeout: 5s
         slow-after: 2s
-    # 색인 주소는 StoryServiceTestContainersConfig의 Qdrant 컨테이너가 넣는다.
     index:
+      # 자리표시(StoryServiceTestContainersConfig의 Qdrant 컨테이너 주소로 대체)
       host: qdrant-test
       grpc-port: 6334
       timeout: 5s
+    consumer:
+      # 테스트용 짧은 재시도 간격
+      retry:
+        initial-backoff: 100ms
+        max-backoff: 500ms
