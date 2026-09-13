@@ -46,3 +46,6 @@ out/
 ### Local runtime ###
 .run/
 logs/
+
+### Claude Code ###
+.claude/settings.local.json
