@@ -76,6 +76,19 @@ kachi:
       max-articles: 500
       # story 갱신 경합에서 검색부터 다시 하는 횟수
       max-cas-retries: 3
+    jobs:
+      close:
+        enabled: true
+        interval: 10m
+        initial-delay: 1m
+        # 마지막 기사 발행 시각부터 닫기까지의 시간
+        close-after: 48h
+        # tick 한 번에 닫는 story 수 상한
+        batch-limit: 100
+      cleanup:
+        enabled: true
+        interval: 1h
+        initial-delay: 5m
     consumer:
       group-id: story-service
       auto-offset-reset: earliest

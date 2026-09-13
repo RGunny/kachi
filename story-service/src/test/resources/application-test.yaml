@@ -26,6 +26,12 @@ kachi:
       host: qdrant-test
       grpc-port: 6334
       timeout: 5s
+    jobs:
+      # 통합 테스트의 저장 상태를 scheduler가 건드리지 않게 끈다
+      close:
+        enabled: false
+      cleanup:
+        enabled: false
     consumer:
       # 테스트용 짧은 재시도 간격
       retry:
