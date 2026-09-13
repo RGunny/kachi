@@ -17,6 +17,7 @@ java {
 dependencies {
     // Contract
     implementation(project(":collector-contract"))
+    implementation(project(":story-contract"))
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
