@@ -30,6 +30,8 @@ kachi:
       # 통합 테스트의 저장 상태를 scheduler가 건드리지 않게 끈다
       close:
         enabled: false
+      merge:
+        enabled: false
       cleanup:
         enabled: false
     consumer:

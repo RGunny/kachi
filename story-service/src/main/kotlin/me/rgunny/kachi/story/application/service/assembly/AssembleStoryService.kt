@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service
  * 한 기사의 처리는 "재전달 확인 → 임베딩 → 후보 검색·판정 → 트랜잭션 쓰기 → 색인 갱신" 순서다.
  * 쓰기가 story 갱신 경합으로 밀리면 임베딩은 두고 검색·판정부터 다시 하며, 한도를 넘기면 예외로 끝내 소비자의 재전달에 맡긴다.
  * 색인 갱신 전에 멈춘 기사는 재전달에서 저장된 기사를 찾아 색인만 다시 쓴다.
+ * 흡수된 story를 가리키는 후보는 살아남은 story로 치환하고, 그 자리에서 낡은 색인 항목을 고친다.
  */
 @Service
 class AssembleStoryService(
@@ -186,13 +187,53 @@ class AssembleStoryService(
             return emptyList()
         }
 
-        val hitsByStory = hits.groupBy { it.storyId }
-        val stories = storyPersistencePort.findByIds(hitsByStory.keys)
-            .filter { it.centroid.model == embedding.model }
-
-        return stories
-            .mapNotNull { story -> candidate(story, hitsByStory.getValue(story.id), embedding) }
+        return resolveMerged(hits.groupBy { it.storyId })
+            .filter { (story, _) -> story.centroid.model == embedding.model }
+            .mapNotNull { (story, storyHits) -> candidate(story, storyHits, embedding) }
             .sortedByDescending { it.score }
+    }
+
+    /**
+     * 흡수된 story를 살아남은 story로 치환하고, 치환 끝이 같은 story로 모인 후보 묶음은 하나로 합친다.
+     *
+     * 치환이 일어난 원 story의 색인 항목은 그 자리에서 살아남은 story로 고친다.
+     */
+    private suspend fun resolveMerged(hitsByStory: Map<StoryId, List<CandidateHit>>): List<Pair<Story, List<CandidateHit>>> {
+        val storiesById = mutableMapOf<StoryId, Story>()
+        val hitsById = linkedMapOf<StoryId, MutableList<CandidateHit>>()
+
+        for (story in storyPersistencePort.findByIds(hitsByStory.keys)) {
+            val terminal = followMergeChain(story) ?: continue
+            storiesById[terminal.id] = terminal
+            hitsById.getOrPut(terminal.id) { mutableListOf() } += hitsByStory.getValue(story.id)
+            if (terminal.id != story.id) {
+                healIndex(from = story.id, to = terminal.id)
+            }
+        }
+
+        return hitsById.map { (id, storyHits) -> storiesById.getValue(id) to storyHits }
+    }
+
+    /**
+     * `mergedInto` 를 끝까지 따라간다.
+     *
+     * story가 없으면 null이고, 호출한 쪽은 그 후보를 버린다.
+     */
+    private suspend fun followMergeChain(story: Story): Story? {
+        var cursor = story
+        while (true) {
+            val nextId = cursor.mergedInto ?: return cursor
+            val next = storyPersistencePort.findById(nextId)
+            if (next == null) {
+                log.warn(
+                    "Merge chain target missing, dropping candidate: storyId={}, missingId={}",
+                    story.id.value,
+                    nextId.value
+                )
+                return null
+            }
+            cursor = next
+        }
     }
 
     /**
@@ -230,6 +271,21 @@ class AssembleStoryService(
             expectedVersion = target.version,
             outbox = outboxOf(updated, article, now)
         )
+    }
+
+    /**
+     * 실패해도 조립을 멈추지 않는다. 다음 읽기가 같은 항목을 다시 고친다.
+     */
+    private suspend fun healIndex(from: StoryId, to: StoryId) {
+        runCatching { candidateIndexPort.reassignStory(from, to) }
+            .onFailure { error ->
+                log.warn(
+                    "Failed to heal stale index entries of merged story: storyId={}, survivorId={}",
+                    from.value,
+                    to.value,
+                    error
+                )
+            }
     }
 
     private suspend fun replay(stored: StoryArticle): AssembleStoryResult {

@@ -2,6 +2,7 @@ package me.rgunny.kachi.story.config
 
 import java.time.Duration
 import me.rgunny.kachi.story.application.service.close.StoryClosePolicy
+import me.rgunny.kachi.story.application.service.merge.StoryMergePolicy
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 /**
@@ -10,6 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = StoryJobsProperties.PREFIX)
 data class StoryJobsProperties(
     val close: Close,
+    val merge: Merge,
     val cleanup: Cleanup
 ) {
     companion object {
@@ -30,6 +32,23 @@ data class StoryJobsProperties(
 
         fun toPolicy(): StoryClosePolicy {
             return StoryClosePolicy(closeAfter = closeAfter, batchLimit = batchLimit)
+        }
+    }
+
+    data class Merge(
+        val enabled: Boolean,
+        val interval: Duration,
+        val initialDelay: Duration,
+        val scanWindow: Duration,
+        val scanLimit: Int
+    ) {
+        init {
+            require(!interval.isNegative && !interval.isZero) { "merge.interval은 양수여야 합니다: $interval" }
+            require(!initialDelay.isNegative) { "merge.initial-delay는 음수일 수 없습니다: $initialDelay" }
+        }
+
+        fun toPolicy(): StoryMergePolicy {
+            return StoryMergePolicy(scanWindow = scanWindow, scanLimit = scanLimit)
         }
     }
 

@@ -85,6 +85,14 @@ kachi:
         close-after: 48h
         # tick 한 번에 닫는 story 수 상한
         batch-limit: 100
+      merge:
+        enabled: true
+        interval: 10m
+        initial-delay: 2m
+        # 연 시각부터 병합 스캔 대상에서 빠지기까지의 시간(동시 생성 경합과 색인 지연 창의 흡수가 목적)
+        scan-window: 24h
+        # tick 한 번에 스캔하는 story 수 상한
+        scan-limit: 200
       cleanup:
         enabled: true
         interval: 1h

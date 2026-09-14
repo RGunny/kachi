@@ -25,6 +25,11 @@ class StoryJobsPropertiesTest {
         assertEquals(Duration.ofMinutes(1), properties.close.initialDelay)
         assertEquals(Duration.ofHours(48), properties.close.closeAfter)
         assertEquals(100, properties.close.batchLimit)
+        assertTrue(properties.merge.enabled)
+        assertEquals(Duration.ofMinutes(10), properties.merge.interval)
+        assertEquals(Duration.ofMinutes(2), properties.merge.initialDelay)
+        assertEquals(Duration.ofHours(24), properties.merge.scanWindow)
+        assertEquals(200, properties.merge.scanLimit)
         assertTrue(properties.cleanup.enabled)
         assertEquals(Duration.ofHours(1), properties.cleanup.interval)
         assertEquals(Duration.ofMinutes(5), properties.cleanup.initialDelay)
@@ -43,6 +48,22 @@ class StoryJobsPropertiesTest {
     fun rejectZeroInterval() {
         assertFailsWith<IllegalArgumentException> {
             bindProduction().close.copy(interval = Duration.ZERO)
+        }
+    }
+
+    @Test
+    @DisplayName("병합 정책 변환에서 검증이 걸린다")
+    fun validateMergeOnConversion() {
+        val merge = bindProduction().merge.copy(scanWindow = Duration.ZERO)
+
+        assertFailsWith<IllegalArgumentException> { merge.toPolicy() }
+    }
+
+    @Test
+    @DisplayName("병합 interval이 0이면 바인딩할 수 없다")
+    fun rejectZeroMergeInterval() {
+        assertFailsWith<IllegalArgumentException> {
+            bindProduction().merge.copy(interval = Duration.ZERO)
         }
     }
 

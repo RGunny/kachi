@@ -4,7 +4,9 @@ import java.time.Instant
 import me.rgunny.kachi.story.application.port.outbound.story.StoryArticlePersistencePort
 import me.rgunny.kachi.story.application.port.outbound.story.StoryAssemblyPersistencePort
 import me.rgunny.kachi.story.application.port.outbound.story.StoryPersistencePort
+import me.rgunny.kachi.story.application.port.outbound.story.StoryReorganizePersistencePort
 import me.rgunny.kachi.story.application.port.outbound.story.model.AttachOutcome
+import me.rgunny.kachi.story.application.port.outbound.story.model.ReorganizeOutcome
 import me.rgunny.kachi.story.domain.NewsId
 import me.rgunny.kachi.story.domain.Story
 import me.rgunny.kachi.story.domain.StoryArticle
@@ -13,11 +15,11 @@ import me.rgunny.kachi.story.domain.StoryStatus
 import me.rgunny.kachi.story.domain.outbox.StoryOutbox
 
 /**
- * story·기사·outbox를 한 메모리 저장 상태로 두고 세 영속 포트를 함께 대신하는 fake.
+ * story·기사·outbox를 한 메모리 저장 상태로 두고 네 영속 포트를 함께 대신하는 fake.
  *
  * 조립 쓰기의 결과는 [attachOutcomes]에 지정한 값을 먼저 쓰고, 비면 저장 상태로 판정한다.
  */
-class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, StoryAssemblyPersistencePort {
+class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, StoryAssemblyPersistencePort, StoryReorganizePersistencePort {
 
     val stories: MutableMap<StoryId, Story> = linkedMapOf()
     val articles: MutableMap<NewsId, StoryArticle> = linkedMapOf()
@@ -28,8 +30,14 @@ class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, St
     /** attach 호출마다 넘어온 story와 expectedVersion. */
     val attachCalls: MutableList<Pair<Story, Long>> = mutableListOf()
 
+    /** merge 호출마다 넘어온 (target, source). */
+    val mergeCalls: MutableList<Pair<Story, Story>> = mutableListOf()
+
     /** 호출 순서별로 강제할 쓰기 결과. 비면 저장 상태로 판정한다. */
     val attachOutcomes: ArrayDeque<AttachOutcome> = ArrayDeque()
+
+    /** 호출 순서별로 강제할 병합 쓰기 결과. 비면 저장 상태로 판정한다. */
+    val mergeOutcomes: ArrayDeque<ReorganizeOutcome> = ArrayDeque()
 
     /** 쓰기 직전에 실행할 동작. 다른 인스턴스의 동시 쓰기를 흉내 낸다. */
     var beforeWrite: (suspend () -> Unit)? = null
@@ -143,6 +151,38 @@ class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, St
         write(story, article, outbox)
 
         return AttachOutcome.ATTACHED
+    }
+
+    // ---- StoryReorganizePersistencePort ----
+
+    override suspend fun merge(
+        target: Story,
+        source: Story,
+        expectedTargetVersion: Long,
+        expectedSourceVersion: Long,
+        outbox: StoryOutbox
+    ): ReorganizeOutcome {
+        mergeCalls += target to source
+        beforeWrite?.invoke()
+        failure?.let { throw it }
+        mergeOutcomes.removeFirstOrNull()?.let { return it }
+
+        val storedTarget = stories[target.id]
+        val storedSource = stories[source.id]
+        if (storedTarget == null || storedTarget.version != expectedTargetVersion) {
+            return ReorganizeOutcome.STORY_CHANGED
+        }
+        if (storedSource == null || storedSource.version != expectedSourceVersion) {
+            return ReorganizeOutcome.STORY_CHANGED
+        }
+        stories[target.id] = target
+        stories[source.id] = source
+        articles.values
+            .filter { it.storyId == source.id }
+            .forEach { articles[it.newsId] = it.reassign(target.id) }
+        outboxes += outbox
+
+        return ReorganizeOutcome.REORGANIZED
     }
 
     private fun write(story: Story, article: StoryArticle, outbox: StoryOutbox) {

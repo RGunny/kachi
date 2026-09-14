@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.story.application.exception.StoryAssemblyErrorCode
 import me.rgunny.kachi.story.application.exception.StoryAssemblyException
 import me.rgunny.kachi.story.application.port.inbound.assembly.model.AttachArticleCommand
+import me.rgunny.kachi.story.application.port.outbound.index.CandidateIndexPort
 import me.rgunny.kachi.story.application.port.outbound.index.model.IndexedArticle
 import me.rgunny.kachi.story.application.port.outbound.story.model.AttachOutcome
 import me.rgunny.kachi.story.domain.AutoMergedLinkDecision
@@ -339,6 +340,93 @@ class AssembleStoryServiceTest {
     }
 
     @Nested
+    @DisplayName("병합 치환")
+    inner class MergedSubstitution {
+
+        @Test
+        @DisplayName("흡수된 story를 가리키는 후보는 살아남은 story로 치환하고 색인을 고친다")
+        fun substituteMergedCandidateAndHealIndex() = runBlocking {
+            val source = seedStory(high)
+            val target = seedStory(high)
+            simulateMerge(source = source, target = target)
+
+            val result = service().assemble(command)
+
+            val decision = assertIs<AutoMergedLinkDecision>(result.decision)
+            assertEquals(target.id, decision.storyId)
+            assertEquals(target.id, result.storyId)
+            assertTrue(index.points.values.all { it.storyId == target.id })
+            assertEquals(3, store.stories.getValue(target.id).articleCount)
+        }
+
+        @Test
+        @DisplayName("두 번 흡수된 계보도 끝까지 따라가 치환한다")
+        fun followMergeChainToTerminal() = runBlocking {
+            val first = seedStory(high)
+            val second = seedStory(high)
+            val terminal = seedStory(high)
+            simulateMerge(source = first, target = second)
+            simulateMerge(source = second, target = terminal)
+
+            val result = service().assemble(command)
+
+            assertEquals(terminal.id, result.storyId)
+            assertTrue(index.points.values.all { it.storyId == terminal.id })
+        }
+
+        @Test
+        @DisplayName("색인 수리가 실패해도 치환된 story로 조립은 끝난다")
+        fun keepAssemblyWhenHealFails() = runBlocking {
+            val source = seedStory(high)
+            val target = seedStory(high)
+            simulateMerge(source = source, target = target)
+            val service = AssembleStoryService(
+                embeddingPort = embeddingPort,
+                candidateIndexPort = FailingReassignIndexPort(index),
+                storyLinkJudge = judge,
+                storyPersistencePort = store,
+                storyArticlePersistencePort = store,
+                storyAssemblyPersistencePort = store,
+                eventSerializer = serializer,
+                policy = assemblyPolicy(),
+                clock = StoryTestFixture.CLOCK
+            )
+
+            val result = service.assemble(command)
+
+            assertEquals(target.id, result.storyId)
+            assertTrue(index.points.values.any { it.storyId == source.id })
+        }
+
+        @Test
+        @DisplayName("계보의 대상이 없으면 그 후보를 버리고 새 story를 연다")
+        fun dropCandidateWhenChainTargetMissing() = runBlocking {
+            val source = seedStory(high)
+            val ghost = StoryTestFixture.story(article(newsId = NewsId.of(UUID.randomUUID()), embedding = high, storyId = StoryId.newId()))
+            store.stories[source.id] = source.mergeInto(ghost, NOW)
+
+            val result = service().assemble(command)
+
+            assertIs<NewStoryLinkDecision>(result.decision)
+            assertNotEquals(source.id, result.storyId)
+            assertEquals(1, store.openStoryCalls.size)
+        }
+
+        /**
+         * 병합 트랜잭션 커밋 뒤 색인 이전만 남은 상태를 만든다. 색인은 일부러 옛 storyId로 둔다.
+         */
+        private fun simulateMerge(source: Story, target: Story) {
+            val storedSource = store.stories.getValue(source.id)
+            val storedTarget = store.stories.getValue(target.id)
+            store.stories[target.id] = storedTarget.absorb(storedSource, NOW)
+            store.stories[source.id] = storedSource.mergeInto(storedTarget, NOW)
+            store.articles.values
+                .filter { it.storyId == source.id }
+                .forEach { store.articles[it.newsId] = it.reassign(target.id) }
+        }
+    }
+
+    @Nested
     @DisplayName("호출 계약")
     inner class Calls {
 
@@ -402,6 +490,16 @@ class AssembleStoryServiceTest {
         index.upsert(articles.map { IndexedArticle.from(it) })
 
         return story
+    }
+
+    /** story 단위 이전이 항상 실패하는 색인. */
+    private class FailingReassignIndexPort(
+        private val delegate: InMemoryCandidateIndexPort
+    ) : CandidateIndexPort by delegate {
+
+        override suspend fun reassignStory(from: StoryId, to: StoryId) {
+            throw IllegalStateException("index unavailable")
+        }
     }
 
     private companion object {

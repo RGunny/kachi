@@ -2,7 +2,9 @@ package me.rgunny.kachi.story.config
 
 import me.rgunny.kachi.story.adapter.inbound.scheduler.IndexCleanupSchedulerSettings
 import me.rgunny.kachi.story.adapter.inbound.scheduler.StoryCloseSchedulerSettings
+import me.rgunny.kachi.story.adapter.inbound.scheduler.StoryMergeSchedulerSettings
 import me.rgunny.kachi.story.application.service.close.StoryClosePolicy
+import me.rgunny.kachi.story.application.service.merge.StoryMergePolicy
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -27,6 +29,22 @@ class StoryJobsConfig {
             initialDelay = properties.close.initialDelay,
             closeAfter = properties.close.closeAfter,
             batchLimit = properties.close.batchLimit
+        )
+    }
+
+    @Bean
+    fun storyMergePolicy(properties: StoryJobsProperties): StoryMergePolicy {
+        return properties.merge.toPolicy()
+    }
+
+    @Bean
+    fun storyMergeSchedulerSettings(properties: StoryJobsProperties): StoryMergeSchedulerSettings {
+        return StoryMergeSchedulerSettings(
+            enabled = properties.merge.enabled,
+            interval = properties.merge.interval,
+            initialDelay = properties.merge.initialDelay,
+            scanWindow = properties.merge.scanWindow,
+            scanLimit = properties.merge.scanLimit
         )
     }
 

@@ -8,6 +8,7 @@ import me.rgunny.kachi.story.adapter.outbound.persistence.story.StoryArticlePers
 import me.rgunny.kachi.story.adapter.outbound.persistence.story.StoryAssemblyPersistenceAdapter
 import me.rgunny.kachi.story.adapter.outbound.persistence.story.StoryMongoDocument
 import me.rgunny.kachi.story.adapter.outbound.persistence.story.StoryPersistenceAdapter
+import me.rgunny.kachi.story.adapter.outbound.persistence.story.StoryReorganizePersistenceAdapter
 import me.rgunny.kachi.story.config.StoryMongoTransactionConfig
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
@@ -30,6 +31,7 @@ import org.springframework.test.context.ActiveProfiles
     StoryPersistenceAdapter::class,
     StoryArticlePersistenceAdapter::class,
     StoryAssemblyPersistenceAdapter::class,
+    StoryReorganizePersistenceAdapter::class,
     StoryOutboxPersistenceAdapter::class,
     StoryMongoTransactionConfig::class,
     StoryServiceTestContainersConfig::class
