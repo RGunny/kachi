@@ -5,7 +5,7 @@ import java.time.Duration
 /**
  * 닫기 scheduler가 보는 실행 설정.
  *
- * 값은 `kachi.story.jobs.close`에서 온다.
+ * `kachi.story.jobs.close`
  */
 data class StoryCloseSchedulerSettings(
     val enabled: Boolean,
