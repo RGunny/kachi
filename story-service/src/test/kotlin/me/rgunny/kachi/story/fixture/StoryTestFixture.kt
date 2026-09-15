@@ -6,9 +6,13 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
 import me.rgunny.kachi.story.adapter.outbound.lock.InMemoryExecutionLockAdapter
+import me.rgunny.kachi.story.adapter.outbound.outbox.StoryEventTopics
 import me.rgunny.kachi.story.application.port.inbound.assembly.model.AttachArticleCommand
 import me.rgunny.kachi.story.application.port.outbound.lock.ExecutionLockPort
 import me.rgunny.kachi.story.application.service.assembly.AssemblyPolicy
+import me.rgunny.kachi.story.application.service.outbox.StoryOutboxRelayPolicy
+import me.rgunny.kachi.story.config.StoryEventsProperties
+import me.rgunny.kachi.story.config.StoryOutboxRelayProperties
 import me.rgunny.kachi.story.domain.ArticleLanguage
 import me.rgunny.kachi.story.domain.ArticleSource
 import me.rgunny.kachi.story.domain.Embedding
@@ -99,6 +103,83 @@ object StoryTestFixture {
             claim = claim,
             createdAt = createdAt,
             updatedAt = updatedAt
+        )
+    }
+
+    fun relayPolicy(
+        batchSize: Int = 10,
+        publisherId: String = RELAY_PUBLISHER_ID,
+        retryPolicy: StoryOutboxRetryPolicy = retryPolicy(),
+        publishingVisibilityTimeout: Duration = Duration.ofSeconds(60)
+    ): StoryOutboxRelayPolicy {
+        return StoryOutboxRelayPolicy(
+            batchSize = batchSize,
+            publisherId = publisherId,
+            retryPolicy = retryPolicy,
+            publishingVisibilityTimeout = publishingVisibilityTimeout
+        )
+    }
+
+    fun relayProperties(
+        enabled: Boolean = true,
+        publisherId: String = RELAY_PUBLISHER_ID,
+        fixedDelay: Duration = Duration.ofSeconds(5),
+        initialDelay: Duration = Duration.ofSeconds(15),
+        batchSize: Int = 50,
+        publishingVisibilityTimeout: Duration = Duration.ofSeconds(60),
+        retry: StoryOutboxRelayProperties.Retry = retryProperties()
+    ): StoryOutboxRelayProperties {
+        return StoryOutboxRelayProperties(
+            enabled = enabled,
+            publisherId = publisherId,
+            fixedDelay = fixedDelay,
+            initialDelay = initialDelay,
+            batchSize = batchSize,
+            publishingVisibilityTimeout = publishingVisibilityTimeout,
+            retry = retry
+        )
+    }
+
+    fun retryProperties(
+        maxAttempts: Int = 5,
+        baseDelay: Duration = Duration.ofSeconds(1),
+        maxDelay: Duration = Duration.ofMinutes(1),
+        multiplier: Double = 2.0
+    ): StoryOutboxRelayProperties.Retry {
+        return StoryOutboxRelayProperties.Retry(
+            maxAttempts = maxAttempts,
+            baseDelay = baseDelay,
+            maxDelay = maxDelay,
+            multiplier = multiplier
+        )
+    }
+
+    const val EVENT_TOPIC_ARTICLE_ATTACHED: String = "story.article.attached"
+    const val EVENT_TOPIC_MERGED: String = "story.merged"
+
+    fun eventTopics(
+        articleAttached: String = EVENT_TOPIC_ARTICLE_ATTACHED,
+        merged: String = EVENT_TOPIC_MERGED
+    ): StoryEventTopics {
+        return StoryEventTopics(
+            articleAttached = articleAttached,
+            merged = merged
+        )
+    }
+
+    fun eventsProperties(
+        enabled: Boolean = true,
+        articleAttachedTopic: String = EVENT_TOPIC_ARTICLE_ATTACHED,
+        mergedTopic: String = EVENT_TOPIC_MERGED,
+        retention: Duration = Duration.ofDays(30)
+    ): StoryEventsProperties {
+        return StoryEventsProperties(
+            enabled = enabled,
+            topics = StoryEventsProperties.Topics(
+                articleAttached = articleAttachedTopic,
+                merged = mergedTopic
+            ),
+            retention = retention
         )
     }
 

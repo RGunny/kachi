@@ -8,6 +8,9 @@ spring:
 
 kachi:
   story:
+    outbox:
+      relay:
+        enabled: false
     inference:
       embedding:
         # 자리표시(StoryServiceTestContainersConfig의 stub 주소로 대체)
@@ -39,3 +42,5 @@ kachi:
       retry:
         initial-backoff: 100ms
         max-backoff: 500ms
+    events:
+      enabled: false
