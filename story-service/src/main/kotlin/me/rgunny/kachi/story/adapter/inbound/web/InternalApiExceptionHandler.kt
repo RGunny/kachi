@@ -5,6 +5,7 @@ import me.rgunny.kachi.story.adapter.inbound.web.response.ErrorCode
 import me.rgunny.kachi.story.application.exception.StoryErrorCode
 import me.rgunny.kachi.story.application.exception.StoryException
 import me.rgunny.kachi.story.application.exception.StoryOperationErrorCode
+import me.rgunny.kachi.story.application.exception.StoryOutboxErrorCode
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -57,7 +58,9 @@ class InternalApiExceptionHandler {
             StoryOperationErrorCode.SPLIT_ARTICLES_REQUIRED to ErrorCode.INVALID_STORY_SPLIT,
             StoryOperationErrorCode.SPLIT_ARTICLES_NOT_IN_STORY to ErrorCode.INVALID_STORY_SPLIT,
             StoryOperationErrorCode.SPLIT_ALL_ARTICLES_REJECTED to ErrorCode.INVALID_STORY_SPLIT,
-            StoryOperationErrorCode.REORGANIZE_CONFLICT to ErrorCode.STORY_CHANGED
+            StoryOperationErrorCode.REORGANIZE_CONFLICT to ErrorCode.STORY_CHANGED,
+            StoryOutboxErrorCode.OUTBOX_NOT_FOUND to ErrorCode.OUTBOX_NOT_FOUND,
+            StoryOutboxErrorCode.OUTBOX_NOT_RECOVERABLE to ErrorCode.OUTBOX_NOT_RECOVERABLE
         )
     }
 }

@@ -11,10 +11,14 @@ object ApiPaths {
     const val INTERNAL_STORY_MERGE = "/internal/stories/{storyId}/merge/{mergedStoryId}"
     const val INTERNAL_STORY_SPLIT = "/internal/stories/{storyId}/split"
     const val INTERNAL_STORY_INDEX_REBUILD = "/internal/story-index/rebuild"
+    const val INTERNAL_STORY_OUTBOXES = "/internal/story-outboxes"
+    const val INTERNAL_STORY_OUTBOX_RECOVER = "/internal/story-outboxes/{outboxId}/recover"
 
     const val V1_INTERNAL_STORIES = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORIES"
     const val V1_INTERNAL_STORY = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY"
     const val V1_INTERNAL_STORY_MERGE = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY_MERGE"
     const val V1_INTERNAL_STORY_SPLIT = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY_SPLIT"
     const val V1_INTERNAL_STORY_INDEX_REBUILD = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY_INDEX_REBUILD"
+    const val V1_INTERNAL_STORY_OUTBOXES = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY_OUTBOXES"
+    const val V1_INTERNAL_STORY_OUTBOX_RECOVER = "${ApiVersions.V1_PATH_PREFIX}$INTERNAL_STORY_OUTBOX_RECOVER"
 }
