@@ -112,6 +112,43 @@ class StoryReorganizePersistenceAdapterIntegrationTest : PersistenceAdapterInteg
         assertUnchanged(target, source)
     }
 
+    @Test
+    @DisplayName("원 story 갱신·새 story 저장·기사 이전을 함께 쓴다")
+    fun splitWritesAllTogether() = runBlocking {
+        val (story, first, second) = openedStoryWithTwoArticles()
+        val newStoryId = StoryId.newId()
+        val newStory = Story.open(second.reassign(newStoryId), now, parentStoryId = story.id)
+        val original = story.recompose(listOf(first), now)
+
+        val outcome = adapter.split(original, expectedVersion = story.version, newStory = newStory, movedNewsIds = listOf(second.newsId))
+
+        assertEquals(ReorganizeOutcome.REORGANIZED, outcome)
+        val storedOriginal = assertNotNull(storyAdapter.findById(story.id))
+        assertEquals(original.version, storedOriginal.version)
+        assertEquals(1, storedOriginal.articleCount)
+        val storedNew = assertNotNull(storyAdapter.findById(newStoryId))
+        assertEquals(StoryStatus.OPEN, storedNew.status)
+        assertEquals(story.id, storedNew.parentStoryId)
+        assertEquals(listOf(first.newsId), articleAdapter.findByStory(story.id).map { it.newsId })
+        assertEquals(listOf(second.newsId), articleAdapter.findByStory(newStoryId).map { it.newsId })
+        assertEquals(emptyList(), outboxCollection.findAll())
+    }
+
+    @Test
+    @DisplayName("원 story version이 어긋나면 새 story와 기사 이전도 남지 않는다")
+    fun rollbackSplitWhenOriginalChanged() = runBlocking {
+        val (story, first, second) = openedStoryWithTwoArticles()
+        val newStoryId = StoryId.newId()
+        val newStory = Story.open(second.reassign(newStoryId), now, parentStoryId = story.id)
+
+        val outcome = adapter.split(story.recompose(listOf(first), now), expectedVersion = 7, newStory = newStory, movedNewsIds = listOf(second.newsId))
+
+        assertEquals(ReorganizeOutcome.STORY_CHANGED, outcome)
+        assertEquals(story.version, storyAdapter.findById(story.id)?.version)
+        assertNull(storyAdapter.findById(newStoryId))
+        assertEquals(2, articleAdapter.findByStory(story.id).size)
+    }
+
     /** 두 story와 기사 소속이 병합 전 그대로인지 본다. */
     private suspend fun assertUnchanged(target: Story, source: Story) {
         assertEquals(0, storyAdapter.findById(target.id)?.version)
@@ -132,6 +169,29 @@ class StoryReorganizePersistenceAdapterIntegrationTest : PersistenceAdapterInteg
         outboxCollection.clear()
 
         return story
+    }
+
+    /**
+     * 기사 둘이 붙은 story 하나를 저장한다.
+     */
+    private suspend fun openedStoryWithTwoArticles(): Triple<Story, StoryArticle, StoryArticle> {
+        val storyId = StoryId.newId()
+        val first = StoryTestFixture.article(newsId = NewsId.of(UUID.randomUUID()), storyId = storyId)
+        val second = StoryTestFixture.article(newsId = NewsId.of(UUID.randomUUID()), storyId = storyId)
+        val opened = Story.open(first, now)
+        assemblyAdapter.openStory(opened, first, outboxKeyed(storyId, first))
+        val attached = opened.attach(second, now)
+        assemblyAdapter.attach(second, attached, expectedVersion = opened.version, outbox = outboxKeyed(storyId, second))
+        outboxCollection.clear()
+
+        return Triple(attached, first, second)
+    }
+
+    private fun outboxKeyed(storyId: StoryId, article: StoryArticle): StoryOutbox {
+        return StoryTestFixture.outbox(
+            eventKey = "${storyId.value}:${article.newsId.value}",
+            partitionKey = storyId.value.toString()
+        )
     }
 
     private fun outboxFor(merged: Story): StoryOutbox {

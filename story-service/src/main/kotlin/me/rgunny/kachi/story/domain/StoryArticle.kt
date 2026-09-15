@@ -37,6 +37,10 @@ class StoryArticle private constructor(
             decision: LinkDecision,
             attachedAt: Instant
         ): StoryArticle {
+            require(!decision.merged || decision.candidateStoryId == storyId) {
+                "붙였다고 판정한 story와 소속 story가 다릅니다: decision=${decision.candidateStoryId}, storyId=$storyId"
+            }
+
             return validated(
                 newsId = newsId,
                 title = title,
@@ -105,9 +109,6 @@ class StoryArticle private constructor(
             require(excerpt.isNotBlank()) { "발췌문은 빈 값일 수 없습니다" }
             require(url.isNotBlank()) { "URL은 빈 값일 수 없습니다" }
             require(matchedKeywords.isNotEmpty()) { "매칭 키워드는 하나 이상이어야 합니다" }
-            require(!decision.merged || decision.candidateStoryId == storyId) {
-                "붙였다고 판정한 story와 소속 story가 다릅니다: decision=${decision.candidateStoryId}, storyId=$storyId"
-            }
 
             return StoryArticle(
                 newsId = newsId,

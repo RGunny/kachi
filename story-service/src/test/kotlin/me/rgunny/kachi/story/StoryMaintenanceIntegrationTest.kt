@@ -24,9 +24,12 @@ import me.rgunny.kachi.story.application.port.outbound.index.model.IndexedArticl
 import me.rgunny.kachi.story.application.service.cleanup.CleanupCandidateIndexService
 import me.rgunny.kachi.story.application.service.close.CloseIdleStoriesService
 import me.rgunny.kachi.story.application.service.close.StoryClosePolicy
+import me.rgunny.kachi.story.application.service.index.RebuildCandidateIndexService
 import me.rgunny.kachi.story.application.service.merge.MergeStoriesService
 import me.rgunny.kachi.story.application.service.merge.StoryMergePolicy
+import me.rgunny.kachi.story.domain.AutoMergedLinkDecision
 import me.rgunny.kachi.story.domain.Embedding
+import me.rgunny.kachi.story.domain.NewStoryLinkDecision
 import me.rgunny.kachi.story.domain.NewsId
 import me.rgunny.kachi.story.domain.Story
 import me.rgunny.kachi.story.domain.StoryArticle
@@ -48,7 +51,7 @@ import org.testcontainers.qdrant.QdrantContainer
 /**
  * 주기 작업을 실제 Mongo·Qdrant로 잇는 통합 테스트.
  *
- * 닫기 뒤 벡터 삭제, 병합 뒤 payload 이전과 MERGED outbox 행, 정리 뒤 옛 점 삭제를 본다.
+ * 닫기 뒤 벡터 삭제, 병합 뒤 payload 이전과 MERGED outbox 행, 정리 뒤 옛 점 삭제, 재구축 왕복을 본다.
  */
 @DisplayName("story 유지보수 통합 테스트")
 class StoryMaintenanceIntegrationTest : PersistenceAdapterIntegrationTest() {
@@ -122,7 +125,7 @@ class StoryMaintenanceIntegrationTest : PersistenceAdapterIntegrationTest() {
     @DisplayName("병합은 기사와 색인 payload를 생존자로 옮기고 MERGED outbox 행을 남긴다")
     fun mergeMovesArticlesAndIndexPayload() = runBlocking {
         val older = seedStory(StoryTestFixture.embedding(1f, 0f), openedAt = NOW.minus(Duration.ofHours(2)))
-        val newer = seedStory(StoryTestFixture.embedding(0.75f, 0.25f), openedAt = NOW.minus(Duration.ofHours(1)))
+        val newer = seedStory(StoryTestFixture.embedding(0.75f, 0.25f), openedAt = NOW.minus(Duration.ofHours(1)), autoMergedDecision = true)
         val service = MergeStoriesService(
             storyPersistencePort = storyAdapter,
             candidateIndexPort = indexAdapter,
@@ -150,6 +153,28 @@ class StoryMaintenanceIntegrationTest : PersistenceAdapterIntegrationTest() {
     }
 
     @Test
+    @DisplayName("재구축은 색인을 비우고 OPEN story의 기사만 다시 채운다")
+    fun rebuildReindexesOpenStoriesOnly() = runBlocking {
+        val open = seedStory(StoryTestFixture.embedding(1f), openedAt = NOW.minus(Duration.ofHours(1)))
+        val closed = seedStory(StoryTestFixture.embedding(0f, 1f), openedAt = NOW.minus(Duration.ofHours(2)))
+        storyAdapter.update(closed.close(NOW), closed.version)
+        val service = RebuildCandidateIndexService(
+            storyArticlePersistencePort = articleAdapter,
+            storyPersistencePort = storyAdapter,
+            candidateIndexPort = indexAdapter,
+            assemblyPolicy = StoryTestFixture.assemblyPolicy(),
+            clock = StoryTestFixture.CLOCK
+        )
+
+        val result = service.rebuild()
+
+        assertEquals(2, result.scannedCount)
+        assertEquals(1, result.indexedCount)
+        assertEquals(1, result.skippedClosedCount)
+        assertEquals(listOf(open.id), searchAll().map { it.storyId })
+    }
+
+    @Test
     @DisplayName("정리는 보관 창을 지난 점만 색인에서 지운다")
     fun cleanupDeletesPointsOutsideWindow() = runBlocking {
         val old = indexedArticle(StoryTestFixture.embedding(1f), collectedAt = NOW.minus(Duration.ofHours(73)))
@@ -168,14 +193,18 @@ class StoryMaintenanceIntegrationTest : PersistenceAdapterIntegrationTest() {
 
     /**
      * 기사 하나로 story를 Mongo와 색인에 심는다.
+     *
+     * [autoMergedDecision]이면 merged 판정 기사로 만들어, 병합 뒤 소속이 갈라진 복원 경로도 함께 덮는다.
      */
-    private suspend fun seedStory(embedding: Embedding, openedAt: Instant): Story {
+    private suspend fun seedStory(embedding: Embedding, openedAt: Instant, autoMergedDecision: Boolean = false): Story {
+        val storyId = StoryId.newId()
         val article: StoryArticle = StoryTestFixture.article(
             newsId = NewsId.of(UUID.randomUUID()),
-            storyId = StoryId.newId(),
+            storyId = storyId,
             embedding = embedding,
             publishedAt = openedAt,
-            collectedAt = openedAt
+            collectedAt = openedAt,
+            decision = if (autoMergedDecision) AutoMergedLinkDecision(storyId, 0.9) else NewStoryLinkDecision(null, null)
         )
         val story = Story.open(article, openedAt)
         val outbox = StoryTestFixture.outbox(

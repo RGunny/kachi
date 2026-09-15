@@ -5,9 +5,13 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.math.sqrt
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import me.rgunny.kachi.story.application.exception.StoryOperationErrorCode
+import me.rgunny.kachi.story.application.exception.StoryOperationException
+import me.rgunny.kachi.story.application.port.inbound.merge.model.MergeStoryPairCommand
 import me.rgunny.kachi.story.application.port.outbound.index.CandidateIndexPort
 import me.rgunny.kachi.story.application.port.outbound.index.model.IndexedArticle
 import me.rgunny.kachi.story.application.port.outbound.outbox.model.StoryMergedEvent
@@ -224,6 +228,75 @@ class MergeStoriesServiceTest {
         assertEquals(1, result.mergedCount)
         assertEquals(1, result.indexReassignFailureCount)
         assertEquals(older.id, store.stories.getValue(newer.id).mergedInto)
+    }
+
+    @Test
+    @DisplayName("운영자 병합은 θ 검사 없이 지정한 쪽이 살아남는다")
+    fun mergePairIgnoresThetaAndSurvivorRule() = runBlocking {
+        val older = seedStory(base, openedAt = NOW.minus(Duration.ofHours(2)))
+        val newer = seedStory(far, openedAt = NOW.minus(Duration.ofHours(1)))
+
+        val result = service().mergeStoryPair(MergeStoryPairCommand(targetStoryId = newer.id, sourceStoryId = older.id))
+
+        assertEquals(newer.id, result.survivor.id)
+        assertEquals(older.id, result.mergedStoryId)
+        assertEquals(2, result.survivor.articleCount)
+        assertEquals(newer.id, store.stories.getValue(older.id).mergedInto)
+        assertEquals(StoryOutboxEventType.MERGED, store.outboxes.single().eventType)
+        assertTrue(index.points.values.all { it.storyId == newer.id })
+    }
+
+    @Test
+    @DisplayName("운영자 병합은 없는 story와 닫힌 story를 거부한다")
+    fun rejectPairOfMissingOrClosedStory() = runBlocking {
+        val open = seedStory(base, openedAt = NOW.minus(Duration.ofHours(2)))
+        val closed = seedStory(near, openedAt = NOW.minus(Duration.ofHours(1)))
+        store.stories[closed.id] = closed.close(NOW)
+
+        val notFound = assertFailsWith<StoryOperationException> {
+            service().mergeStoryPair(MergeStoryPairCommand(targetStoryId = open.id, sourceStoryId = StoryId.newId()))
+        }
+        assertEquals(StoryOperationErrorCode.STORY_NOT_FOUND, notFound.errorCode)
+
+        val notOpen = assertFailsWith<StoryOperationException> {
+            service().mergeStoryPair(MergeStoryPairCommand(targetStoryId = open.id, sourceStoryId = closed.id))
+        }
+        assertEquals(StoryOperationErrorCode.STORY_NOT_OPEN, notOpen.errorCode)
+    }
+
+    @Test
+    @DisplayName("운영자 병합은 같은 story와 상한 초과 쌍을 거부한다")
+    fun rejectIncompatiblePair() = runBlocking {
+        val target = seedStory(base, base, openedAt = NOW.minus(Duration.ofHours(2)))
+        val source = seedStory(near, openedAt = NOW.minus(Duration.ofHours(1)))
+
+        val self = assertFailsWith<StoryOperationException> {
+            service().mergeStoryPair(MergeStoryPairCommand(targetStoryId = target.id, sourceStoryId = target.id))
+        }
+        assertEquals(StoryOperationErrorCode.MERGE_INCOMPATIBLE, self.errorCode)
+
+        val overMax = assertFailsWith<StoryOperationException> {
+            service(assemblyPolicy(maxArticles = 2))
+                .mergeStoryPair(MergeStoryPairCommand(targetStoryId = target.id, sourceStoryId = source.id))
+        }
+        assertEquals(StoryOperationErrorCode.MERGE_INCOMPATIBLE, overMax.errorCode)
+        assertTrue(store.outboxes.isEmpty())
+    }
+
+    @Test
+    @DisplayName("운영자 병합 중 story가 바뀌면 실패로 알린다")
+    fun reportConflictOnPairVersionChange() = runBlocking {
+        val target = seedStory(base, openedAt = NOW.minus(Duration.ofHours(2)))
+        val source = seedStory(near, openedAt = NOW.minus(Duration.ofHours(1)))
+        store.mergeOutcomes += ReorganizeOutcome.STORY_CHANGED
+
+        val conflict = assertFailsWith<StoryOperationException> {
+            service().mergeStoryPair(MergeStoryPairCommand(targetStoryId = target.id, sourceStoryId = source.id))
+        }
+
+        assertEquals(StoryOperationErrorCode.REORGANIZE_CONFLICT, conflict.errorCode)
+        assertTrue(store.stories.values.all { it.status == StoryStatus.OPEN })
+        assertTrue(store.outboxes.isEmpty())
     }
 
     private fun service(policy: AssemblyPolicy = assemblyPolicy()): MergeStoriesService {

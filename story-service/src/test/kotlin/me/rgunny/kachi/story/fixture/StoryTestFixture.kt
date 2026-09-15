@@ -124,6 +124,11 @@ object StoryTestFixture {
     val NEWS_ID: NewsId = NewsId.of(UUID.fromString("018f0000-0000-7000-8000-000000000009"))
     val STORY_ID: StoryId = StoryId.of(UUID.fromString("018f0000-0000-7000-8000-000000000001"))
 
+    /** 끝자리가 [sequence]인 결정적 기사 id. 정렬 순서가 sequence 순과 같다. */
+    fun newsId(sequence: Int): NewsId {
+        return NewsId.of(UUID.fromString("018f0000-0000-7000-8000-%012x".format(sequence)))
+    }
+
     /**
      * 앞자리 몇 개만 준 벡터. 나머지는 0이라 코사인 값을 손으로 셀 수 있다.
      */

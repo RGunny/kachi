@@ -179,6 +179,47 @@ class StoryTest {
     }
 
     @Nested
+    @DisplayName("recompose()")
+    inner class Recompose {
+
+        @Test
+        @DisplayName("centroid 평균·기사 수·키워드 합집합·마지막 발행 시각을 다시 계산한다")
+        fun recomputeDerivedState() {
+            val first = article(embedding = embedding(1f, 0f), publishedAt = NOW.minus(Duration.ofHours(2)))
+            val second = article(
+                newsId = otherNewsId,
+                embedding = embedding(0f, 1f),
+                keywords = listOf("ai"),
+                publishedAt = NOW.minus(Duration.ofHours(1))
+            )
+            val story = story(first)
+
+            val recomposed = story.recompose(listOf(first, second), NOW)
+
+            assertEquals(embedding(0.5f, 0.5f), recomposed.centroid)
+            assertEquals(2, recomposed.articleCount)
+            assertEquals(setOf(StoryKeyword.of("nvidia"), StoryKeyword.of("ai")), recomposed.keywords)
+            assertEquals(second.publishedAt, recomposed.lastArticleAt)
+            assertEquals(story.version + 1, recomposed.version)
+        }
+
+        @Test
+        @DisplayName("빈 목록과 다른 story의 기사는 거부한다")
+        fun rejectInvalidArticles() {
+            assertFailsWith<IllegalArgumentException> { story().recompose(emptyList(), NOW) }
+            assertFailsWith<IllegalArgumentException> {
+                story().recompose(listOf(article(newsId = otherNewsId, storyId = otherStoryId)), NOW)
+            }
+        }
+
+        @Test
+        @DisplayName("닫힌 story는 재구성할 수 없다")
+        fun rejectWhenClosed() {
+            assertFailsWith<IllegalStateException> { story().close(NOW).recompose(listOf(article()), NOW) }
+        }
+    }
+
+    @Nested
     @DisplayName("mergeInto() · absorb()")
     inner class Merge {
         private val target = story(article(embedding = embedding(1f, 0f), publishedAt = NOW.minus(Duration.ofHours(5))))

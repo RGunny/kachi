@@ -1,6 +1,7 @@
 package me.rgunny.kachi.story.application.port.outbound.story
 
 import me.rgunny.kachi.story.application.port.outbound.story.model.ReorganizeOutcome
+import me.rgunny.kachi.story.domain.NewsId
 import me.rgunny.kachi.story.domain.Story
 import me.rgunny.kachi.story.domain.outbox.StoryOutbox
 
@@ -22,5 +23,17 @@ interface StoryReorganizePersistencePort {
         expectedTargetVersion: Long,
         expectedSourceVersion: Long,
         outbox: StoryOutbox
+    ): ReorganizeOutcome
+
+    /**
+     * [movedNewsIds]의 기사를 [newStory]로 옮기고 두 story를 쓴다.
+     *
+     * 저장된 version이 [expectedVersion]과 다르면 [ReorganizeOutcome.STORY_CHANGED]다.
+     */
+    suspend fun split(
+        original: Story,
+        expectedVersion: Long,
+        newStory: Story,
+        movedNewsIds: List<NewsId>
     ): ReorganizeOutcome
 }

@@ -33,11 +33,17 @@ class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, St
     /** merge 호출마다 넘어온 (target, source). */
     val mergeCalls: MutableList<Pair<Story, Story>> = mutableListOf()
 
+    /** split 호출마다 넘어온 (original, newStory). */
+    val splitCalls: MutableList<Pair<Story, Story>> = mutableListOf()
+
     /** 호출 순서별로 강제할 쓰기 결과. 비면 저장 상태로 판정한다. */
     val attachOutcomes: ArrayDeque<AttachOutcome> = ArrayDeque()
 
     /** 호출 순서별로 강제할 병합 쓰기 결과. 비면 저장 상태로 판정한다. */
     val mergeOutcomes: ArrayDeque<ReorganizeOutcome> = ArrayDeque()
+
+    /** 호출 순서별로 강제할 분리 쓰기 결과. 비면 저장 상태로 판정한다. */
+    val splitOutcomes: ArrayDeque<ReorganizeOutcome> = ArrayDeque()
 
     /** 쓰기 직전에 실행할 동작. 다른 인스턴스의 동시 쓰기를 흉내 낸다. */
     var beforeWrite: (suspend () -> Unit)? = null
@@ -181,6 +187,30 @@ class InMemoryStoryStore : StoryPersistencePort, StoryArticlePersistencePort, St
             .filter { it.storyId == source.id }
             .forEach { articles[it.newsId] = it.reassign(target.id) }
         outboxes += outbox
+
+        return ReorganizeOutcome.REORGANIZED
+    }
+
+    override suspend fun split(
+        original: Story,
+        expectedVersion: Long,
+        newStory: Story,
+        movedNewsIds: List<NewsId>
+    ): ReorganizeOutcome {
+        splitCalls += original to newStory
+        beforeWrite?.invoke()
+        failure?.let { throw it }
+        splitOutcomes.removeFirstOrNull()?.let { return it }
+
+        val stored = stories[original.id]
+        if (stored == null || stored.version != expectedVersion) {
+            return ReorganizeOutcome.STORY_CHANGED
+        }
+        stories[original.id] = original
+        stories[newStory.id] = newStory
+        movedNewsIds.forEach { newsId ->
+            articles[newsId]?.let { articles[newsId] = it.reassign(newStory.id) }
+        }
 
         return ReorganizeOutcome.REORGANIZED
     }

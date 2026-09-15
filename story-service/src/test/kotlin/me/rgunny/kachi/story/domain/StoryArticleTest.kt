@@ -58,6 +58,36 @@ class StoryArticleTest {
     }
 
     @Nested
+    @DisplayName("restore()")
+    inner class Restore {
+
+        @Test
+        @DisplayName("병합·분리로 소속이 옮겨진 merged 판정 기사도 복원한다")
+        fun restoreReassignedMergedArticle() {
+            val moved = article(decision = AutoMergedLinkDecision(STORY_ID, 0.9)).reassign(otherStoryId)
+
+            val restored = StoryArticle.restore(
+                newsId = moved.newsId,
+                title = moved.title,
+                excerpt = moved.excerpt,
+                url = moved.url,
+                source = moved.source,
+                language = moved.language,
+                publishedAt = moved.publishedAt,
+                collectedAt = moved.collectedAt,
+                matchedKeywords = moved.matchedKeywords,
+                embedding = moved.embedding,
+                storyId = moved.storyId,
+                decision = moved.decision,
+                attachedAt = moved.attachedAt
+            )
+
+            assertEquals(otherStoryId, restored.storyId)
+            assertEquals(moved.decision, restored.decision)
+        }
+    }
+
+    @Nested
     @DisplayName("reassign()")
     inner class Reassign {
 

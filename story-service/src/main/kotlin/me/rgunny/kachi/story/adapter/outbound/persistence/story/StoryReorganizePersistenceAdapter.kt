@@ -4,6 +4,7 @@ import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.story.adapter.outbound.persistence.outbox.StoryOutboxMongoDocument
 import me.rgunny.kachi.story.application.port.outbound.story.StoryReorganizePersistencePort
 import me.rgunny.kachi.story.application.port.outbound.story.model.ReorganizeOutcome
+import me.rgunny.kachi.story.domain.NewsId
 import me.rgunny.kachi.story.domain.Story
 import me.rgunny.kachi.story.domain.StoryId
 import me.rgunny.kachi.story.domain.outbox.StoryOutbox
@@ -56,6 +57,30 @@ class StoryReorganizePersistenceAdapter(
         }
     }
 
+    /**
+     * 원 story CAS update, 새 story insert, 기사 reassign 순이다.
+     * CAS가 0건이면 트랜잭션을 되돌린다.
+     */
+    override suspend fun split(
+        original: Story,
+        expectedVersion: Long,
+        newStory: Story,
+        movedNewsIds: List<NewsId>
+    ): ReorganizeOutcome {
+        require(newStory.parentStoryId == original.id) { "원 story의 후속이 아닌 새 story입니다: parent=${newStory.parentStoryId}, original=${original.id}" }
+
+        return transactionalOperator.executeAndAwait { transaction ->
+            if (!casUpdate(original, expectedVersion)) {
+                transaction.setRollbackOnly()
+                return@executeAndAwait ReorganizeOutcome.STORY_CHANGED
+            }
+
+            mongoTemplate.insert(StoryMongoDocument.fromDomain(newStory)).awaitSingle()
+            reassignArticles(newsIds = movedNewsIds, to = newStory.id)
+            ReorganizeOutcome.REORGANIZED
+        }
+    }
+
     private suspend fun casUpdate(story: Story, expectedVersion: Long): Boolean {
         val matched = mongoTemplate.updateFirst(
             StoryMongoDocument.versionQuery(story.id, expectedVersion),
@@ -74,7 +99,16 @@ class StoryReorganizePersistenceAdapter(
         ).awaitSingle()
     }
 
+    private suspend fun reassignArticles(newsIds: List<NewsId>, to: StoryId) {
+        mongoTemplate.updateMulti(
+            Query.query(Criteria.where(FIELD_ID).`in`(newsIds.map { it.value })),
+            Update().set(FIELD_STORY_ID, to.value),
+            StoryArticleMongoDocument::class.java
+        ).awaitSingle()
+    }
+
     private companion object {
+        const val FIELD_ID = "_id"
         const val FIELD_STORY_ID = "storyId"
     }
 }

@@ -2,8 +2,13 @@ package me.rgunny.kachi.story.application.service.merge
 
 import java.time.Clock
 import java.time.Instant
+import me.rgunny.kachi.story.application.exception.StoryOperationErrorCode
+import me.rgunny.kachi.story.application.exception.StoryOperationException
 import me.rgunny.kachi.story.application.port.inbound.merge.MergeOpenStoriesUseCase
+import me.rgunny.kachi.story.application.port.inbound.merge.MergeStoryPairUseCase
 import me.rgunny.kachi.story.application.port.inbound.merge.model.MergeOpenStoriesResult
+import me.rgunny.kachi.story.application.port.inbound.merge.model.MergeStoryPairCommand
+import me.rgunny.kachi.story.application.port.inbound.merge.model.MergeStoryPairResult
 import me.rgunny.kachi.story.application.port.outbound.index.CandidateIndexPort
 import me.rgunny.kachi.story.application.port.outbound.index.model.CandidateQuery
 import me.rgunny.kachi.story.application.port.outbound.outbox.StoryOutboxEventSerializer
@@ -21,10 +26,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
- * 최근에 연 OPEN story 가운데 centroid가 θ_high 이상 가까워진 쌍을 합치는 유스케이스.
+ * OPEN story 쌍을 합치는 유스케이스.
  *
- * 생존자는 먼저 연 쪽이고, `openedAt` 동률이면 id 문자열이 작은 쪽이다.
- * 쌍의 쓰기는 version 조건부라, 그 사이 어느 한쪽이 바뀐 쌍은 건너뛰고 다음 틱이 다시 본다.
+ * 주기 병합은 최근에 연 story를 스캔해 centroid가 θ_high 이상 가까워진 쌍을 찾고, 생존자는 먼저 연 쪽(`openedAt` 동률이면 id 문자열이 작은 쪽)이다.
+ * 운영자 병합은 지정한 쌍을 θ 검사 없이 합치고 지정한 쪽이 생존한다.
+ * 쌍의 쓰기는 version 조건부라, 그 사이 어느 한쪽이 바뀐 쌍을 주기 병합은 건너뛰고 운영자 병합은 실패로 알린다.
  * 색인 이전 실패는 조립이 후보를 읽을 때 스스로 고치므로 기록만 남긴다.
  */
 @Service
@@ -36,7 +42,7 @@ class MergeStoriesService(
     private val mergePolicy: StoryMergePolicy,
     private val assemblyPolicy: AssemblyPolicy,
     private val clock: Clock
-) : MergeOpenStoriesUseCase {
+) : MergeOpenStoriesUseCase, MergeStoryPairUseCase {
 
     override suspend fun mergeOpenStories(): MergeOpenStoriesResult {
         val now = Instant.now(clock)
@@ -107,6 +113,32 @@ class MergeStoriesService(
         )
     }
 
+    override suspend fun mergeStoryPair(command: MergeStoryPairCommand): MergeStoryPairResult {
+        val now = Instant.now(clock)
+        val (target, source) = pairOf(command)
+        val survivorAfter = target.absorb(source, now)
+        val sourceAfter = source.mergeInto(target, now)
+
+        val outcome = reorganizePersistencePort.merge(
+            target = survivorAfter,
+            source = sourceAfter,
+            expectedTargetVersion = target.version,
+            expectedSourceVersion = source.version,
+            outbox = outboxOf(sourceAfter, now)
+        )
+        if (outcome == ReorganizeOutcome.STORY_CHANGED) {
+            throw StoryOperationException(
+                errorCode = StoryOperationErrorCode.REORGANIZE_CONFLICT,
+                detail = "storyId=${target.id.value}, mergedStoryId=${source.id.value}"
+            )
+        }
+
+        reassignIndex(source.id, survivorAfter.id)
+        logMerged(survivorAfter, sourceAfter)
+
+        return MergeStoryPairResult(survivor = survivorAfter, mergedStoryId = source.id)
+    }
+
     /**
      * [subject]와 합칠 수 있는 story를 가까운 순으로 세운다.
      *
@@ -143,6 +175,49 @@ class MergeStoriesService(
         }
 
         return if (survivorFirst) a to b else b to a
+    }
+
+    /**
+     * 운영자가 지정한 병합 대상 두 story 검증
+     *
+     * θ 검사는 하지 않고 OPEN 여부, centroid 모델, 합산 기사 수 상한만 본다.
+     */
+    private suspend fun pairOf(command: MergeStoryPairCommand): Pair<Story, Story> {
+        if (command.targetStoryId == command.sourceStoryId) {
+            throw StoryOperationException(
+                errorCode = StoryOperationErrorCode.MERGE_INCOMPATIBLE,
+                detail = "같은 story입니다: ${command.targetStoryId.value}"
+            )
+        }
+        val target = openStoryOf(command.targetStoryId)
+        val source = openStoryOf(command.sourceStoryId)
+        if (target.centroid.model != source.centroid.model) {
+            throw StoryOperationException(
+                errorCode = StoryOperationErrorCode.MERGE_INCOMPATIBLE,
+                detail = "centroid 모델이 다릅니다: target=${target.centroid.model.code}, source=${source.centroid.model.code}"
+            )
+        }
+        if (target.articleCount + source.articleCount > assemblyPolicy.maxArticles) {
+            throw StoryOperationException(
+                errorCode = StoryOperationErrorCode.MERGE_INCOMPATIBLE,
+                detail = "합산 기사 수가 상한을 넘습니다: ${target.articleCount + source.articleCount} > ${assemblyPolicy.maxArticles}"
+            )
+        }
+
+        return target to source
+    }
+
+    private suspend fun openStoryOf(storyId: StoryId): Story {
+        val story = storyPersistencePort.findById(storyId)
+            ?: throw StoryOperationException(StoryOperationErrorCode.STORY_NOT_FOUND, "storyId=${storyId.value}")
+        if (story.status != StoryStatus.OPEN) {
+            throw StoryOperationException(
+                errorCode = StoryOperationErrorCode.STORY_NOT_OPEN,
+                detail = "storyId=${storyId.value}, status=${story.status}"
+            )
+        }
+
+        return story
     }
 
     private fun outboxOf(merged: Story, now: Instant): StoryOutbox {

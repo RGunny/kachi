@@ -137,6 +137,25 @@ class Story private constructor(
         )
     }
 
+    /**
+     * 구성 기사 전체에서 파생 상태를 다시 계산한다.
+     *
+     * [articles]는 분리 뒤 이 story에 남는(또는 새로 속하는) 기사 전체다.
+     */
+    fun recompose(articles: List<StoryArticle>, now: Instant): Story {
+        requireOpen("재구성할")
+        require(articles.isNotEmpty()) { "story는 기사를 하나 이상 가져야 합니다" }
+        require(articles.all { it.storyId == id }) { "다른 story의 기사가 있습니다: story=$id" }
+
+        return copy(
+            centroid = centroidOf(articles),
+            articleCount = articles.size,
+            keywords = articles.flatMap { it.matchedKeywords }.toSet(),
+            lastArticleAt = articles.maxOf { it.publishedAt },
+            version = version + 1
+        )
+    }
+
     /** 다른 story를 흡수한다. */
     fun absorb(other: Story, now: Instant): Story {
         requireOpen("흡수할")
@@ -150,6 +169,11 @@ class Story private constructor(
             lastArticleAt = maxOf(lastArticleAt, other.lastArticleAt),
             version = version + 1
         )
+    }
+
+    private fun centroidOf(articles: List<StoryArticle>): Embedding {
+        return articles.map { it.embedding }
+            .reduceIndexed { index, mean, embedding -> mean.meanWith(embedding, index, 1) }
     }
 
     private fun requireOpen(action: String) {
