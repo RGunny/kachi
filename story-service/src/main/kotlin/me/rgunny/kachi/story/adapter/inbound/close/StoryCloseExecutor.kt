@@ -9,7 +9,7 @@ import me.rgunny.kachi.story.application.port.outbound.lock.model.UnavailableExe
 import org.springframework.stereotype.Component
 
 /**
- * 닫기 요청의 중복 실행을 막고 유스케이스를 호출하는 실행기.
+ * 닫기 요청의 중복 실행을 막고 유스케이스를 호출하는 executor.
  *
  * lock의 결과를 이 진입점의 언어로 옮기는 일만 한다.
  */

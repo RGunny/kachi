@@ -31,7 +31,7 @@ class TeiInfoResponseTest {
     }
 
     @Test
-    @DisplayName("판정기 서버의 실제 응답은 reranker 종류와 라벨 표로 읽힌다")
+    @DisplayName("judge 서버의 실제 응답은 reranker 종류와 라벨 표로 읽힌다")
     fun parseRerankerInfo() {
         val info = JSON.readValue(TeiInfoJson.RERANKER, TeiInfoResponse::class.java)
 

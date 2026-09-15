@@ -118,7 +118,7 @@ class StoryAssemblyKafkaIntegrationTest {
     }
 
     @Test
-    @DisplayName("같은 벡터의 두 번째 기사는 판정기 없이 같은 story에 붙는다")
+    @DisplayName("같은 벡터의 두 번째 기사는 judge 없이 같은 story에 붙는다")
     fun autoMergeSecondArticle() {
         val first = event()
         val second = event(title = "엔비디아 실적 서프라이즈")

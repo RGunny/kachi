@@ -26,9 +26,9 @@ import org.springframework.context.annotation.Configuration
 /**
  * 추론 서버 호출 층을 조립하는 설정.
  *
- * - 전략 패턴: 판정기는 [StoryLinkJudge]를 구현하는 adapter 중 설정이 고른 하나다.
- *   조립 유스케이스는 어느 판정기인지 모른 채 다형성으로 부른다.
- *   판정기가 늘면 상수와 adapter가 하나씩 늘고 [storyLinkJudge]의 `when`이 빠진 분기를 컴파일에서 잡는다.
+ * - 전략 패턴: judge는 [StoryLinkJudge]를 구현하는 adapter 중 설정이 고른 하나다.
+ *   조립 유스케이스는 어느 judge인지 모른 채 다형성으로 부른다.
+ *   judge가 늘면 상수와 adapter가 하나씩 늘고 [storyLinkJudge]의 `when`이 빠진 분기를 컴파일에서 잡는다.
  * - 데코레이터 패턴: HTTP 클라이언트를 같은 인터페이스로 감싸는 [GuardedTeiClient]를 씌운다.
  *   차단 정책이 바뀌어도 adapter는 그대로다.
  */
@@ -39,7 +39,7 @@ class InferenceConfig {
     /**
      * 서버마다 자기 회로를 가진 가드를 씌운다.
      *
-     * 판정기 서버는 원격 판정기를 골랐을 때만 있다.
+     * judge 서버는 원격 judge를 골랐을 때만 있다.
      */
     @Bean
     fun teiClients(properties: InferenceProperties): List<GuardedTeiClient> {
@@ -79,7 +79,7 @@ class InferenceConfig {
         teiClients: List<GuardedTeiClient>
     ): StoryLinkJudge {
         // Strategy Pattern
-        // StoryLinkJudge가 전략의 공통 계약이고 판정기마다 그것을 구현한 adapter가 구체 전략이다.
+        // StoryLinkJudge가 전략의 공통 계약이고 judge마다 그것을 구현한 adapter가 구체 전략이다.
         // 어느 전략을 쓸지는 judge.kind 하나로 여기서 고른다. 새 StoryJudge 상수에 분기가 빠지면 이 when이 컴파일에서 잡는다.
         return when (properties.judge.kind) {
             StoryJudge.BGE_RERANKER_V2_M3 -> TeiRerankJudge(client = teiClients.of(InferenceTarget.JUDGE))
@@ -140,7 +140,7 @@ class InferenceConfig {
     @Bean("tei-reranker")
     @ConditionalOnProperty(prefix = InferenceProperties.PREFIX, name = ["judge.kind"], havingValue = "BGE_RERANKER_V2_M3")
     fun teiRerankerHealthIndicator(properties: InferenceProperties): TeiHealthIndicator {
-        return healthIndicator(checkNotNull(properties.judge.server) { "원격 판정기 서버 설정이 없습니다" })
+        return healthIndicator(checkNotNull(properties.judge.server) { "원격 judge 서버 설정이 없습니다" })
     }
 
     /** 실제 호출에서 나온 일시 실패만 회로를 여는 근거로 삼는다. */

@@ -5,7 +5,7 @@ import org.apache.kafka.common.errors.RecordTooLargeException
 import org.apache.kafka.common.errors.SerializationException
 
 /**
- * Kafka 전송 실패가 같은 레코드를 다시 보내도 결과가 달라지지 않는 실패인지 가르는 분류기.
+ * Kafka 전송 실패가 같은 레코드를 다시 보내도 결과가 달라지지 않는 실패인지 가르는 classifier.
  *
  * 같은 payload를 다시 보내도 결과가 같은 실패만 재시도하지 않고, 나머지는 전부 재시도한다.
  * 원인을 모르는 실패를 재시도하지 않는 쪽으로 두면 운영자가 매번 복구해야 하므로 기본값은 재시도다.

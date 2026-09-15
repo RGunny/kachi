@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 class JudgedLinkDecisionTest {
 
     @Test
-    @DisplayName("판정기가 낮게 봐 붙이지 않은 기록도 후보를 남긴다")
+    @DisplayName("judge가 낮게 봐 붙이지 않은 기록도 후보를 남긴다")
     fun keepCandidateWhenNotMerged() {
         val decision = JudgedLinkDecision(
             candidateStoryId = STORY_ID,

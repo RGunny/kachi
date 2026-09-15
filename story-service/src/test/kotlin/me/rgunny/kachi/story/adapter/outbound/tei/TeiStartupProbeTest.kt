@@ -26,7 +26,7 @@ class TeiStartupProbeTest {
     }
 
     @Test
-    @DisplayName("판정기 서버의 실제 /info는 모델·종류 검사를 통과한다")
+    @DisplayName("judge 서버의 실제 /info는 모델·종류 검사를 통과한다")
     fun verifyJudge() = runBlocking {
         val client = FakeTeiClient(info = FakeTeiClient.rerankerInfo())
 
@@ -46,7 +46,7 @@ class TeiStartupProbeTest {
     }
 
     @Test
-    @DisplayName("임베딩 자리에 판정기 모델이 떠 있으면 실패한다")
+    @DisplayName("임베딩 자리에 judge 모델이 떠 있으면 실패한다")
     fun failOnWrongKind() = runBlocking {
         val client = FakeTeiClient(info = FakeTeiClient.rerankerInfo())
 
@@ -71,7 +71,7 @@ class TeiStartupProbeTest {
     }
 
     @Test
-    @DisplayName("판정기 자리에 임베딩 모델이 떠 있으면 실패한다")
+    @DisplayName("judge 자리에 임베딩 모델이 떠 있으면 실패한다")
     fun failOnJudgeWithoutReranker() = runBlocking {
         assertFailsWith<IllegalStateException> {
             TeiStartupProbe(FakeTeiClient(), InferenceTarget.JUDGE, "BAAI/bge-m3").verify()

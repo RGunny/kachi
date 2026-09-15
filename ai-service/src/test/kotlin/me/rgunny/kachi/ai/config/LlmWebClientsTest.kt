@@ -62,7 +62,7 @@ class LlmWebClientsTest {
         val impatient = LlmWebClients.forModel(provider, responseTimeout = Duration.ofMillis(150))
         val patient = LlmWebClients.forModel(provider, responseTimeout = Duration.ofSeconds(5))
 
-        // block()은 TimeoutException을 ReactiveException으로 감싼다. adapter가 보는 것은 cause 체인이고, 분류기도 체인을 훑는다.
+        // block()은 TimeoutException을 ReactiveException으로 감싼다. adapter가 보는 것은 cause 체인이고, classifier도 체인을 훑는다.
         val exception = assertFailsWith<RuntimeException> {
             impatient.get().uri(PATH).retrieve().bodyToMono<String>().block()
         }

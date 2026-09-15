@@ -6,7 +6,7 @@ import me.rgunny.kachi.story.domain.EmbeddingText
 import me.rgunny.kachi.story.domain.StoryJudge
 
 /**
- * 후보 텍스트마다 지정한 점수를 돌려주는 판정기.
+ * 후보 텍스트마다 지정한 점수를 돌려주는 judge.
  *
  * 지정이 없으면 [defaultScore]다.
  */

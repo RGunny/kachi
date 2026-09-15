@@ -1,6 +1,6 @@
 package me.rgunny.kachi.story.domain
 
-/** 회색 구간에서 판정기가 정한 결과. */
+/** 회색 구간에서 judge가 정한 결과. */
 data class JudgedLinkDecision(
     override val candidateStoryId: StoryId,
     override val similarity: Double,

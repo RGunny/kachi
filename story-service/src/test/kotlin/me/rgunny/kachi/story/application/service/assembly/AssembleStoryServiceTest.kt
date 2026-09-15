@@ -158,7 +158,7 @@ class AssembleStoryServiceTest {
     inner class AutoMerge {
 
         @Test
-        @DisplayName("θ_high 이상이면 판정기 없이 붙이고 story의 centroid·기사 수·version이 바뀐다")
+        @DisplayName("θ_high 이상이면 judge 없이 붙이고 story의 centroid·기사 수·version이 바뀐다")
         fun mergeAboveThetaHigh() = runBlocking {
             val target = seedStory(high)
 
@@ -207,11 +207,11 @@ class AssembleStoryServiceTest {
     }
 
     @Nested
-    @DisplayName("판정기")
+    @DisplayName("judge")
     inner class Judge {
 
         @Test
-        @DisplayName("회색 구간이면 최대 유사도를 낸 기사와 그 점수를 판정기에 넣고 θ_judge 이상이면 붙인다")
+        @DisplayName("회색 구간이면 최대 유사도를 낸 기사와 그 점수를 judge에 넣고 θ_judge 이상이면 붙인다")
         fun mergeWhenJudgeAccepts() = runBlocking {
             val target = seedStory(gray)
             val grayArticle = store.articles.values.single()

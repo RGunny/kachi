@@ -35,7 +35,7 @@ class InferenceConfigTest {
     }
 
     @Test
-    @DisplayName("원격 판정기 설정이면 서버 둘의 가드·판정기·health indicator가 조립되고 probe가 통과한다")
+    @DisplayName("원격 judge 설정이면 서버 둘의 가드·judge·health indicator가 조립되고 probe가 통과한다")
     fun assembleRemoteJudge() {
         runner().run { context ->
             val clients = context.getBean("teiClients", List::class.java).filterIsInstance<GuardedTeiClient>()
@@ -52,7 +52,7 @@ class InferenceConfigTest {
     }
 
     @Test
-    @DisplayName("코사인만 쓰는 판정기 설정이면 판정기 서버 없이 조립된다")
+    @DisplayName("코사인만 쓰는 judge 설정이면 judge 서버 없이 조립된다")
     fun assembleThresholdOnly() {
         runner("${InferenceProperties.PREFIX}.judge.kind=THRESHOLD_ONLY").run { context ->
             val clients = context.getBean("teiClients", List::class.java)
@@ -94,7 +94,7 @@ class InferenceConfigTest {
     }
 
     @Test
-    @DisplayName("판정기 서버가 판정기 모델이 아니면 probe가 기동을 실패시킨다")
+    @DisplayName("judge 서버가 judge 모델이 아니면 probe가 기동을 실패시킨다")
     fun failProbeOnJudgeKind() {
         rerankerStub.respond(TeiHttpClient.INFO_PATH, ok(TeiInfoJson.EMBEDDING.replace("BAAI/bge-m3", TeiRerankJudge.MODEL_ID)))
 

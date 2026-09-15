@@ -38,7 +38,7 @@ class TeiRerankJudgeTest {
     }
 
     @Test
-    @DisplayName("판정기 정체는 cross-encoder다")
+    @DisplayName("judge 정체는 cross-encoder다")
     fun identity() {
         assertEquals(StoryJudge.BGE_RERANKER_V2_M3, judge.judge)
         assertEquals("BAAI/bge-reranker-v2-m3", TeiRerankJudge.MODEL_ID)

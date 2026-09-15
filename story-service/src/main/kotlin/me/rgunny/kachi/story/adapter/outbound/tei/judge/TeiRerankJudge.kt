@@ -6,7 +6,7 @@ import me.rgunny.kachi.story.application.port.outbound.judge.model.JudgeCandidat
 import me.rgunny.kachi.story.domain.EmbeddingText
 import me.rgunny.kachi.story.domain.StoryJudge
 
-/** cross-encoder 판정기 서버로 [StoryLinkJudge]를 구현하는 adapter. */
+/** cross-encoder judge 서버로 [StoryLinkJudge]를 구현하는 adapter. */
 class TeiRerankJudge(
     private val client: TeiClient
 ) : StoryLinkJudge {
@@ -22,7 +22,7 @@ class TeiRerankJudge(
     }
 
     companion object {
-        /** 이 adapter가 쓰는 판정기 가중치. */
+        /** 이 adapter가 쓰는 judge 가중치. */
         const val MODEL_ID = "BAAI/bge-reranker-v2-m3"
     }
 }

@@ -26,7 +26,7 @@ class TeiRealClients {
     )
 
     val judge: TeiHttpClient = TeiHttpClient(
-        webClient = TeiWebClients.forServer(requireNotNull(properties.judge.server) { "local 프로파일에 원격 판정기 설정이 없습니다" }),
+        webClient = TeiWebClients.forServer(requireNotNull(properties.judge.server) { "local 프로파일에 원격 judge 설정이 없습니다" }),
         target = InferenceTarget.JUDGE
     )
 

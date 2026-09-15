@@ -30,7 +30,7 @@ class ThresholdOnlyStoryLinkJudgeTest {
     }
 
     @Test
-    @DisplayName("판정기 정체는 코사인만이다")
+    @DisplayName("judge 정체는 코사인만이다")
     fun identity() {
         assertEquals(StoryJudge.THRESHOLD_ONLY, judge.judge)
     }

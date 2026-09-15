@@ -6,7 +6,7 @@ import io.netty.handler.timeout.WriteTimeoutException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeoutException
 
-/** 추론 서버 호출 중 발생한 client-level 예외의 timeout 여부를 판단하는 분류기. */
+/** 추론 서버 호출 중 발생한 client-level 예외의 timeout 여부를 판단하는 classifier. */
 object TeiHttpExceptionClassifier {
 
     fun isTimeout(exception: Throwable): Boolean {

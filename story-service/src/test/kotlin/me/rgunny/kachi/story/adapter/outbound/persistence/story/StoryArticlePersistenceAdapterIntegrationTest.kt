@@ -91,7 +91,7 @@ class StoryArticlePersistenceAdapterIntegrationTest : PersistenceAdapterIntegrat
         }
 
         @Test
-        @DisplayName("자동 병합 판정과 판정기 판정도 그대로 복원한다")
+        @DisplayName("자동 병합 판정과 judge 판정도 그대로 복원한다")
         fun restoreEachDecision() = runBlocking {
             val autoMerged = insert(article(1, decision = AutoMergedLinkDecision(storyId = storyId, similarity = 0.91)))
             val judged = insert(

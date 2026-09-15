@@ -6,7 +6,7 @@ import io.grpc.StatusRuntimeException
 import me.rgunny.kachi.story.domain.index.CandidateIndexFailure
 import me.rgunny.kachi.story.domain.index.CandidateIndexFailureCode
 
-/** Qdrant 호출 중 발생한 예외를 gRPC status로 실패 코드에 대응시키는 분류기. */
+/** Qdrant 호출 중 발생한 예외를 gRPC status로 실패 코드에 대응시키는 classifier. */
 object QdrantFailureClassifier {
 
     fun classify(exception: Throwable): CandidateIndexFailure {

@@ -8,7 +8,7 @@ import me.rgunny.kachi.ai.application.port.outbound.lock.ExecutionLockPort
 import org.springframework.stereotype.Component
 
 /**
- * scheduler와 internal API에서 들어온 키워드 확장 요청을 받아 중복 실행을 막고 유스케이스를 호출하는 실행기.
+ * scheduler와 internal API에서 들어온 키워드 확장 요청을 받아 중복 실행을 막고 유스케이스를 호출하는 executor.
  *
  * 무엇을 보호하는지는 [AiExecutionLock.KEYWORD_EXPANSION]이 말하고, 그 규칙을 무엇이 지키는지는 알지 않는다.
  * 여기서는 lock의 결과를 확장 요청의 결과로 옮기는 일만 한다.

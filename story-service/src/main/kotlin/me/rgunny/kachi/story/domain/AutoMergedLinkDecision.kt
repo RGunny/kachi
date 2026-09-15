@@ -1,7 +1,7 @@
 package me.rgunny.kachi.story.domain
 
 /**
- * 유사도가 θ_high 이상이라 판정기 없이 붙인 판정.
+ * 유사도가 θ_high 이상이라 judge 없이 붙인 판정.
  */
 data class AutoMergedLinkDecision(
     val storyId: StoryId,

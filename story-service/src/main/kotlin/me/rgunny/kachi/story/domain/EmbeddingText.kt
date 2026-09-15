@@ -1,7 +1,7 @@
 package me.rgunny.kachi.story.domain
 
 /**
- * 임베딩과 판정기에 넣는 텍스트.
+ * 임베딩과 judge에 넣는 텍스트.
  */
 @JvmInline
 value class EmbeddingText private constructor(

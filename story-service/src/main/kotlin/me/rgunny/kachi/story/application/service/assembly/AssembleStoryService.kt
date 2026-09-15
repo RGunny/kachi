@@ -141,7 +141,7 @@ class AssembleStoryService(
     }
 
     /**
-     * 회색 구간 후보 전부를 판정기에 한 번에 넣고 가장 높은 판정을 받은 후보를 고른다.
+     * 회색 구간 후보 전부를 judge에 한 번에 넣고 가장 높은 판정을 받은 후보를 고른다.
      */
     private suspend fun judge(
         command: AttachArticleCommand,

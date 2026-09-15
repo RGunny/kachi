@@ -44,9 +44,9 @@ data class InferenceProperties(
     }
 
     /**
-     * 판정기.
+     * judge.
      *
-     * [kind]가 원격 판정기면 서버 값이 있어야 하고, 코사인만 쓰는 판정기면 서버 값이 없어도 된다.
+     * [kind]가 원격 judge면 서버 값이 있어야 하고, 코사인만 쓰는 judge면 서버 값이 없어도 된다.
      */
     data class JudgeProperties(
         val kind: StoryJudge,
@@ -56,16 +56,16 @@ data class InferenceProperties(
         val slowAfter: Duration? = null
     ) {
         /**
-         * 원격 판정기의 서버 값.
+         * 원격 judge의 서버 값.
          *
-         * 코사인만 쓰는 판정기는 null이다.
+         * 코사인만 쓰는 judge는 null이다.
          */
         val server: TeiServerProperties? = when (kind) {
             StoryJudge.BGE_RERANKER_V2_M3 -> TeiServerProperties(
-                baseUrl = requireNotNull(baseUrl) { "판정기 ${kind.name}의 base-url이 없습니다" },
-                connectTimeout = requireNotNull(connectTimeout) { "판정기 ${kind.name}의 connect-timeout이 없습니다" },
-                timeout = requireNotNull(timeout) { "판정기 ${kind.name}의 timeout이 없습니다" },
-                slowAfter = requireNotNull(slowAfter) { "판정기 ${kind.name}의 slow-after가 없습니다" }
+                baseUrl = requireNotNull(baseUrl) { "judge ${kind.name}의 base-url이 없습니다" },
+                connectTimeout = requireNotNull(connectTimeout) { "judge ${kind.name}의 connect-timeout이 없습니다" },
+                timeout = requireNotNull(timeout) { "judge ${kind.name}의 timeout이 없습니다" },
+                slowAfter = requireNotNull(slowAfter) { "judge ${kind.name}의 slow-after가 없습니다" }
             )
 
             StoryJudge.THRESHOLD_ONLY -> null

@@ -9,7 +9,7 @@ import me.rgunny.kachi.story.domain.NewStoryLinkDecision
 /**
  * 기사 한 건의 판정 기록 응답.
  *
- * [judge]·[judgeScore]는 판정기를 거친 판정에만 있다.
+ * [judge]·[judgeScore]는 judge를 거친 판정에만 있다.
  */
 data class LinkDecisionResponse(
     val kind: String,

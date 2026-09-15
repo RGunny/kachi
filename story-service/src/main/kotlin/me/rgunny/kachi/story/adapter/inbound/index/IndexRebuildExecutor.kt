@@ -18,7 +18,7 @@ import org.springframework.beans.factory.DisposableBean
 import org.springframework.stereotype.Component
 
 /**
- * 색인 재구축의 중복 실행을 막고 본체는 요청 밖에서 돌리는 실행기.
+ * 색인 재구축의 중복 실행을 막고 본체는 요청 밖에서 돌리는 executor.
  *
  * 요청은 lock 획득까지만 기다리고 재구축 완료는 로그로 남긴다. scheduler 스레드를 쓰지 않는다.
  */

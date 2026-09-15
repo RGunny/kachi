@@ -41,12 +41,12 @@ class InferencePropertiesTest {
     }
 
     @Test
-    @DisplayName("원격 판정기는 서버 값 넷이 전부 있어야 한다")
+    @DisplayName("원격 judge는 서버 값 넷이 전부 있어야 한다")
     fun requireServerValuesForRemoteJudge() {
         val error = assertFailsWith<IllegalArgumentException> {
             InferenceProperties.JudgeProperties(kind = StoryJudge.BGE_RERANKER_V2_M3)
         }
-        assertEquals("판정기 BGE_RERANKER_V2_M3의 base-url이 없습니다", error.message)
+        assertEquals("judge BGE_RERANKER_V2_M3의 base-url이 없습니다", error.message)
 
         assertFailsWith<IllegalArgumentException> {
             InferenceProperties.JudgeProperties(kind = StoryJudge.BGE_RERANKER_V2_M3, baseUrl = "http://x", connectTimeout = Duration.ofSeconds(1))
@@ -62,7 +62,7 @@ class InferencePropertiesTest {
     }
 
     @Test
-    @DisplayName("코사인만 쓰는 판정기는 서버 값이 없어도 된다")
+    @DisplayName("코사인만 쓰는 judge는 서버 값이 없어도 된다")
     fun allowThresholdOnlyWithoutServer() {
         val judge = InferenceProperties.JudgeProperties(kind = StoryJudge.THRESHOLD_ONLY)
 
