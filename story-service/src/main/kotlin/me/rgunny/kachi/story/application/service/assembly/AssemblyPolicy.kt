@@ -5,7 +5,7 @@ import java.time.Duration
 /**
  * 기사를 story에 붙일지 정하는 임계값과 검색·재시도 한도.
  *
- * 판정 점수는 0~1 공간이고 θ 값은 골드셋 측정으로 정한다.
+ * 판정 점수는 0~1 공간이다.
  */
 data class AssemblyPolicy(
     val thetaHigh: Double,

@@ -13,7 +13,6 @@ spring:
       properties:
         acks: all
         enable.idempotence: true
-        # relay의 publishing-visibility-timeout(60s)에서 역산한 값이다. max.block + delivery = 15s < 60s.
         max.block.ms: 5000
         request.timeout.ms: 5000
         delivery.timeout.ms: 10000
@@ -47,7 +46,7 @@ kachi:
       enabled: true
       topics:
         news-collected: collector.news.collected
-      # 기사 id compaction과 함께 걸리는 삭제 기간. 이 안에서 처음부터 다시 읽어 재처리할 수 있다.
+      # 기사 id compaction과 함께 걸리는 삭제 기간
       retention: 30d
     scheduler:
       news:

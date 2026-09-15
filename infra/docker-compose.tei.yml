@@ -2,7 +2,7 @@ services:
   tei-embedding:
     image: ghcr.io/huggingface/text-embeddings-inference:${TEI_IMAGE_TAG:-cpu-arm64-sha-4150561}
     container_name: kachi-tei-embedding
-    # revision은 Hugging Face 커밋이다. 가중치를 바꾸는 것은 모델을 바꾸는 것이라 env로 열지 않는다.
+    # revision은 Hugging Face 커밋이다.
     command:
       - --model-id=BAAI/bge-m3
       - --revision=5617a9f61b028005a4858fdac845db406aefb181
@@ -35,7 +35,6 @@ services:
       - --max-client-batch-size=32
       - --max-batch-tokens=512
       - --max-concurrent-requests=32
-      # 이 가중치에는 ONNX가 없어 candle 백엔드로 뜬다. float32는 6.1GB를 쓴다.
       - --dtype=float16
     ports:
       - "${TEI_RERANKER_PORT:-8091}:80"
