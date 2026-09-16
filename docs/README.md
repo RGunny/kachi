@@ -24,7 +24,7 @@ docs/의 각 문서는 축이 하나다. 같은 내용을 두 문서에 적지 �
 ## 도메인모델 문서 규칙
 
 - 컨텍스트별 파일로 나눈다: `도메인모델-{context}.md`, context는 영문 소문자
-  (`user`, `collector`, `ai`, `notification`, `history`). 새 컨텍스트가 생기면 같은
+  (`user`, `collector`, `story`, `ai`, `notification`, `history`). 새 컨텍스트가 생기면 같은
   규칙으로 파일을 추가하고 index([도메인모델.md](도메인모델.md)) 표에 등록한다.
 - 요소 템플릿: `### 한글명(영문클래스명)` + 스테레오타입(_Aggregate Root_ / _Entity_ /
   _Value Object_ / _Enum_ / _Domain Service_) + `#### 속성(Attributes)` /

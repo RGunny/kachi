@@ -1,6 +1,7 @@
 # 022. ai-service outbox와 이벤트 발행 보장
 
 이 outbox가 실제 broker까지 발행하는 계약은 ai-service의 `AiSummaryCycleIntegrationTest`가 검증한다(ADR 029).
+이 설계는 collector `CollectorOutbox`(ADR 032)와 story-service `StoryOutbox`(ADR 033)에서도 같은 형태로 쓴다.
 
 ## 배경
 
