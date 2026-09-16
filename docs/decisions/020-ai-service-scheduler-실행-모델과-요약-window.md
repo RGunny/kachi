@@ -301,7 +301,7 @@ watermark가 격리 이후에도 정체한다면 그건 격리로도 걸러지�
 ## 결과
 
 - `ai-service`가 수동 API 없이 주기적으로 뉴스 요약을 생성한다.
-- scheduler와 internal API가 `Executor`의 같은 CAS lock을 공유한다. 중복 실행 방지 규칙이 진입점마다 갈리지 않는다.
+- scheduler와 internal API가 executor의 같은 실행 lock(`ExecutionLockPort`, ADR 036)을 공유한다. 중복 실행 방지 규칙이 진입점마다 갈리지 않는다.
 - 실행 중인 작업의 시작 시각이 skip 로그와 `409 CONFLICT` 응답에 함께 드러난다.
 - 배포, 재시작, 장기 장애로 멈춰 있던 구간을 재기동 후 이어서 처리한다.
 - 부분 실패한 키워드는 다음 tick이 자동으로 재시도하고, 성공분은 `newsHash`로 재사용해 LLM을 다시 호출하지 않는다.
@@ -330,6 +330,6 @@ TTL 기반 자동 재시도는 원인이 해소되지 않은 상태에서 같은
 
 이미 처리한 구간을 다시 열어야 하면 저장된 값을 직접 고친다. 되돌리기는 원인을 확인한 사람이 한 번 하는 일이라 진입점을 상시로 열어둘 이유가 없다.
 
-현재는 scheduler 단위의 distributed lock을 도입하지 않는다. ADR 008과 같은 이유로, 단일 인스턴스 배포 모델에서는 `Executor`의 JVM lock으로 충분하다. 다만 watermark는 인스턴스가 늘어나면 경합 대상이 되므로, 그 시점에 lock과 함께 다시 다룬다.
+현재는 scheduler 단위의 distributed lock을 도입하지 않는다. ADR 008과 같은 이유로, 단일 인스턴스 배포 모델에서는 in-memory lock으로 충분하다. lock은 `ExecutionLockPort`로 분리했고 범위 선언과 교체 지점은 ADR 036이 정한다. 다만 watermark는 인스턴스가 늘어나면 경합 대상이 되므로, 그 시점에 lock과 함께 다시 다룬다.
 
 현재는 collector 수집 완료를 뉴스 요약 실행의 트리거로 삼지 않는다. 두 서비스의 scheduler는 서로를 모른 채 독립적으로 돈다. watermark가 두 scheduler 사이의 타이밍 어긋남도 함께 흡수하므로, 지금 단계에서 이벤트 기반 연결까지 도입할 이유가 없다. 수집과 요약 사이의 지연을 줄여야 하는 요구가 생기면 별도 결정으로 다룬다.

@@ -210,12 +210,11 @@ kachi:
 
 ## 단일 인스턴스 실행 가정
 
-현재 중복 실행 방지는 JVM 내부 `AtomicBoolean` lock으로 처리한다.
+중복 실행 방지는 `ExecutionLockPort` 뒤에 있다(ADR 036).
+`CollectorExecutionLock`이 뉴스 수집을 `CLUSTER`, outbox relay를 `INSTANCE` 범위로 선언하고, executor는 이 포트로 실행 겹침 방지를 요청할 뿐 lock 구현을 모른다.
 
-이 방식은 단일 collector 인스턴스 안에서는 scheduler와 수동 API의 동시 실행을 막을 수 있다.
-하지만 여러 collector 인스턴스를 동시에 띄우는 분산 환경에서는 인스턴스별로 lock이 따로 존재하므로 충분하지 않다.
-
-분산 환경으로 확장할 때는 Redis, MongoDB, 또는 별도 coordination 저장소 기반 distributed lock으로 교체한다.
+현재 두 범위 모두 `InMemoryExecutionLockAdapter`로 이어져 있어 단일 collector 인스턴스 안에서만 유효하다.
+인스턴스를 늘리면 `CLUSTER` 범위 작업이 인스턴스마다 따로 돌므로, 그 전에 `ExecutionLockConfig`의 범위-구현 연결을 distributed lock adapter로 바꾼다. executor와 진입점은 바뀌지 않는다.
 
 ## 외부 연동
 

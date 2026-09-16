@@ -236,3 +236,6 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [028. 발송 직전 주소 조회와 스킵](./docs/decisions/028-발송-직전-주소-조회와-스킵.md) | worker의 `(recipientId, channel)` 주소 조회와 Redis 캐시, 없는 수신자의 스킵(SUPPRESSED), `sent:{requestId}` 발송 직전 가드, 전역 webhook 설정 삭제 |
 | [029. 전체 사이클 검증과 e2e-test 모듈](./docs/decisions/029-전체-사이클-검증과-e2e-test-모듈.md) | 모듈별 Kafka 계약 통합 테스트, 서비스 다섯 개를 컨테이너로 띄우는 `e2e-test` 모듈과 별도 task, skip/실패 규칙, 스모크 절차 |
 | [030. ai-service LLM 호출 단위, 실패 분류, 실호출 검증](./docs/decisions/030-ai-service-llm-호출-단위와-실패-분류와-실호출-검증.md) | API 규격·제공자·모델·용도 enum과 yaml의 경계, 전략·데코레이터·컴포지트 세 층 조립, 실패의 책임·지속 두 축, 프롬프트 버전을 코드에, `src/realTest` 소스셋과 운영 API |
+| [031. 요약 단위를 키워드에서 story로](./docs/decisions/031-요약-단위를-키워드에서-story로.md) | TDT 틀에서 같은 사건의 기사를 story로 묶는 방향, 세 층의 중복 제거, 모델 네 종류(임베딩·판정기·생성형·벡터 저장소)의 역할, 서비스 경계와 데이터 소유, 벡터 색인은 파생 캐시 |
+| [032. collector 기사 이벤트 발행과 collector-contract](./docs/decisions/032-collector-기사-이벤트-발행과-collector-contract.md) | 발췌문·URL 정규화 기사 모델, collector outbox와 relay, `collector.news.collected` 계약과 compact+delete topic, 발행·relay 스위치 분리 |
+| [036. 실행 lock 포트 분리와 lock 범위](./docs/decisions/036-실행-lock-포트-분리와-lock-범위.md) | 중복 실행 방지를 `ExecutionLockPort`로 분리, 실행 단위마다 `INSTANCE`·`CLUSTER` 범위 선언, outbox relay가 `INSTANCE`인 이유 |
