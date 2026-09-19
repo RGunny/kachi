@@ -30,7 +30,7 @@ import java.time.Instant
  * 여기서 정하는 것은 순회 정책뿐이다. 후보 하나의 호출 가능 여부는 [LlmProviderCandidate]가 판단한다.
  */
 class RoutingLlmProvider(
-    internal val candidates: Map<LlmUse, List<LlmProviderCandidate>>,
+    val candidates: Map<LlmUse, List<LlmProviderCandidate>>,
     private val clock: Clock
 ) : LlmProviderPort {
 
@@ -77,7 +77,7 @@ class RoutingLlmProvider(
      * 차단은 호출이 아니므로, 차단이 마지막이었다는 이유로 "전 모델 불능"이라고 기록하면 거짓이 된다.
      * 실제 호출의 실패는 전부 예외에 실어 올린다. 격리 카운트는 그 전부의 책임이 어디 있는지를 보고 정한다.
      */
-    internal suspend fun <T> callWithFailover(
+    suspend fun <T> callWithFailover(
         order: List<LlmProviderCandidate>,
         call: suspend (LlmProviderCandidate) -> T
     ): T {

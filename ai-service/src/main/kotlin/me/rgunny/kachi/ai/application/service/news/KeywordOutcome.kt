@@ -12,4 +12,4 @@ package me.rgunny.kachi.ai.application.service.news
  * 실행 기록 집계를 함께 고치지 않을 수 없다. 새 결과가 어느 카운트에도 잡히지 않은 채
  * 조용히 사라지는 일을 타입으로 막는다.
  */
-internal sealed interface KeywordOutcome
+sealed interface KeywordOutcome

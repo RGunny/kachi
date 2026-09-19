@@ -12,7 +12,7 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
  * [plan]을 먼저 확정해야 application 계층이 LLM 호출 전에 기존 요약을 조회할 수 있다(ADR 011).
  * plan을 만든 adapter가 곧 호출 대상이므로 둘이 어긋날 수 없게 같은 객체가 들고 간다.
  */
-internal class OpenAiPreparedNewsSummary(
+class OpenAiPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,
     private val adapter: OpenAiChatAdapter
 ) : PreparedLlmNewsSummary {

@@ -9,7 +9,7 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 /**
  * 선조회에 쓴 plan은 위임 대상의 것을 그대로 쓰고, 호출만 차단 판정을 거치게 하는 실행 단위.
  */
-internal class GuardedPreparedNewsSummary(
+class GuardedPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,
     private val model: GuardedLlmModel
 ) : PreparedLlmNewsSummary {
