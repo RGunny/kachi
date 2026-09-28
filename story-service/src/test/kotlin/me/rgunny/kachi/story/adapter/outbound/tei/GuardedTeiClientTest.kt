@@ -240,7 +240,7 @@ class GuardedTeiClientTest {
         return InferenceException(InferenceFailure(code = code, target = InferenceTarget.EMBEDDING))
     }
 
-    /** 실제 운영 설정 변환기를 그대로 쓰되 창을 좁혀 두 번의 실패로 열리게 한다. */
+    /** `InferenceConfig`로 서킷 브레이커를 만들되 창을 좁혀 두 번의 실패로 열리게 한다. */
     private fun circuitBreaker(
         slidingWindowSize: Int = 2,
         minimumNumberOfCalls: Int = 2,

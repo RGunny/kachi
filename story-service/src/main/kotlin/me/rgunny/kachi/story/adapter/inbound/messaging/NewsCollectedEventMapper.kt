@@ -10,7 +10,7 @@ import me.rgunny.kachi.story.domain.NewsId
 import me.rgunny.kachi.story.domain.StoryKeyword
 
 /**
- * 기사 수집 이벤트 계약을 붙일 기사 명령으로 옮기는 변환기.
+ * 기사 수집 이벤트 계약을 붙일 기사 명령으로 옮기는 Mapper.
  *
  * 계약에 맞지 않는 값은 `IllegalArgumentException`으로 거부한다.
  */

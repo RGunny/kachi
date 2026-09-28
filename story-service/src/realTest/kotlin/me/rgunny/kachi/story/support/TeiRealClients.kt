@@ -14,7 +14,7 @@ import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.env.SystemEnvironmentPropertySource
 import org.springframework.core.io.ClassPathResource
 
-/** local 프로파일의 추론 서버 설정을 Spring 컨텍스트 없이 바인딩하고, 운영과 같은 WebClient로 서버 둘의 클라이언트를 만드는 헬퍼. */
+/** local 프로파일의 추론 서버 설정을 Spring 컨텍스트 없이 바인딩하고, [TeiWebClients]의 WebClient로 서버 둘의 클라이언트를 만드는 헬퍼. */
 class TeiRealClients {
 
     val properties: InferenceProperties = bind()
