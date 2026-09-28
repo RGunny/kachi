@@ -41,6 +41,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-data-mongodb-test")
     testImplementation("org.springframework.boot:spring-boot-starter-kafka-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.3.0")
     testImplementation("io.projectreactor:reactor-test")
 
     // TestContainers

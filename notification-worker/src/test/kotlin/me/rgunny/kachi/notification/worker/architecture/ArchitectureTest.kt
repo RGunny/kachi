@@ -1,0 +1,68 @@
+package me.rgunny.kachi.notification.worker.architecture
+
+import com.tngtech.archunit.core.importer.ImportOption
+import com.tngtech.archunit.junit.AnalyzeClasses
+import com.tngtech.archunit.junit.ArchIgnore
+import com.tngtech.archunit.junit.ArchTest
+import com.tngtech.archunit.lang.ArchRule
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices
+
+/**
+ * notification-worker의 배치 규칙을 검증하는 ArchUnit 테스트.
+ *
+ * 검사 범위는 adapter가 notification-core의 포트에만 의존하는지와 클래스 배치다.
+ */
+@AnalyzeClasses(
+    packages = ["me.rgunny.kachi.notification.worker"],
+    importOptions = [ImportOption.DoNotIncludeTests::class, ImportOption.DoNotIncludeJars::class]
+)
+class ArchitectureTest {
+
+    companion object {
+
+        @ArchTest
+        @JvmField
+        val adapters_depend_on_core_ports_not_service_implementations: ArchRule = noClasses()
+            .that().resideInAPackage("..worker.adapter..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("me.rgunny.kachi.notification.application.service..")
+
+        @ArchIgnore(reason = "inbound 리스너가 adapter.outbound.monitoring의 메트릭 기록기를 직접 주입받는다(17건). 기록기를 공통 계측 패키지로 옮기거나 포트로 감싼 뒤 활성화한다")
+        @ArchTest
+        @JvmField
+        val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()
+            .that().resideInAPackage("..worker.adapter.inbound..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..worker.adapter.outbound..")
+
+        @ArchIgnore(reason = "monitoring이 recipient의 RecipientResolveSource를 참조한다(3건). RecipientResolveSource를 포트 모델로 올린 뒤 활성화한다")
+        @ArchTest
+        @JvmField
+        val outbound_adapters_do_not_depend_on_each_other: ArchRule = slices()
+            .matching("..worker.adapter.outbound.(*)..")
+            .should().notDependOnEachOther()
+
+        @ArchIgnore(reason = "adapter가 config의 NotificationRecipientProperties.UserService를 주입받아 adapter -> config -> adapter 순환 1건이 있다. Properties를 adapter 하위로 옮기거나 값만 전달하도록 바꾼 뒤 활성화한다")
+        @ArchTest
+        @JvmField
+        val no_package_cycles: ArchRule = slices()
+            .matching("me.rgunny.kachi.notification.worker.(*)..")
+            .should().beFreeOfCycles()
+
+        @ArchTest
+        @JvmField
+        val mongo_documents_only_in_persistence_adapter: ArchRule = classes()
+            .that().areAnnotatedWith("org.springframework.data.mongodb.core.mapping.Document")
+            .should().resideInAPackage("..worker.adapter.outbound.persistence..")
+            .allowEmptyShould(true)
+
+        @ArchTest
+        @JvmField
+        val configuration_properties_only_in_config: ArchRule = classes()
+            .that().areAnnotatedWith("org.springframework.boot.context.properties.ConfigurationProperties")
+            .should().resideInAPackage("..worker.config..")
+            .allowEmptyShould(true)
+    }
+}

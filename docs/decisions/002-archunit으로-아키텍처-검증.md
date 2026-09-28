@@ -14,8 +14,10 @@ Kachi는 서비스별로 Hexagonal Architecture를 따른다. 하지만 패키�
 
 - `domain`은 외부 계층에 의존하지 않는다.
 - `application`은 `adapter`에 의존하지 않는다.
-- persistence 구현체와 Spring Data repository는 `adapter.out.persistence`에 둔다.
-- HTTP controller, messaging listener, scheduler는 `adapter.in`에 둔다.
+- persistence 구현체와 Spring Data repository는 `adapter.outbound.persistence`에 둔다.
+- HTTP controller, messaging listener, scheduler는 `adapter.inbound`에 둔다.
+
+규칙은 각 서비스 모듈의 `src/test/kotlin/.../architecture/ArchitectureTest.kt`에 정의한다. notification은 도메인과 유스케이스가 `notification-core`에 있으므로 계층 규칙은 core의 테스트에 두고, service·worker의 테스트는 adapter가 core의 포트에만 의존하는지와 클래스 배치를 검사한다. 아직 규칙을 어기고 있는 곳은 `@ArchIgnore(reason)`으로 표시해 미반영 항목이 테스트 코드에 드러나게 한다.
 
 ## 결과
 
