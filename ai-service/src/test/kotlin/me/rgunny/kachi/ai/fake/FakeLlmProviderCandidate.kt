@@ -4,6 +4,9 @@ import me.rgunny.kachi.ai.adapter.outbound.llm.LlmProviderCandidate
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmStorySummaryResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
@@ -12,10 +15,11 @@ import me.rgunny.kachi.ai.domain.llm.LlmModel
 import java.time.Instant
 
 /**
- * 가용성을 직접 지정할 수 있는 failover 후보 fake. 이름은 모델의 qualified code다.
+ * 가용성을 직접 지정할 수 있는 failover 후보 fake.
  *
- * [blockedBy]에 사유를 넣으면 차단 상태가 된다. 차단 중에는 호출을 세지 않고
- * [LlmFailureCode.LLM_NOT_PERMITTED]로 실패한다. 회로나 cooldown이 어떻게 열리는지는 여기 관심이 아니다.
+ * 이름은 모델의 qualified code다.
+ * [blockedBy]에 사유가 있으면 차단 상태다.
+ * 차단 중에는 호출을 세지 않고 [LlmFailureCode.LLM_NOT_PERMITTED]로 실패한다.
  */
 class FakeLlmProviderCandidate(
     override val model: LlmModel
@@ -42,6 +46,16 @@ class FakeLlmProviderCandidate(
         rejectIfBlocked()
 
         return super.summarizeNews(keyword, articles)
+    }
+
+    override suspend fun summarizeStory(
+        keywords: List<AiKeyword>,
+        previousSummary: PreviousStorySummary?,
+        articles: List<StorySummaryArticle>
+    ): LlmStorySummaryResult {
+        rejectIfBlocked()
+
+        return super.summarizeStory(keywords, previousSummary, articles)
     }
 
     private fun rejectIfBlocked() {

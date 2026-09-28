@@ -18,7 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /**
- * 항목 하나 안의 검증, 항목 사이의 참조 검증, 운영 yaml 바인딩을 보는 테스트.
+ * 항목 하나 안의 검증, 항목 사이의 참조 검증, `application.yaml` 바인딩을 보는 테스트.
  */
 @DisplayName("LlmProperties")
 class LlmPropertiesTest {
@@ -38,7 +38,10 @@ class LlmPropertiesTest {
     fun failWhenUseHasNoCandidates() {
         val error = assertFailsWith<IllegalArgumentException> {
             AiTestFixture.llmProperties(
-                uses = mapOf(LlmUse.NEWS_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B)))
+                uses = mapOf(
+                    LlmUse.NEWS_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B)),
+                    LlmUse.STORY_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B))
+                )
             )
         }
 
@@ -81,9 +84,6 @@ class LlmPropertiesTest {
         assertEquals("LLM provider GROQ의 api-key가 없습니다", error.message)
     }
 
-    /**
-     * 정의만 있고 후보가 아닌 제공자의 키를 요구하면 로컬이 클라우드 키 없이 뜨지 못한다.
-     */
     @Test
     @DisplayName("후보가 아닌 제공자는 api-key가 없어도 된다")
     fun ignoreApiKeyOfUnreferencedProvider() {
@@ -104,6 +104,7 @@ class LlmPropertiesTest {
         val properties = AiTestFixture.llmProperties(
             uses = mapOf(
                 LlmUse.NEWS_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.OLLAMA_QWEN3_27B)),
+                LlmUse.STORY_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.OLLAMA_QWEN3_27B)),
                 LlmUse.KEYWORD_EXPANSION to LlmProperties.UseProperties(listOf(LlmModel.OLLAMA_QWEN3_27B))
             )
         )
@@ -147,10 +148,10 @@ class LlmPropertiesTest {
     }
 
     /**
-     * 운영 yaml의 값이 enum 키와 단축형 시간 표기 그대로 바인딩되는지 본다. 키 이름이 곧 계약이라 여기서 고정한다.
+     * `application.yaml`의 값이 enum 키와 단축형 시간 표기 그대로 바인딩되는지 본다.
      */
     @Test
-    @DisplayName("운영 application.yaml의 kachi.ai.llm 값이 그대로 바인딩된다")
+    @DisplayName("application.yaml의 kachi.ai.llm 값이 그대로 바인딩된다")
     fun bindProductionYaml() {
         val properties = productionYamlBinder().bind(LlmProperties.PREFIX, LlmProperties::class.java).get()
 
@@ -186,7 +187,7 @@ class LlmPropertiesTest {
         factory.setResources(ClassPathResource("application.yaml"))
         val yaml = requireNotNull(factory.getObject()) { "application.yaml을 읽지 못했습니다" }
         val source = MapConfigurationPropertySource(
-            // 운영 yaml의 ${ENV:} 자리표시는 Binder가 풀지 않으므로 빈 키 대신 검증을 통과할 값을 넣는다.
+            // ${ENV:} 자리표시 치환값(Binder는 자리표시를 풀지 않음)
             yaml.entries.associate { (key, value) -> key.toString() to value.toString().replace(Regex("\\$\\{[^}]*}"), "placeholder") }
         )
 

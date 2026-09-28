@@ -16,6 +16,7 @@ java {
 
 dependencies {
     implementation(project(":ai-contract"))
+    implementation(project(":story-contract"))
 
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")

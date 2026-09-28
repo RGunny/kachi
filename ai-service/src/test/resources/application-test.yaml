@@ -13,6 +13,13 @@ kachi:
         enabled: false
         fixed-delay: 10m
         initial-delay: 30s
+      story-summary:
+        enabled: false
+    consumer:
+      # 테스트용 짧은 재시도 간격
+      retry:
+        initial-backoff: 100ms
+        max-backoff: 500ms
     outbox:
       relay:
         enabled: false
@@ -36,6 +43,8 @@ kachi:
           base-url: http://llm-test
       uses:
         NEWS_SUMMARY:
+          candidates: [OLLAMA_QWEN3_27B]
+        STORY_SUMMARY:
           candidates: [OLLAMA_QWEN3_27B]
         KEYWORD_EXPANSION:
           candidates: [OLLAMA_QWEN3_27B]

@@ -24,10 +24,11 @@ import tools.jackson.module.kotlin.KotlinModule
 import java.time.Clock
 
 /**
- * 프로파일 하나의 LLM 설정을 Spring 컨텍스트 없이 바인딩하고, 운영과 같은 조립으로 후보 모델을 만드는 헬퍼.
+ * 프로파일 하나의 LLM 설정을 Spring 컨텍스트 없이 바인딩하고, [LlmConfig]의 팩터리로 후보 모델을 만드는 헬퍼.
  *
- * 설정은 `application.yaml` 위에 `application-<profile>.yaml`을 덮은 것이고(`default`는 기본 yaml만), `${ENV}` 자리표시는
- * 환경변수와 env 파일([TestSecretEnvironment])로 푼다. [LlmProperties]의 검증을 그대로 지나므로 secret이 없으면 여기서 실패한다.
+ * 설정은 `application.yaml` 위에 `application-<profile>.yaml`을 덮은 것이다(`default`는 기본 yaml만).
+ * `${ENV}` 자리표시는 환경변수와 env 파일([TestSecretEnvironment])로 푼다.
+ * secret이 없으면 [LlmProperties] 검증에서 실패한다.
  * 조립은 [LlmConfig]와 [LlmCircuitBreakerConfig]의 팩터리를 그대로 부른다.
  */
 class LlmProfileCandidates(
@@ -35,7 +36,7 @@ class LlmProfileCandidates(
 ) {
     val properties: LlmProperties = bind()
 
-    /** 후보 모델마다 운영과 같은 가드·adapter·WebClient를 씌운 것. */
+    /** 후보 모델마다 가드·adapter·WebClient를 씌운 것. */
     val models: List<GuardedLlmModel> = assemble()
 
     /** 용도마다 설정된 순서의 (용도, 모델) 쌍. */
@@ -46,7 +47,7 @@ class LlmProfileCandidates(
     fun model(model: LlmModel): GuardedLlmModel = models.first { it.model == model }
 
     /**
-     * 제공자 층의 WebClient. 생성이 아니라 제공자 자체를 묻는 요청(모델 목록)에 쓴다.
+     * 제공자 자체를 묻는 요청(모델 목록)용 WebClient를 만든다.
      */
     fun providerWebClient(provider: LlmProvider): WebClient {
         val settings = properties.providers.getValue(provider)
@@ -61,20 +62,20 @@ class LlmProfileCandidates(
     private fun bind(): LlmProperties {
         val secrets = TestSecretEnvironment(profile)
         val sources = MutablePropertySources().apply {
-            // 서비스와 같은 우선순위다. 환경변수가 yaml을 덮고, 프로파일 yaml이 기본 yaml을 덮는다.
-            // 환경변수의 relaxed 매핑(KACHI_AI_LLM_...)은 소스 이름이 Spring 표준 이름일 때만 적용된다.
+            // 소스 우선순위(서비스와 동일): 환경변수 > 프로파일 yaml > 기본 yaml > env 파일
             addLast(
+                // relaxed 매핑(KACHI_AI_LLM_...)이 붙는 Spring 표준 소스 이름
                 SystemEnvironmentPropertySource(
                     StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME,
                     HashMap<String, Any>(System.getenv())
                 )
             )
-            // Spring의 default 프로파일은 파일이 없다. 그 밖의 프로파일은 파일이 있어야 한다.
+            // 프로파일 yaml(Spring default 프로파일은 파일 없음)
             if (profile != SPRING_DEFAULT_PROFILE) {
                 addLast(yamlSource("application-$profile.yaml"))
             }
             addLast(yamlSource("application.yaml"))
-            // 자리표시 `${GROQ_API_KEY:}`가 env 파일의 값으로 풀리도록 마지막에 둔다.
+            // 자리표시 `${GROQ_API_KEY:}`를 푸는 env 파일 소스(최하위 우선순위)
             addLast(object : PropertySource<TestSecretEnvironment>("dotenv", secrets) {
                 override fun getProperty(name: String): Any? = source.value(name)
             })
