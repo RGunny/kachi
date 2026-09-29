@@ -49,3 +49,6 @@ logs/
 
 ### Claude Code ###
 .claude/settings.local.json
+
+### Harness ###
+scripts/**/__pycache__/
