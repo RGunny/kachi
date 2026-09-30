@@ -1,5 +1,6 @@
 package me.rgunny.kachi.ai.config
 
+import me.rgunny.kachi.ai.adapter.outbound.llm.LlmHoldSettings
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
@@ -134,8 +135,8 @@ class LlmPropertiesTest {
     @Test
     @DisplayName("hold의 reprobe-after는 양수여야 한다")
     fun rejectNonPositiveReprobeAfter() {
-        assertFailsWith<IllegalArgumentException> { LlmHoldProperties(reprobeAfter = Duration.ZERO) }
-        assertFailsWith<IllegalArgumentException> { LlmHoldProperties(reprobeAfter = Duration.ofMinutes(-1)) }
+        assertFailsWith<IllegalArgumentException> { LlmHoldSettings(reprobeAfter = Duration.ZERO) }
+        assertFailsWith<IllegalArgumentException> { LlmHoldSettings(reprobeAfter = Duration.ofMinutes(-1)) }
     }
 
     @Test

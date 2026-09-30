@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.config
+package me.rgunny.kachi.ai.adapter.outbound.llm
 
 import java.time.Duration
 
@@ -8,7 +8,7 @@ import java.time.Duration
  * 제공자가 Retry-After로 지시한 값을 우선하되 [max]를 넘지 않는다.
  * 헤더가 없으면 [default]를 적용한다. 0으로 두면 같은 tick 안에서 같은 모델을 다시 골라 같은 응답을 받는다.
  */
-data class LlmCooldownProperties(
+data class LlmCooldownSettings(
     val default: Duration,
     val max: Duration
 ) {

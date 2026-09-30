@@ -2,6 +2,7 @@ package me.rgunny.kachi.ai.config
 
 import me.rgunny.kachi.ai.adapter.outbound.messaging.KafkaAiOutboxPublisher
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -28,7 +29,7 @@ class AiEventsConfig {
     ): AiOutboxPublisherPort {
         return KafkaAiOutboxPublisher(
             kafkaTemplate = kafkaTemplate,
-            properties = properties
+            topics = AiOutboxEventType.entries.associateWith(properties::topicOf)
         )
     }
 }

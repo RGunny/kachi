@@ -2,7 +2,6 @@ package me.rgunny.kachi.ai.architecture
 
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.junit.AnalyzeClasses
-import com.tngtech.archunit.junit.ArchIgnore
 import com.tngtech.archunit.junit.ArchTest
 import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
@@ -51,6 +50,14 @@ class ArchitectureTest {
 
         @ArchTest
         @JvmField
+        val application_does_not_depend_on_config: ArchRule = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..config..")
+            .allowEmptyShould(true)
+
+        @ArchTest
+        @JvmField
         val application_ports_are_independent: ArchRule = noClasses()
             .that().resideInAPackage("..application.port..")
             .should().dependOnClassesThat()
@@ -70,7 +77,6 @@ class ArchitectureTest {
             .matching("..adapter.outbound.(*)..")
             .should().notDependOnEachOther()
 
-        @ArchIgnore(reason = "adapter가 config의 *Properties를 주입받아 adapter -> application -> config -> adapter 순환 3건이 있다. Properties를 adapter 하위로 옮기거나 값만 전달하도록 바꾼 뒤 활성화한다")
         @ArchTest
         @JvmField
         val no_package_cycles: ArchRule = slices()

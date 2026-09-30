@@ -6,7 +6,6 @@ import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.jsonExchangeFunction
-import me.rgunny.kachi.ai.config.CollectorServiceNewsProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -109,12 +108,8 @@ class CollectorServiceNewsReaderAdapterTest {
             webClient = WebClient.builder()
                 .exchangeFunction(jsonExchangeFunction(responseBody, status))
                 .build(),
-            properties = CollectorServiceNewsProperties(
-                baseUrl = "http://collector-service",
-                newsPath = "/api/v1/internal/news",
-                timeout = Duration.ofSeconds(1),
-                maxInMemorySize = 256 * 1024,
-            )
+            newsPath = "/api/v1/internal/news",
+            timeout = Duration.ofSeconds(1)
         )
     }
 }

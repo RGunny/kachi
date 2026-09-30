@@ -7,6 +7,7 @@ import me.rgunny.kachi.ai.application.port.inbound.keyword.ExpandKeywordsUseCase
 import me.rgunny.kachi.ai.fake.FailingExpandKeywordsUseCase
 import me.rgunny.kachi.ai.fake.RecordingExpandKeywordsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
+import me.rgunny.kachi.ai.config.AiSchedulerConfig
 import me.rgunny.kachi.ai.config.AiKeywordExpansionSchedulerProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -70,7 +71,7 @@ class AiKeywordExpansionSchedulerTest {
     ): AiKeywordExpansionScheduler {
         return AiKeywordExpansionScheduler(
             executor = AiKeywordExpansionExecutor(useCase, AiTestFixture.executionLock()),
-            properties = properties
+            settings = AiSchedulerConfig().aiKeywordExpansionSchedulerSettings(properties)
         )
     }
 

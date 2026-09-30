@@ -5,7 +5,6 @@ import me.rgunny.kachi.ai.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.KeywordReaderException
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.support.jsonExchangeFunction
-import me.rgunny.kachi.ai.config.UserServiceKeywordProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -113,12 +112,8 @@ class UserServiceKeywordReaderAdapterTest {
             webClient = WebClient.builder()
                 .exchangeFunction(jsonExchangeFunction(responseBody, status))
                 .build(),
-            properties = UserServiceKeywordProperties(
-                baseUrl = "http://user-service",
-                activeKeywordsPath = "/api/v1/internal/keywords/active",
-                timeout = Duration.ofSeconds(1),
-                maxInMemorySize = 256 * 1024,
-            )
+            activeKeywordsPath = "/api/v1/internal/keywords/active",
+            timeout = Duration.ofSeconds(1)
         )
     }
 }

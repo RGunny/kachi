@@ -4,7 +4,6 @@ import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
 import me.rgunny.kachi.ai.application.port.outbound.lock.AiExecutionLock
 import me.rgunny.kachi.ai.application.port.outbound.lock.ExecutionLockOutcome
 import me.rgunny.kachi.ai.application.port.outbound.lock.ExecutionLockPort
-import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 @ConditionalOnProperty(
-    prefix = AiOutboxRelayProperties.PREFIX,
+    prefix = AiOutboxRelaySettings.PREFIX,
     name = ["enabled"],
     havingValue = "true"
 )

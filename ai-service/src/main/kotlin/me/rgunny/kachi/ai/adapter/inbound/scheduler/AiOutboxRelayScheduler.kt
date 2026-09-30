@@ -5,7 +5,7 @@ import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayFinished
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayLockUnavailable
-import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
+import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelaySettings
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -18,29 +18,29 @@ import org.springframework.stereotype.Component
  */
 @Component
 @ConditionalOnProperty(
-    prefix = AiOutboxRelayProperties.PREFIX,
+    prefix = AiOutboxRelaySettings.PREFIX,
     name = ["enabled"],
     havingValue = "true"
 )
 class AiOutboxRelayScheduler(
     private val executor: AiOutboxRelayExecutor,
-    private val properties: AiOutboxRelayProperties
+    private val settings: AiOutboxRelaySettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "AI outbox relay scheduler configured: publisherId={}, initialDelay={}, fixedDelay={}, batchSize={}, visibilityTimeout={}",
-            properties.publisherId,
-            properties.initialDelay,
-            properties.fixedDelay,
-            properties.batchSize,
-            properties.publishingVisibilityTimeout
+            settings.publisherId,
+            settings.initialDelay,
+            settings.fixedDelay,
+            settings.batchSize,
+            settings.publishingVisibilityTimeout
         )
     }
 
     @Scheduled(
-        fixedDelayString = AiOutboxRelayProperties.FIXED_DELAY_EXPRESSION,
-        initialDelayString = AiOutboxRelayProperties.INITIAL_DELAY_EXPRESSION
+        fixedDelayString = AiOutboxRelaySettings.FIXED_DELAY_EXPRESSION,
+        initialDelayString = AiOutboxRelaySettings.INITIAL_DELAY_EXPRESSION
     )
     suspend fun relay() {
         runCatching {

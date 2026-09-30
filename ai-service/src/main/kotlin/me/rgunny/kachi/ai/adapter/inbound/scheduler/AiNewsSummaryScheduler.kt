@@ -6,7 +6,6 @@ import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.config.AiNewsSummarySchedulerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -20,27 +19,27 @@ import org.springframework.stereotype.Component
 @Component
 class AiNewsSummaryScheduler(
     private val executor: AiNewsSummaryExecutor,
-    private val properties: AiNewsSummarySchedulerProperties
+    private val settings: AiNewsSummarySchedulerSettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "AI news summary scheduler configured: enabled={}, initialDelay={}, fixedDelay={}, overlap={}, maxLookback={}",
-            properties.enabled,
-            properties.initialDelay,
-            properties.fixedDelay,
-            properties.overlap,
-            properties.maxLookback
+            settings.enabled,
+            settings.initialDelay,
+            settings.fixedDelay,
+            settings.overlap,
+            settings.maxLookback
         )
     }
 
     @Scheduled(
-        fixedDelayString = AiNewsSummarySchedulerProperties.FIXED_DELAY_EXPRESSION,
-        initialDelayString = AiNewsSummarySchedulerProperties.INITIAL_DELAY_EXPRESSION
+        fixedDelayString = AiNewsSummarySchedulerSettings.FIXED_DELAY_EXPRESSION,
+        initialDelayString = AiNewsSummarySchedulerSettings.INITIAL_DELAY_EXPRESSION
     )
     suspend fun summarizeNews() {
         // 1. local/test처럼 자동 LLM 호출을 피해야 하는 환경에서는 scheduler 실행을 건너뛴다.
-        if (!properties.enabled) {
+        if (!settings.enabled) {
             return
         }
 
@@ -48,14 +47,14 @@ class AiNewsSummaryScheduler(
         // 실행이 지연되거나 서비스가 멈춰 있었어도 그 구간이 다음 실행에 그대로 들어온다.
         val command = SummarizeNewsCommand(
             keywords = emptyList(),
-            window = properties.toWindowRequest(),
-            maxArticlesPerKeyword = properties.maxArticlesPerKeyword
+            window = settings.toWindowRequest(),
+            maxArticlesPerKeyword = settings.maxArticlesPerKeyword
         )
 
         log.info(
             "Scheduled news summary started: overlap={}, maxLookback={}",
-            properties.overlap,
-            properties.maxLookback
+            settings.overlap,
+            settings.maxLookback
         )
         runCatching {
             executor.execute(command)

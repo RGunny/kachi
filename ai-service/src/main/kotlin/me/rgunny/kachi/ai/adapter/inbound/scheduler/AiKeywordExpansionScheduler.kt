@@ -6,7 +6,6 @@ import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
-import me.rgunny.kachi.ai.config.AiKeywordExpansionSchedulerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -19,32 +18,32 @@ import org.springframework.stereotype.Component
 @Component
 class AiKeywordExpansionScheduler(
     private val executor: AiKeywordExpansionExecutor,
-    private val properties: AiKeywordExpansionSchedulerProperties
+    private val settings: AiKeywordExpansionSchedulerSettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "AI keyword expansion scheduler configured: enabled={}, initialDelay={}, fixedDelay={}",
-            properties.enabled,
-            properties.initialDelay,
-            properties.fixedDelay
+            settings.enabled,
+            settings.initialDelay,
+            settings.fixedDelay
         )
     }
 
     @Scheduled(
-        fixedDelayString = AiKeywordExpansionSchedulerProperties.FIXED_DELAY_EXPRESSION,
-        initialDelayString = AiKeywordExpansionSchedulerProperties.INITIAL_DELAY_EXPRESSION
+        fixedDelayString = AiKeywordExpansionSchedulerSettings.FIXED_DELAY_EXPRESSION,
+        initialDelayString = AiKeywordExpansionSchedulerSettings.INITIAL_DELAY_EXPRESSION
     )
     suspend fun expandKeywords() {
         // 1. local/test처럼 자동 LLM 호출을 피해야 하는 환경에서는 scheduler 실행을 건너뛴다.
-        if (!properties.enabled) {
+        if (!settings.enabled) {
             return
         }
 
         // 2. 요청 키워드를 비워 보내 user-service의 활성 키워드 전체를 확장 대상으로 삼는다.
         val command = ExpandKeywordsCommand(
             keywords = emptyList(),
-            maxExpansionsPerKeyword = properties.maxExpansionsPerKeyword
+            maxExpansionsPerKeyword = settings.maxExpansionsPerKeyword
         )
 
         log.info("Scheduled keyword expansion started")

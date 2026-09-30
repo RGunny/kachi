@@ -10,7 +10,6 @@ import kotlinx.coroutines.yield
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerConfig
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
-import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
@@ -830,8 +829,8 @@ class GuardedLlmModelTest {
             model = model,
             billing = LlmBilling.FREE_TIER,
             circuitBreaker = circuitBreaker,
-            cooldown = LlmCooldownProperties(default = DEFAULT_COOLDOWN, max = MAX_COOLDOWN),
-            hold = AiTestFixture.holdProperties(REPROBE_AFTER),
+            cooldown = LlmCooldownSettings(default = DEFAULT_COOLDOWN, max = MAX_COOLDOWN),
+            hold = AiTestFixture.holdSettings(REPROBE_AFTER),
             providerHolds = providerHolds,
             clock = clock
         )

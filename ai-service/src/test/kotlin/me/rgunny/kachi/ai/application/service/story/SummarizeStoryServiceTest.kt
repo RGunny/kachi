@@ -48,12 +48,11 @@ class SummarizeStoryServiceTest {
             storyQuarantinePersistencePort = quarantines,
             llmProviderPort = llm,
             eventSerializer = serializer,
-            policy = AiTestFixture.storySummaryPolicy(maxArticlesPerVersion = maxArticlesPerVersion),
-            properties = AiTestFixture.storySummaryProperties(
+            policy = AiTestFixture.storySummaryPolicy(
                 maxArticlesPerVersion = maxArticlesPerVersion,
                 eventsEnabled = eventsEnabled
             ),
-            quarantineProperties = AiTestFixture.quarantineProperties(),
+            quarantinePolicy = AiTestFixture.quarantinePolicy(),
             clock = AiTestFixture.CLOCK
         )
     }

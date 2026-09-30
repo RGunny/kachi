@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.config
+package me.rgunny.kachi.ai.adapter.outbound.llm
 
 import java.time.Duration
 
@@ -8,7 +8,7 @@ import java.time.Duration
  * 404·401·402·403은 한 건으로 확정이라 서킷의 대기 시간으로 다루지 않는다.
  * [reprobeAfter] 뒤 한 번 다시 시도하고, 같은 실패면 다시 보류한다. 일일 한도처럼 시간이 풀어 주는 경우를 스스로 반영하기 위한 값이다.
  */
-data class LlmHoldProperties(
+data class LlmHoldSettings(
     val reprobeAfter: Duration
 ) {
     init {

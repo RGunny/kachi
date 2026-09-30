@@ -24,9 +24,8 @@ import me.rgunny.kachi.ai.application.port.outbound.outbox.model.toOutbox
 import me.rgunny.kachi.ai.application.port.outbound.quarantine.StoryQuarantinePersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.story.AiStoryArticlePersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.story.AiStoryPersistencePort
+import me.rgunny.kachi.ai.application.service.news.KeywordQuarantinePolicy
 import me.rgunny.kachi.ai.application.port.outbound.summary.StorySummaryPersistencePort
-import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
-import me.rgunny.kachi.ai.config.StorySummaryProperties
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.quarantine.StoryQuarantine
@@ -54,8 +53,7 @@ class SummarizeStoryService(
     private val llmProviderPort: LlmProviderPort,
     private val eventSerializer: AiOutboxEventSerializer,
     private val policy: StorySummaryPolicy,
-    private val properties: StorySummaryProperties,
-    private val quarantineProperties: KeywordQuarantineProperties,
+    private val quarantinePolicy: KeywordQuarantinePolicy,
     private val clock: Clock
 ) : SummarizeStoryUseCase {
 
@@ -184,7 +182,7 @@ class SummarizeStoryService(
      * 발행 스위치가 꺼져 있으면 빈 목록을 돌려준다.
      */
     private fun outboxesFor(summary: StorySummary): List<AiOutbox> {
-        if (!properties.eventsEnabled) {
+        if (!policy.eventsEnabled) {
             return emptyList()
         }
 
@@ -218,13 +216,13 @@ class SummarizeStoryService(
         val tracked = quarantine ?: StoryQuarantine.track(storyId = story.storyId, updatedAt = now)
         val updated = tracked.recordFailure(
             reason = reason,
-            failureThreshold = quarantineProperties.failureThreshold,
+            failureThreshold = quarantinePolicy.failureThreshold,
             updatedAt = now
         )
 
         // 격리 전이 시점의 알림 이벤트
         if (updated.isQuarantined && !tracked.isQuarantined) {
-            val outbox = if (properties.eventsEnabled) toOutbox(StoryQuarantinedEvent.from(updated), now) else null
+            val outbox = if (policy.eventsEnabled) toOutbox(StoryQuarantinedEvent.from(updated), now) else null
             storyQuarantinePersistencePort.saveQuarantined(quarantine = updated, outbox = outbox)
             log.error(
                 "Story quarantined after consecutive summary failures: storyId={}, consecutiveFailures={}, lastFailureReason={}",

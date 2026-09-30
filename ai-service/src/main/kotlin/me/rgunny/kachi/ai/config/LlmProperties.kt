@@ -1,5 +1,7 @@
 package me.rgunny.kachi.ai.config
 
+import me.rgunny.kachi.ai.adapter.outbound.llm.LlmCooldownSettings
+import me.rgunny.kachi.ai.adapter.outbound.llm.LlmHoldSettings
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
@@ -105,7 +107,7 @@ data class LlmProperties(
      */
     data class GuardProperties(
         val circuitBreaker: LlmCircuitBreakerProperties,
-        val cooldown: LlmCooldownProperties,
-        val hold: LlmHoldProperties
+        val cooldown: LlmCooldownSettings,
+        val hold: LlmHoldSettings
     )
 }

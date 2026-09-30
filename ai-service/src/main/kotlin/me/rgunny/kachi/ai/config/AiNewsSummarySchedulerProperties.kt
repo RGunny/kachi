@@ -1,7 +1,6 @@
 package me.rgunny.kachi.ai.config
 
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
-import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
@@ -22,11 +21,6 @@ data class AiNewsSummarySchedulerProperties(
 ) {
     companion object {
         const val PREFIX = "kachi.ai.scheduler.news-summary"
-
-        // @Scheduled는 애노테이션이라 주입된 properties 값을 참조할 수 없고 placeholder만 받는다.
-        // 같은 설정 키를 두 곳에 문자열로 흩어두지 않도록 여기서 한 번만 선언한다.
-        const val FIXED_DELAY_EXPRESSION = "\${$PREFIX.fixed-delay}"
-        const val INITIAL_DELAY_EXPRESSION = "\${$PREFIX.initial-delay}"
     }
 
     init {
@@ -43,12 +37,5 @@ data class AiNewsSummarySchedulerProperties(
         require(maxArticlesPerKeyword in 1..SummarizeNewsCommand.MAX_ARTICLES_PER_KEYWORD) {
             "키워드별 최대 뉴스 개수는 1 이상 ${SummarizeNewsCommand.MAX_ARTICLES_PER_KEYWORD} 이하여야 합니다"
         }
-    }
-
-    fun toWindowRequest(): WatermarkSummaryWindowRequest {
-        return WatermarkSummaryWindowRequest(
-            overlap = overlap,
-            maxLookback = maxLookback
-        )
     }
 }

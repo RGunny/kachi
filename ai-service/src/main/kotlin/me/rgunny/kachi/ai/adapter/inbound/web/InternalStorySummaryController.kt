@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
 import java.util.UUID
-import me.rgunny.kachi.ai.config.AiStorySummarySchedulerProperties
+import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiStorySummarySchedulerSettings
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryLockUnavailable
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 class InternalStorySummaryController(
     private val findStorySummariesUseCase: FindStorySummariesUseCase,
     private val executor: AiStorySummaryExecutor,
-    private val schedulerProperties: AiStorySummarySchedulerProperties
+    private val schedulerSettings: AiStorySummarySchedulerSettings
 ) {
 
     @GetMapping(ApiPaths.INTERNAL_AI_STORY_SUMMARIES, version = ApiVersions.V1)
@@ -49,9 +49,9 @@ class InternalStorySummaryController(
 
     @PostMapping(ApiPaths.INTERNAL_AI_STORY_SUMMARY_RUN, version = ApiVersions.V1)
     suspend fun runStorySummaries(): ResponseEntity<ApiResponse<*>> {
-        log.info("Manual story summary tick requested: maxStoriesPerTick={}", schedulerProperties.maxStoriesPerTick)
+        log.info("Manual story summary tick requested: maxStoriesPerTick={}", schedulerSettings.maxStoriesPerTick)
 
-        return when (val result = executor.execute(schedulerProperties.toCommand())) {
+        return when (val result = executor.execute(schedulerSettings.toCommand())) {
             is AiStorySummaryAlreadyRunning -> {
                 log.info(
                     "Manual story summary tick skipped because another tick is running: startedAt={}",

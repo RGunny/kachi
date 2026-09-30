@@ -5,7 +5,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
-import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
@@ -120,8 +119,8 @@ class GuardedLlmModelAdminTest {
             model = model,
             billing = BILLING.getValue(model),
             circuitBreaker = circuitBreakers.getValue(model),
-            cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
-            hold = AiTestFixture.holdProperties(),
+            cooldown = LlmCooldownSettings(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
+            hold = AiTestFixture.holdSettings(),
             providerHolds = providerHolds,
             clock = clock
         )

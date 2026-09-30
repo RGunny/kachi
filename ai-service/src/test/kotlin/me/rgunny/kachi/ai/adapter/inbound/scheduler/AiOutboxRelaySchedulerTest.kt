@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelayExecutor
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RelayAiOutboxResult
+import me.rgunny.kachi.ai.config.AiOutboxRelayConfig
 import me.rgunny.kachi.ai.fake.BlockingRelayAiOutboxUseCase
 import me.rgunny.kachi.ai.fake.FailingRelayAiOutboxUseCase
 import me.rgunny.kachi.ai.fake.RecordingRelayAiOutboxUseCase
@@ -78,7 +79,7 @@ class AiOutboxRelaySchedulerTest {
     private fun schedulerOf(useCase: RelayAiOutboxUseCase): AiOutboxRelayScheduler {
         return AiOutboxRelayScheduler(
             executor = AiOutboxRelayExecutor(useCase, AiTestFixture.executionLock()),
-            properties = AiTestFixture.relayProperties()
+            settings = AiOutboxRelayConfig().aiOutboxRelaySettings(AiTestFixture.relayProperties())
         )
     }
 

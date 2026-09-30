@@ -6,19 +6,16 @@ import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.NewsReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
-import me.rgunny.kachi.ai.config.CollectorServiceNewsProperties
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 
-@Component
 class CollectorServiceNewsReaderAdapter(
-    @param:Qualifier("collectorServiceWebClient")
     private val webClient: WebClient,
-    private val properties: CollectorServiceNewsProperties
+    private val newsPath: String,
+    private val timeout: Duration
 ) : NewsReaderPort {
 
     override suspend fun findNews(
@@ -31,7 +28,7 @@ class CollectorServiceNewsReaderAdapter(
         // 1. collector-service 에서 키워드와 기간에 해당하는 저장 뉴스를 조회한다.
         val response = webClient.get()
             .uri { builder ->
-                builder.path(properties.newsPath)
+                builder.path(newsPath)
                     .queryParam("keyword", keyword.value)
                     .queryParamIfPresent("from", optionalInstant(from))
                     .queryParamIfPresent("to", optionalInstant(to))
@@ -50,7 +47,7 @@ class CollectorServiceNewsReaderAdapter(
                     }
             }
             .bodyToMono(NEWS_RESPONSE_TYPE)
-            .timeout(properties.timeout)
+            .timeout(timeout)
             .awaitSingle()
 
         // 2. API envelope이 실패이거나 data가 없으면 요약 대상 뉴스를 확정할 수 없으므로 실패시킨다.

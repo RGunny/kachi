@@ -27,7 +27,6 @@ import me.rgunny.kachi.ai.application.port.outbound.quarantine.KeywordQuarantine
 import me.rgunny.kachi.ai.application.port.outbound.run.AiRunPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.summary.NewsSummaryPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.watermark.SummaryWatermarkPersistencePort
-import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
 import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
@@ -54,7 +53,7 @@ class SummarizeNewsService(
     private val summaryWatermarkPersistencePort: SummaryWatermarkPersistencePort,
     private val keywordQuarantinePersistencePort: KeywordQuarantinePersistencePort,
     private val eventSerializer: AiOutboxEventSerializer,
-    private val quarantineProperties: KeywordQuarantineProperties,
+    private val quarantinePolicy: KeywordQuarantinePolicy,
     private val clock: Clock
 ) : SummarizeNewsUseCase {
 
@@ -421,7 +420,7 @@ class SummarizeNewsService(
         )
         val updated = tracked.recordFailure(
             reason = reason,
-            failureThreshold = quarantineProperties.failureThreshold,
+            failureThreshold = quarantinePolicy.failureThreshold,
             updatedAt = now
         )
         // 격리로 넘어간 순간에만 알릴 이벤트를 남긴다.
