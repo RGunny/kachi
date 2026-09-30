@@ -1,0 +1,18 @@
+{
+  "project": "kachi",
+  "mode": "supervised",
+  "verify": {
+    "fast": ["./gradlew test --continue"],
+    "full": ["./gradlew check", "./gradlew :e2e-test:e2eTest"],
+    "arch": ["./gradlew test --tests '*ArchitectureTest'"],
+    "harness": ["cd scripts/harness/tests && PYTHONPATH=.. python3 -m unittest -q"]
+  },
+  "verify_after_phase": "none",
+  "preflight": ["python3>=3.11", "java=21", "docker", "DOCKER_HOST"],
+  "docs": {
+    "diff_paths": ["docs/", "README.md", "*/README.md"],
+    "allowlist": "scripts/doc-paths.json"
+  },
+  "frozen_paths": [],
+  "commit": { "mode": "none", "language": "en" }
+}

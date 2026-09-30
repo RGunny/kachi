@@ -1,0 +1,16 @@
+{
+  "allowed": [
+    "README.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "*/README.md",
+    "docs/*.md",
+    "docs/decisions/*.md",
+    "experiments/**/*.md",
+    "prompts/*.md",
+    ".agents/*.md",
+    ".agents/skills/*/SKILL.md",
+    ".claude/agents/*.md"
+  ],
+  "lineLimits": { "AGENTS.md": 60 }
+}
