@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 324.0 174.0" width="486" font-family="JetBrains Mono, SF Mono, Menlo, Consolas, monospace">
+<title>notification 모듈 의존</title>
+<rect x="-12" y="-12" width="324.0" height="174.0" fill="#ffffff"/>
+  <defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#44546b"/></marker>
+<marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2b55e0"/></marker>
+<marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a97ab"/></marker>
+  </defs>
+    <rect x="0.5" y="2" width="78" height="30" rx="5" fill="#f4f6fa" stroke="#dce2ec"/><text x="39.5" y="21" text-anchor="middle" font-size="9.4" fill="#101c30">ai-contract</text>
+    <rect x="88" y="2" width="211.5" height="30" rx="5" fill="#f4f6fa" stroke="#dce2ec"/><text x="194" y="21" text-anchor="middle" font-size="9.4" fill="#101c30">notification-contract</text>
+    <rect x="140" y="52" width="132" height="42" rx="5" fill="#e8edfd" stroke="#2b55e0"/><text x="206" y="69" text-anchor="middle" font-size="9.4" font-weight="700" fill="#1b3aa8">notification-core</text><text x="206" y="84" text-anchor="middle" font-size="8.4" fill="#1b3aa8" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, Malgun Gothic, sans-serif">도메인 · 포트 · 유스케이스</text>
+    <rect x="0.5" y="118" width="84" height="30" rx="5" fill="#fff" stroke="#101c30"/><text x="42" y="137" text-anchor="middle" font-size="9.4" fill="#101c30">routing</text>
+    <rect x="100" y="118" width="84" height="30" rx="5" fill="#fff" stroke="#101c30"/><text x="142" y="137" text-anchor="middle" font-size="9.4" fill="#101c30">service</text>
+    <rect x="215.5" y="118" width="84" height="30" rx="5" fill="#fff" stroke="#101c30"/><text x="257.5" y="137" text-anchor="middle" font-size="9.4" fill="#101c30">worker</text>
+    <g stroke="#44546b" stroke-width="1" marker-end="url(#ah)" fill="none">
+      <line x1="28" y1="118" x2="28" y2="34"/>
+      <line x1="60" y1="118" x2="100" y2="34"/>
+      <line x1="116" y1="118" x2="116" y2="34"/>
+      <line x1="160" y1="118" x2="176" y2="96"/>
+      <line x1="250" y1="118" x2="236" y2="96"/>
+      <line x1="286" y1="118" x2="286" y2="34"/>
+    </g>
+  </svg>

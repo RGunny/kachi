@@ -83,7 +83,7 @@ user-service
 | `collector-service` | 뉴스 도메인, Google/Naver/Finnhub provider, user-service 키워드 조회, MongoDB 저장, scheduler/internal API 실행 진입점, 기사 outbox 기록과 relay의 `collector.news.collected` 발행(`collector-contract` 모듈) 구현 | [collector-service README](./collector-service/README.md) |
 | `story-service` | story·기사 사본·판정 기록 도메인, TEI 임베딩·판정기 adapter와 서킷, Qdrant gRPC 후보 색인, `collector.news.collected` 소비와 2단계 판정 조립, 닫기·병합·색인 정리 주기 작업, 조회·병합·분리·색인 재구축·outbox 운영 internal API, outbox relay의 `story.article.attached`/`story.merged` 발행(`story-contract` 모듈) 구현 | [story-service README](./story-service/README.md) |
 | `ai-service` | 뉴스 요약 실행 구현: 키워드별 LLM 요약, newsHash 중복 방지, AiRun 실행 기록, 용도별 후보 모델(enum)과 모델 단위 서킷·cooldown·hold, 순차 failover, 실패의 책임·지속 분류와 전 후보 합의 격리, 코드에 둔 프롬프트 버전, `src/realTest` 실호출 검증, MongoDB 저장, 요약/격리 이벤트 outbox 기록과 relay, `ai.summary.created`/`ai.keyword.quarantined` Kafka 발행(`ai-contract` 모듈), scheduler/internal API 진입점, 격리·watermark·outbox 운영 internal API, LLM 모델 상태·reset·probe internal API | [ai-service README](./ai-service/README.md) |
-| `notification-service` | notification-routing/core/service/worker/contract 모듈 구성, `ai.summary.created`·`ai.keyword.quarantined` 소비와 구독자 x 채널 fan-out(`notification.requested` 발행, RoutingJob 멱등), 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 설계 문서](./docs/decisions/012-notification-service-초기-모듈-설계.md) |
+| `notification-service` | notification-routing/core/service/worker/contract 모듈 구성, `ai.summary.created`·`ai.keyword.quarantined` 소비와 구독자 x 채널 fan-out(`notification.requested` 발행, RoutingJob 멱등), 요청 접수, MongoDB outbox, Kafka dispatch 발행, worker dispatch, mock/Slack/Discord/Telegram sender, retry/DLT 영속화와 운영 조회/폐기, stale PUBLISHING/PROCESSING 회수, DEAD 운영 조회/수동 복구 구현 | [notification 종합 문서](./docs/README-notification.md) |
 | `history-service` | 미구현 | - |
 
 ---
@@ -207,6 +207,7 @@ SPRING_PROFILES_ACTIVE=dev ./scripts/app.sh user-service start   # dev, .env.dev
 | [아키텍처](./docs/아키텍처.md) | 헥사고날 층 책임, 의존 규칙, API 버전 정책, ArchUnit 검증 방침 |
 | [패키지 구조](./docs/패키지구조.md) | 층·포트·어댑터·config·테스트 소스셋의 패키지 배치 규칙 |
 | [개발가이드](./docs/개발가이드.md) | 도메인/예외/어댑터/테스트 코드 관례와 네이밍 |
+| [Notification](./docs/README-notification.md) | notification 파이프라인 종합: 모듈, 핵심 설계 요약, API, 운영 확장 설계 |
 | [포트 구성](./docs/포트-구성.md) | 로컬 호스트 공개 포트, 컨테이너 인바운드 포트, 서비스 간 연결 계약 |
 | [테스트 전략](./docs/테스트전략.md) | unit, slice, integration, e2e 테스트 분류와 인프라 테스트 기준 |
 | [collector-service WebClient 설정](./docs/collector-webclient-설정.md) | 외부 뉴스 provider WebClient 설정값과 근거 |

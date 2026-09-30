@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 704.0 306.0" width="1056" font-family="Apple SD Gothic Neo, Pretendard, Noto Sans KR, Malgun Gothic, sans-serif">
+<title>notification 아키텍처</title>
+<rect x="-12" y="-12" width="704.0" height="306.0" fill="#ffffff"/>
+  <defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#44546b"/></marker>
+<marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2b55e0"/></marker>
+<marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a97ab"/></marker>
+  </defs>
+<!-- top row -->
+<rect x="10" y="4" width="112" height="34" rx="7" fill="#f4f6fa" stroke="#dce2ec"/>
+<text x="66" y="19" text-anchor="middle" font-size="10" font-weight="700" fill="#101c30">ai-service</text>
+<text x="66" y="31" text-anchor="middle" font-size="7.8" fill="#44546b">키워드별 요약 발행</text>
+<rect x="252" y="4" width="176" height="34" rx="7" fill="#fff" stroke="#8a97ab" stroke-dasharray="3 2"/>
+<text x="340" y="19" text-anchor="middle" font-size="10" font-weight="700" fill="#101c30">user-service</text>
+<text x="340" y="31" text-anchor="middle" font-size="7.8" fill="#44546b">키워드 구독 · 채널 바인딩 · 주소(암호화)</text>
+<rect x="530" y="0.5" width="140" height="44" rx="7" fill="#f4f6fa" stroke="#dce2ec"/>
+<text x="600" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#101c30">vendor</text>
+<text x="600" y="26" text-anchor="middle" font-size="7.8" fill="#44546b">Slack · Discord · Telegram</text>
+<text x="600" y="37.5" text-anchor="middle" font-size="7.8" fill="#44546b">SMS · 카카오 · 이메일 (mock)</text>
+
+<!-- vertical links -->
+<line x1="40" y1="38" x2="40" y2="82" stroke="#2b55e0" stroke-width="1.3" marker-end="url(#ahb)"/>
+<g font-family="JetBrains Mono, SF Mono, Menlo, Consolas, monospace" font-size="7.4" fill="#2b55e0"><text x="46" y="56">ai.summary.created</text><text x="46" y="66">ai.keyword.quarantined</text></g>
+<path d="M170 84 V21 H250" fill="none" stroke="#8a97ab" stroke-width="1" marker-end="url(#ahl)"/>
+<text x="176" y="78" font-size="7.8" fill="#44546b">키워드 구독자 × 채널 조회</text>
+<path d="M510 84 V21 H430" fill="none" stroke="#8a97ab" stroke-width="1" marker-end="url(#ahl)"/>
+<text x="504" y="78" text-anchor="end" font-size="7.8" fill="#44546b">발송 직전 주소 조회</text>
+<line x1="640" y1="84" x2="640" y2="47" stroke="#44546b" stroke-width="1.3" marker-end="url(#ah)"/>
+<text x="634" y="68" text-anchor="end" font-size="7.8" fill="#44546b">HTTPS</text>
+
+<!-- horizontal topic arrows -->
+<g font-family="JetBrains Mono, SF Mono, Menlo, Consolas, monospace" font-size="7.4" fill="#2b55e0" text-anchor="middle">
+  <text x="219" y="134">notification</text><text x="219" y="144">.requested</text>
+  <text x="461" y="134">notification</text><text x="461" y="144">.dispatch</text>
+</g>
+<g stroke="#2b55e0" stroke-width="1.3" marker-end="url(#ahb)">
+  <line x1="188" y1="153" x2="250" y2="153"/>
+  <line x1="430" y1="153" x2="492" y2="153"/>
+</g>
+
+<!-- routing -->
+<rect x="10" y="84" width="176" height="142" rx="8" fill="#fff" stroke="#101c30" stroke-width="1.2"/>
+<text x="22" y="104" font-size="10" font-weight="700" fill="#101c30">notification-routing</text>
+<text x="22" y="116" font-size="7.4" fill="#8a97ab" font-family="Menlo, monospace">:8086</text>
+<g font-size="8.6" fill="#44546b"><text x="22" y="136">키워드 구독자 × 채널로 fan-out</text><text x="22" y="149">결정적 requestId 생성</text><text x="22" y="162">대상마다 broker ack 대기</text><text x="22" y="175">RoutingJob으로 이벤트 멱등</text></g>
+<rect x="22" y="192" width="152" height="22" rx="4" fill="#f4f6fa"/><text x="98" y="206.5" text-anchor="middle" font-size="7.8" fill="#44546b">MongoDB · routing_jobs</text>
+
+<!-- service -->
+<rect x="252" y="84" width="176" height="142" rx="8" fill="#fff" stroke="#101c30" stroke-width="1.2"/>
+<text x="264" y="104" font-size="10" font-weight="700" fill="#101c30">notification-service</text>
+<text x="264" y="116" font-size="7.4" fill="#8a97ab" font-family="Menlo, monospace">:8084</text>
+<g font-size="8.6" fill="#44546b"><text x="264" y="136">접수 (Kafka · HTTP)</text><text x="264" y="149">알림 + outbox를 한 트랜잭션에</text><text x="264" y="162">relay: 1초 폴링 · 배치 100</text><text x="264" y="175">운영 API: 조회 · 수동 복구</text></g>
+<rect x="264" y="192" width="92" height="22" rx="4" fill="#f4f6fa"/><text x="310" y="206.5" text-anchor="middle" font-size="7.8" fill="#44546b">MongoDB (트랜잭션)</text>
+<rect x="362" y="192" width="54" height="22" rx="4" fill="#f4f6fa"/><text x="389" y="206.5" text-anchor="middle" font-size="7.8" fill="#44546b">Redis</text>
+<circle cx="413" cy="101" r="7.5" fill="#2b55e0"/><text x="413" y="104.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">1</text>
+
+<!-- worker -->
+<rect x="494" y="84" width="176" height="142" rx="8" fill="#fff" stroke="#101c30" stroke-width="1.2"/>
+<text x="506" y="104" font-size="10" font-weight="700" fill="#101c30">notification-worker</text>
+<text x="506" y="116" font-size="7.4" fill="#8a97ab" font-family="Menlo, monospace">:8085</text>
+<g font-size="8.6" fill="#44546b"><text x="506" y="136">claim → 주소 조회 → 발송</text><text x="506" y="149">결과 확정 (claim이 일치할 때만)</text><text x="506" y="162">멈춘 처리를 30초 뒤 회수</text><text x="506" y="175">DLT 메시지 저장</text></g>
+<rect x="506" y="192" width="92" height="22" rx="4" fill="#f4f6fa"/><text x="552" y="206.5" text-anchor="middle" font-size="7.8" fill="#44546b">MongoDB (CAS)</text>
+<rect x="604" y="192" width="54" height="22" rx="4" fill="#f4f6fa"/><text x="631" y="206.5" text-anchor="middle" font-size="7.8" fill="#44546b">Redis</text>
+<circle cx="619" cy="118" r="7.5" fill="#2b55e0"/><text x="619" y="121.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">2</text>
+<circle cx="637" cy="118" r="7.5" fill="#2b55e0"/><text x="637" y="121.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">3</text>
+<circle cx="655" cy="118" r="7.5" fill="#2b55e0"/><text x="655" y="121.2" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">4</text>
+
+<!-- shared collection -->
+<path d="M310 226 V243 H552 V226" fill="none" stroke="#2b55e0" stroke-width="1" stroke-dasharray="3 2"/>
+<text x="431" y="259" text-anchor="middle" font-size="8.4" fill="#2b55e0">두 프로세스가 같은 notifications 컬렉션을 공유한다. 조정 수단은 조건부 update(CAS)다.</text>
+<text x="431" y="272" text-anchor="middle" font-size="7.8" fill="#44546b">service는 outbox 행을, worker는 알림 행을 claim한다. 분산 락이나 리더 선출은 쓰지 않는다.</text>
+</svg>
