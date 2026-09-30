@@ -14,8 +14,8 @@ import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendN
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientResolveSource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

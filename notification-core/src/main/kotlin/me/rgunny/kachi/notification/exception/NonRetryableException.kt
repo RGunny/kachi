@@ -1,8 +1,8 @@
-package me.rgunny.kachi.notification.retry
+package me.rgunny.kachi.notification.exception
 
-import me.rgunny.kachi.notification.exception.ErrorCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
 
-open class RetryableException(
+open class NonRetryableException(
     errorCode: ErrorCode,
     failure: RetryFailure,
     cause: Throwable? = null,

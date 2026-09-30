@@ -2,7 +2,6 @@ package me.rgunny.kachi.notification.architecture
 
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.junit.AnalyzeClasses
-import com.tngtech.archunit.junit.ArchIgnore
 import com.tngtech.archunit.junit.ArchTest
 import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
@@ -36,7 +35,14 @@ class ArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAPackage("..notification.application.service..")
 
-        @ArchIgnore(reason = "domain.NotificationOutbox.recordFailure가 retry.RetryPolicy를 받고, retry의 예외가 exception.BaseException을 상속하며, exception이 domain 타입을 참조해 domain -> retry -> exception -> domain 순환이 있다. retry를 domain 하위로 옮기거나 RetryPolicy를 domain 값으로 바꾼 뒤 활성화한다")
+        @ArchTest
+        @JvmField
+        val application_does_not_depend_on_config: ArchRule = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..config..")
+            .allowEmptyShould(true)
+
         @ArchTest
         @JvmField
         val no_package_cycles: ArchRule = slices()
@@ -46,7 +52,7 @@ class ArchitectureTest {
         @ArchTest
         @JvmField
         val core_is_free_of_spring_stereotypes: ArchRule = noClasses()
-            .that().resideInAnyPackage("..notification.domain..", "..notification.application..", "..notification.retry..")
+            .that().resideInAnyPackage("..notification.domain..", "..notification.application..")
             .should().beAnnotatedWith("org.springframework.stereotype.Component")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Service")
             .orShould().beAnnotatedWith("org.springframework.stereotype.Repository")

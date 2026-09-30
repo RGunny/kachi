@@ -2,7 +2,7 @@ package me.rgunny.kachi.notification.application.port.inbound.dispatch.model
 
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
 import java.time.Instant
 
 /**

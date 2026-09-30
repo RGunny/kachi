@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.retry
+package me.rgunny.kachi.notification.domain.retry
 
 data class RetryFailure(
     val code: String,

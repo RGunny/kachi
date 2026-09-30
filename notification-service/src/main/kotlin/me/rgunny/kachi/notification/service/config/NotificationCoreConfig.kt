@@ -22,7 +22,7 @@ import me.rgunny.kachi.notification.application.service.OutboxPublishPolicy
 import me.rgunny.kachi.notification.application.service.PublishNotificationDispatchService
 import me.rgunny.kachi.notification.application.service.RequestNotificationPolicy
 import me.rgunny.kachi.notification.application.service.RequestNotificationService
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.domain.retry.RetryPolicy
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

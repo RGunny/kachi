@@ -8,9 +8,9 @@ import me.rgunny.kachi.notification.application.port.outbound.idempotency.Notifi
 import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
-import me.rgunny.kachi.notification.retry.RetryDecision
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryDecision
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 
 /**
  * PROCESSING 상태로 멈춘 dispatch 회수 application service.

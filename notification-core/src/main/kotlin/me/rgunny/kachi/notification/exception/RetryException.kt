@@ -1,7 +1,6 @@
-package me.rgunny.kachi.notification.retry
+package me.rgunny.kachi.notification.exception
 
-import me.rgunny.kachi.notification.exception.BaseException
-import me.rgunny.kachi.notification.exception.ErrorCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
 
 abstract class RetryException(
     errorCode: ErrorCode,

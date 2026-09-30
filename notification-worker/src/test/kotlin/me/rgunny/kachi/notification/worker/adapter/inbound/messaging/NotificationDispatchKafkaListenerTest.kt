@@ -7,8 +7,8 @@ import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.Disp
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.InvalidDispatchMessageException
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException
 import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract

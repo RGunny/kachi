@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.retry
+package me.rgunny.kachi.notification.domain.retry
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

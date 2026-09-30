@@ -23,9 +23,9 @@ import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
 import me.rgunny.kachi.notification.exception.recipient.RecipientResolveException
 import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.sender.RetryableSendException
-import me.rgunny.kachi.notification.retry.FailureCategory
-import me.rgunny.kachi.notification.retry.RetryDecision
-import me.rgunny.kachi.notification.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.FailureCategory
+import me.rgunny.kachi.notification.domain.retry.RetryDecision
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
 
 /**
  * notification.dispatch 발송 실행 application service.

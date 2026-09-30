@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.exception.sender
 
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.NonRetryableException
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.exception.NonRetryableException
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.exception.NotificationErrorCode

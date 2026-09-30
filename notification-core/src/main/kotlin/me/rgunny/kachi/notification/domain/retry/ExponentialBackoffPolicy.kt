@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.retry
+package me.rgunny.kachi.notification.domain.retry
 
 import java.time.Duration
 import kotlin.math.pow

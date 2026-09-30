@@ -14,8 +14,8 @@ import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUESTER
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.REQUEST_ID
-import me.rgunny.kachi.notification.retry.RetryFailureCode
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryPolicy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
