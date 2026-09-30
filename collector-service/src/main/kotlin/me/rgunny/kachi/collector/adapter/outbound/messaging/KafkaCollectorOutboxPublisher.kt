@@ -10,7 +10,7 @@ import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import org.springframework.kafka.core.KafkaTemplate
 
 /**
- * outbox 행 하나를 Kafka 레코드 하나로 발행한다.
+ * outbox 행 하나를 Kafka 레코드 하나로 발행하는 어댑터.
  *
  * topic은 행의 eventType이 고르고, key는 partitionKey, value는 기록 시점의 계약 JSON을 그대로 보낸다.
  * payload를 읽거나 바꾸지 않는다. 계약대로 읽히는지는 소비자 쪽 검증의 몫이다.

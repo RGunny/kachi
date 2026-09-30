@@ -1,9 +1,9 @@
 package me.rgunny.kachi.notification.application.service
 
+import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
 import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageCommand
 import me.rgunny.kachi.notification.application.port.inbound.dlt.model.PersistNotificationDltMessageResult
-import me.rgunny.kachi.notification.application.port.inbound.dlt.PersistNotificationDltMessageUseCase
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDltMessagePersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.dlt.NotificationDltMessagePersistencePort
 import me.rgunny.kachi.notification.domain.NotificationDltMessage
 
 /**

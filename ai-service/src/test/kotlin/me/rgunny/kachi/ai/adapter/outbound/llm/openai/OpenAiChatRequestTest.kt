@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 /**
- * 요청 본문 직렬화가 값 없는 필드를 싣지 않는지 본다.
+ * 요청 본문 직렬화가 값 없는 필드를 싣지 않는지 보는 테스트.
  */
 class OpenAiChatRequestTest {
     private val jsonMapper = JsonMapper.builder().build()

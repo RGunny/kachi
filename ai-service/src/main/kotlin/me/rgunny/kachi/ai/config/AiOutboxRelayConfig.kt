@@ -1,15 +1,15 @@
 package me.rgunny.kachi.ai.config
 
+import java.time.Clock
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
 import me.rgunny.kachi.ai.application.service.outbox.RelayAiOutboxService
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.time.Clock
 
 /**
  * relay가 켜져 있을 때만 relay 유스케이스와 실행 정책을 조립한다.

@@ -1,31 +1,31 @@
 package me.rgunny.kachi.notification.application.service
 
+import java.time.Clock
+import java.time.Instant
+import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationCommand
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchNotificationResult
-import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
-import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNotificationUseCase
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationDeduplicationPort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationDispatchPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.idempotency.NotificationIdempotencyKeyPort
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationDispatchPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
 import me.rgunny.kachi.notification.application.port.outbound.recipient.model.AvailableRecipient
 import me.rgunny.kachi.notification.application.port.outbound.recipient.model.UnavailableRecipient
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationCommand
+import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
-import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
+import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
 import me.rgunny.kachi.notification.exception.recipient.RecipientResolveException
+import me.rgunny.kachi.notification.exception.sender.NonRetryableSendException
 import me.rgunny.kachi.notification.exception.sender.RetryableSendException
 import me.rgunny.kachi.notification.retry.FailureCategory
 import me.rgunny.kachi.notification.retry.RetryDecision
 import me.rgunny.kachi.notification.retry.RetryFailure
-import java.time.Clock
-import java.time.Instant
 
 /**
  * notification.dispatch 발송 실행 application service.

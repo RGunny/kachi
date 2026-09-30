@@ -1,20 +1,20 @@
 package me.rgunny.kachi.ai.application.service.outbox
 
+import java.time.Clock
+import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.ai.application.exception.AiOutboxPublishException
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
 import me.rgunny.kachi.ai.application.port.inbound.outbox.model.RelayAiOutboxResult
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxClaim
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxStatus
 import org.slf4j.LoggerFactory
-import java.time.Clock
-import java.time.Instant
 
 /**
- * 기록된 outbox 이벤트를 주기적으로 발행하고 그 결과를 확정한다.
+ * 기록된 outbox 이벤트를 주기적으로 발행하고 그 결과를 확정하는 유스케이스.
  *
  * 발행은 "소유권을 잡는다 → 내보낸다 → 결과를 확정한다" 세 단계이고 각 단계가 단일 문서 조건부 쓰기다.
  * 여러 인스턴스가 같은 행을 집어도 하나만 소유권을 얻고, 확정도 그 소유권이 그대로일 때만 저장된다.

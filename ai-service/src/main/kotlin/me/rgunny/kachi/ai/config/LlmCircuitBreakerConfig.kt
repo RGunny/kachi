@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration
 import java.time.Duration
 
 /**
- * LLM 모델 호출에 적용할 서킷 브레이커 설정과 registry를 구성한다.
+ * LLM 모델 호출에 적용할 서킷 브레이커와 registry 설정.
  *
  * failure rate·slow call rate·wait duration은 모델 전체가 공유하고, slow call duration threshold와 sliding window는 모델마다 갈린다.
  * registry에는 후보 모델마다 그 모델의 이름으로 설정을 등록해 두고, 조립이 같은 이름으로 인스턴스를 꺼낸다.

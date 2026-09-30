@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * stub 서버가 응답 순서와 요청 기록을 약속대로 지키는지 확인한다.
+ * stub 서버가 응답 순서와 요청 기록을 약속대로 지키는지 확인하는 테스트.
  */
 class TestLlmServerTest {
     private val client = HttpClient.newHttpClient()

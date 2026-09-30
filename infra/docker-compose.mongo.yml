@@ -2,7 +2,7 @@ services:
   mongo:
     image: mongo:7.0
     container_name: kachi-mongo
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET:-rs0}", "--bind_ip_all"]
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET:-rs0}", "--bind_ip_all", "--wiredTigerCacheSizeGB", "1"]
     environment:
       MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kachi_collector}
       TZ: Asia/Seoul

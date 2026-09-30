@@ -4,7 +4,7 @@ import me.rgunny.kachi.collector.application.port.inbound.collection.model.Colle
 import java.time.Instant
 
 /**
- * lock을 쥐고 실행 중인 뉴스 수집 작업의 최소 메타데이터다.
+ * lock을 쥐고 실행 중인 뉴스 수집 작업의 최소 메타데이터.
  *
  * CollectionRunId는 CollectNewsService 내부에서 생성되므로,
  * 중복 실행으로 건너뛴 요청에는 아직 알 수 없다.

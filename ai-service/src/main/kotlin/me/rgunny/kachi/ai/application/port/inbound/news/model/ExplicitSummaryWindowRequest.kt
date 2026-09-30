@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.application.port.inbound.news.model
 import java.time.Instant
 
 /**
- * 구간을 직접 지정한다.
+ * 구간을 직접 지정하는 요청.
  * watermark를 읽지도 전진시키지도 않는다.
  */
 data class ExplicitSummaryWindowRequest(

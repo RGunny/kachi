@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.application.port.inbound.news.model
 import java.time.Duration
 
 /**
- * 저장된 watermark에서 이어받는다.
+ * 저장된 watermark에서 이어받는 요청.
  * 격리되지 않은 키워드가 모두 성공하면 watermark를 전진시킨다.
  */
 data class WatermarkSummaryWindowRequest(

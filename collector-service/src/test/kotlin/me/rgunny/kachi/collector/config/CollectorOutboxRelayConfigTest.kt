@@ -1,8 +1,13 @@
 package me.rgunny.kachi.collector.config
 
+import java.time.Clock
+import java.util.function.Supplier
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import me.rgunny.kachi.collector.application.port.inbound.outbox.RelayCollectorOutboxUseCase
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPublisherPort
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.fake.FakeCollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.fake.FakeCollectorOutboxPublisherPort
 import me.rgunny.kachi.collector.fixture.CollectorTestFixture
@@ -11,11 +16,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.BeansException
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource
-import java.time.Clock
-import java.util.function.Supplier
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 @DisplayName("CollectorOutboxRelayConfig")
 class CollectorOutboxRelayConfigTest {

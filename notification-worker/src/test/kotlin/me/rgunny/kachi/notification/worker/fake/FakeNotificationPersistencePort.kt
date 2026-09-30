@@ -1,11 +1,11 @@
 package me.rgunny.kachi.notification.worker.fake
 
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * DispatchNotificationService의 상태 전이와 claim 흐름을 검증하기 위한 in-memory persistence port fake.

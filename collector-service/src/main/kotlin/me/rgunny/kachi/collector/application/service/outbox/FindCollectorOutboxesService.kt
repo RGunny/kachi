@@ -4,11 +4,11 @@ import me.rgunny.kachi.collector.application.port.inbound.outbox.FindCollectorOu
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.CollectorOutboxSummary
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.FindCollectorOutboxesQuery
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.FindCollectorOutboxesResult
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import org.springframework.stereotype.Service
 
 /**
- * 상태별 outbox 행을 오래된 순으로 읽는다.
+ * 상태별 outbox 행을 오래된 순으로 읽는 조회 유스케이스.
  */
 @Service
 class FindCollectorOutboxesService(

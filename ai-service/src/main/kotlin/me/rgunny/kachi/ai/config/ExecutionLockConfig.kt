@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration
 import java.time.Clock
 
 /**
- * 실행 lock의 범위를 구현에 연결한다.
+ * 실행 lock의 범위를 구현에 연결하는 설정.
  *
  * 지금은 두 범위 모두 이 인스턴스 안에서만 유효한 lock으로 간다.
  * 여러 인스턴스를 띄우면 CLUSTER 범위의 작업이 인스턴스마다 따로 실행되므로, 그 시점에는 이 연결을 바꿔야 한다.

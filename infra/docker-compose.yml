@@ -13,3 +13,5 @@ volumes:
   kafka-data:
   prometheus-data:
   grafana-data:
+  tei-data:
+  qdrant-data:

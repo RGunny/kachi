@@ -7,7 +7,7 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.TimeoutException
 
 /**
- * LLM provider 호출 중 발생한 client-level 예외를 공통 분류한다.
+ * LLM provider 호출 중 발생한 client-level 예외를 공통 분류하는 classifier.
  *
  * provider별 HTTP status/body 해석은 adapter에 두고, 여기서는 Netty/WebClient 계층의 timeout 성격만 판단한다.
  * timeout은 예외 체인의 어느 깊이에서든 나올 수 있어 cause를 끝까지 훑는다.

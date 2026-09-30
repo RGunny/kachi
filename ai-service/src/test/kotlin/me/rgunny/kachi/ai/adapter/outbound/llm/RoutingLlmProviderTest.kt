@@ -20,7 +20,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * 순회 정책만 검증한다. 후보가 왜 차단되는지는 후보 구현의 몫이라 가용성은 fake에 직접 지정한다.
+ * 순회 정책만 검증하는 테스트.
  */
 @DisplayName("RoutingLlmProvider")
 class RoutingLlmProviderTest {

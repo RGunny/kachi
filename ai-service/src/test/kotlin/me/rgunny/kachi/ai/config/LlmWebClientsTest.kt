@@ -17,7 +17,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * 제공자 층과 모델 층의 값이 각자 자리에 붙는지 실제 HTTP로 본다. mock exchange로는 헤더와 timeout이 보이지 않는다.
+ * 제공자 층과 모델 층의 값이 각자 자리에 붙는지 실제 HTTP로 보는 테스트.
  */
 @DisplayName("LlmWebClients")
 class LlmWebClientsTest {
@@ -62,7 +62,7 @@ class LlmWebClientsTest {
         val impatient = LlmWebClients.forModel(provider, responseTimeout = Duration.ofMillis(150))
         val patient = LlmWebClients.forModel(provider, responseTimeout = Duration.ofSeconds(5))
 
-        // block()은 TimeoutException을 ReactiveException으로 감싼다. adapter가 보는 것은 cause 체인이고, 분류기도 체인을 훑는다.
+        // block()은 TimeoutException을 ReactiveException으로 감싼다. adapter가 보는 것은 cause 체인이고, classifier도 체인을 훑는다.
         val exception = assertFailsWith<RuntimeException> {
             impatient.get().uri(PATH).retrieve().bodyToMono<String>().block()
         }

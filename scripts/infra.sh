@@ -9,6 +9,8 @@ COMPOSE=(docker compose
   -f "$ROOT/infra/docker-compose.redis.yml"
   -f "$ROOT/infra/docker-compose.mongo.yml"
   -f "$ROOT/infra/docker-compose.kafka.yml"
+  -f "$ROOT/infra/docker-compose.tei.yml"
+  -f "$ROOT/infra/docker-compose.qdrant.yml"
   -f "$ROOT/infra/docker-compose.observability.yml")
 
 usage() {
@@ -16,21 +18,23 @@ usage() {
 Usage: ./scripts/infra.sh <target> <start|stop|restart|status|logs>
 
 Targets:
-  mysql, redis, mongo, kafka, observability
-  user, collector, ai, notification, core, all
+  mysql, redis, mongo, kafka, tei, qdrant, observability
+  user, collector, ai, notification, story, core, all
 EOF
 }
 
 services() {
   case "$1" in
-    mysql|redis|mongo|kafka) echo "$1" ;;
+    mysql|redis|mongo|kafka|qdrant) echo "$1" ;;
+    tei) echo "tei-embedding tei-reranker" ;;
     observability) echo "prometheus grafana" ;;
     user) echo "mysql redis" ;;
     collector) echo "mongo" ;;
     ai) echo "mongo kafka" ;;
     notification) echo "mongo redis kafka" ;;
+    story) echo "mongo kafka tei-embedding tei-reranker qdrant" ;;
     core) echo "mysql redis mongo kafka" ;;
-    all) echo "mysql redis mongo kafka prometheus grafana" ;;
+    all) echo "mysql redis mongo kafka tei-embedding tei-reranker qdrant prometheus grafana" ;;
     *) return 1 ;;
   esac
 }

@@ -1,9 +1,10 @@
 package me.rgunny.kachi.notification.routing.config
 
+import java.time.Clock
 import me.rgunny.kachi.notification.routing.adapter.outbound.messaging.KafkaNotificationRequestPublisher
 import me.rgunny.kachi.notification.routing.adapter.outbound.recipient.UserServiceRecipientReaderAdapter
+import me.rgunny.kachi.notification.routing.application.port.outbound.job.RoutingJobPersistencePort
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.NotificationRequestPublisherPort
-import me.rgunny.kachi.notification.routing.application.port.outbound.persistence.RoutingJobPersistencePort
 import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.RecipientReaderPort
 import me.rgunny.kachi.notification.routing.application.service.RouteNotificationService
 import me.rgunny.kachi.notification.routing.application.service.RoutingPolicy
@@ -13,7 +14,6 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.reactive.function.client.WebClient
 import tools.jackson.databind.json.JsonMapper
-import java.time.Clock
 
 /**
  * 라우팅 유스케이스와 outbound 어댑터(user-service 클라이언트, 접수 topic publisher)를 조립한다.

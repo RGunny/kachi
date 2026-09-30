@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.routing.fake
 
-import me.rgunny.kachi.notification.routing.application.port.outbound.persistence.RoutingJobPersistencePort
+import me.rgunny.kachi.notification.routing.application.port.outbound.job.RoutingJobPersistencePort
 import me.rgunny.kachi.notification.routing.domain.RoutingJob
 import me.rgunny.kachi.notification.routing.exception.routing.RoutingJobConflictException
 

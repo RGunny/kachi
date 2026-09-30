@@ -22,7 +22,7 @@ load_env "$ROOT/.env.$PROFILE"
 load_env "$ROOT/.env"
 export SPRING_PROFILES_ACTIVE="$PROFILE"
 
-SERVICES=(user-service collector-service ai-service notification-service notification-worker notification-routing)
+SERVICES=(user-service collector-service story-service ai-service notification-service notification-worker notification-routing)
 
 usage() {
   echo "Usage: [SPRING_PROFILES_ACTIVE=<profile>] ./scripts/app.sh <service|all> <start|stop|restart|status|logs>"

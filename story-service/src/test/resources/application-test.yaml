@@ -1,0 +1,46 @@
+spring:
+  mongodb:
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
+
+kachi:
+  story:
+    outbox:
+      relay:
+        enabled: false
+    inference:
+      embedding:
+        # 자리표시(StoryServiceTestContainersConfig의 stub 주소로 대체)
+        base-url: http://tei-embedding-test
+        connect-timeout: 1s
+        timeout: 5s
+        slow-after: 2s
+      judge:
+        # 자리표시(StoryServiceTestContainersConfig의 stub 주소로 대체)
+        base-url: http://tei-reranker-test
+        connect-timeout: 1s
+        timeout: 5s
+        slow-after: 2s
+    index:
+      # 자리표시(StoryServiceTestContainersConfig의 Qdrant 컨테이너 주소로 대체)
+      host: qdrant-test
+      grpc-port: 6334
+      timeout: 5s
+    jobs:
+      # 통합 테스트의 저장 상태를 scheduler가 건드리지 않게 끈다
+      close:
+        enabled: false
+      merge:
+        enabled: false
+      cleanup:
+        enabled: false
+    consumer:
+      # 테스트용 짧은 재시도 간격
+      retry:
+        initial-backoff: 100ms
+        max-backoff: 500ms
+    events:
+      enabled: false

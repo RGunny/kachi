@@ -19,7 +19,7 @@ import tools.jackson.databind.json.JsonMapper
 import java.time.Clock
 
 /**
- * LLM 호출 층을 조립한다. 층은 셋이고 전부 같은 포트 [LlmProviderPort]를 구현한다.
+ * LLM 호출 층을 조립하는 설정.
  *
  * - 전략 패턴: 후보 모델마다 그 제공자의 API 규격에 맞는 adapter를 만든다. adapter는 포트를 규격마다 하나씩
  *   구현하므로 위 층은 규격을 모른 채 다형성으로 부른다. 규격이 늘면 [adapter]의 분기와 adapter 클래스가 하나씩 는다.

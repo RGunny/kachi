@@ -1,0 +1,1 @@
+{"measuredAt":"2026-09-10T01:05:35.122254Z","jdkVersion":"21.0.12","jvmArch":"aarch64","hostProcessors":10,"dockerVersion":"29.7.2","dockerCpus":10,"dockerMemoryBytes":12526370816,"qdrantVersion":"1.19.1","qdrantImage":"qdrant/qdrant:v1.19.1","points":20000,"queries":2000,"batchSize":100,"topK":10,"repeats":3}

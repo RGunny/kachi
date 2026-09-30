@@ -1,6 +1,7 @@
 # 022. ai-service outbox와 이벤트 발행 보장
 
 이 outbox가 실제 broker까지 발행하는 계약은 ai-service의 `AiSummaryCycleIntegrationTest`가 검증한다(ADR 029).
+이 설계는 collector `CollectorOutbox`(ADR 032)와 story-service `StoryOutbox`(ADR 033)에서도 같은 형태로 쓴다.
 
 ## 배경
 
@@ -109,8 +110,8 @@ jitter는 인스턴스가 하나여도 필요하다.
 ### 실행 모델 (ADR 020)
 
 polling relay scheduler가 기본이자 복구 경로다. 
-같은 인스턴스의 tick 겹침은 Executor JVM lock, 다중 인스턴스는 claim CAS가 막는다. 즉, relay는 다중 인스턴스에 안전하다. 
-뉴스 요약·키워드 확장 tick은 여전히 JVM lock뿐이라 단일 인스턴스 전제이며(ADR 020 보류 유지), 분산 lock은 별도 단계에서 다룬다.
+같은 인스턴스의 tick 겹침은 실행 lock(`ExecutionLockPort`의 `INSTANCE` 범위, ADR 036), 다중 인스턴스는 claim CAS가 막는다. 즉, relay는 다중 인스턴스에 안전하다. 
+뉴스 요약·키워드 확장 tick은 `CLUSTER` 범위로 선언됐지만 현재 구현이 in-memory라 단일 인스턴스 전제이며(ADR 036), distributed lock 구현은 별도 단계에서 다룬다.
 
 `kachi.ai.outbox.relay.enabled`로 relay 전체를 끈다. 
 이 값은 scheduler만 막는 것이 아니라 relay 유스케이스·executor·scheduler 빈을 전부 만들지 않는다. 

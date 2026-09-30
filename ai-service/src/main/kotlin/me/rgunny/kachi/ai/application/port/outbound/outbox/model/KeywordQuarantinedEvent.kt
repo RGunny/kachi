@@ -8,7 +8,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * 키워드가 연속 실패로 격리됐다. 격리 상태로 넘어가는 전이에서만 만든다.
+ * 키워드가 연속 실패로 격리된 사건.
  */
 data class KeywordQuarantinedEvent(
     val quarantineId: UUID,

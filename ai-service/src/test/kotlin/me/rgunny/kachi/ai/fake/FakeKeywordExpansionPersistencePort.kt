@@ -1,6 +1,6 @@
 package me.rgunny.kachi.ai.fake
 
-import me.rgunny.kachi.ai.application.port.outbound.persistence.KeywordExpansionPersistencePort
+import me.rgunny.kachi.ai.application.port.outbound.keyword.KeywordExpansionPersistencePort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.KeywordExpansion
 import me.rgunny.kachi.ai.domain.llm.PromptVersion

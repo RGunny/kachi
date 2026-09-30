@@ -7,7 +7,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * 기사 한 건이 저장됐다. 기사 내용을 다 실어 소비자가 이 서비스의 저장소나 API를 부르지 않게 한다.
+ * 기사 한 건이 저장된 사건.
  *
  * 기사는 저장 후 바뀌지 않으므로 이벤트 키와 파티션 키가 모두 기사 id다.
  * topic이 기사 id로 compaction되면 기사당 최신 1건이 남아 전체 재처리가 가능하다.

@@ -109,7 +109,7 @@ class NotificationWorkerMetrics(
         elapsed: Duration,
     ) {
         val metricResult = senderResult(result)
-        // 상세 외부 오류 코드는 tag로 쓰지 않는다.
+        // 상세 외부 에러 코드는 tag로 쓰지 않는다.
         // cardinality가 제한된 core FailureCategory만 운영 분류로 사용한다.
         val failureCategory = when (result) {
             is SendNotificationResult.Success -> NotificationWorkerMetricContract.TagValues.NONE

@@ -7,7 +7,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * 뉴스 요약이 새로 만들어졌다. 요약 본문까지 실어 소비자가 요약을 다시 읽지 않게 한다.
+ * 뉴스 요약이 새로 만들어진 사건.
  */
 data class SummaryCreatedEvent(
     val summaryId: UUID,

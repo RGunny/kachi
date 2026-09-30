@@ -3,7 +3,7 @@ package me.rgunny.kachi.ai.application.service.news
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 
 /**
- * [abortsRun]은 이 실패가 남은 키워드까지 확정적으로 막는 상태인지를 나타낸다.
+ * 키워드 하나의 실패 결과.
  * 호출할 수 있는 모델이 하나도 없어 실제 호출이 나가지 않았을 때 참이고, 이번 실행은 남은 키워드를 호출하지 않고 건너뛴다.
  */
 internal data class FailedKeywordOutcome(

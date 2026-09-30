@@ -1,0 +1,20 @@
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/kachi_story?replicaSet=rs0
+    representation:
+      uuid: standard
+  data:
+    mongodb:
+      auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
+
+kachi:
+  story:
+    inference:
+      embedding:
+        timeout: 30s
+        slow-after: 15s
+      judge:
+        timeout: 30s
+        slow-after: 15s

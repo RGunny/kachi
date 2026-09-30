@@ -1,8 +1,13 @@
 package me.rgunny.kachi.ai.config
 
+import java.time.Clock
+import java.util.function.Supplier
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
+import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
-import me.rgunny.kachi.ai.application.port.outbound.persistence.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.fake.FakeAiOutboxPersistencePort
 import me.rgunny.kachi.ai.fake.FakeAiOutboxPublisherPort
 import me.rgunny.kachi.ai.fixture.AiTestFixture
@@ -11,11 +16,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.BeansException
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource
-import java.time.Clock
-import java.util.function.Supplier
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 @DisplayName("AiOutboxRelayConfig")
 class AiOutboxRelayConfigTest {

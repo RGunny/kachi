@@ -1,6 +1,8 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.application.port.outbound.messaging.model.NotificationDispatchMessage
+import java.time.Clock
+import java.time.Instant
+import me.rgunny.kachi.notification.application.port.inbound.admin.NotificationAdminUseCase
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.DeadNotificationQuery
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationAdminResult
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationHistoryQuery
@@ -9,16 +11,14 @@ import me.rgunny.kachi.notification.application.port.inbound.admin.model.Notific
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.NotificationSummary
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.RecoverDeadNotificationCommand
 import me.rgunny.kachi.notification.application.port.inbound.admin.model.RecoverDeadNotificationResult
-import me.rgunny.kachi.notification.application.port.inbound.admin.NotificationAdminUseCase
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationAdminPersistencePort
 import me.rgunny.kachi.notification.application.port.outbound.messaging.NotificationEventSerializer
-import me.rgunny.kachi.notification.application.port.outbound.persistence.NotificationPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.messaging.model.NotificationDispatchMessage
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationAdminPersistencePort
+import me.rgunny.kachi.notification.application.port.outbound.notification.NotificationPersistencePort
 import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.exception.InvalidNotificationStateException
 import me.rgunny.kachi.notification.exception.NotificationNotFoundException
-import java.time.Clock
-import java.time.Instant
 
 /**
  * Notification 현재 상태 document 운영 기능을 담당하는 application service.

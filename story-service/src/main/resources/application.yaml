@@ -1,0 +1,138 @@
+spring:
+  application:
+    name: story-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mongodb:
+    representation:
+      uuid: standard
+  kafka:
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        acks: all
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+
+server:
+  port: 8087
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+
+kachi:
+  story:
+    outbox:
+      relay:
+        enabled: true
+        publisher-id: ${HOSTNAME:story-service-${random.uuid}}
+        fixed-delay: 5s
+        initial-delay: 15s
+        batch-size: 50
+        # 발행 중인 행을 죽은 것으로 보고 회수하기까지의 시간(producer max.block + delivery 15s보다 길게)
+        publishing-visibility-timeout: 60s
+        retry:
+          max-attempts: 5
+          base-delay: 1s
+          max-delay: 1m
+          multiplier: 2.0
+    inference:
+      embedding:
+        model: BGE_M3
+        base-url: ${KACHI_STORY_TEI_EMBEDDING_BASE_URL:http://localhost:8090}
+        connect-timeout: 2s
+        timeout: 10s
+        # 서킷의 slow call duration threshold(timeout 미만)
+        slow-after: 5s
+        # 요청당 입력 수(서버 max_client_batch_size 이하, 기동 probe 대조)
+        batch-size: 32
+      judge:
+        kind: BGE_RERANKER_V2_M3
+        base-url: ${KACHI_STORY_TEI_RERANKER_BASE_URL:http://localhost:8091}
+        connect-timeout: 2s
+        timeout: 10s
+        slow-after: 5s
+      # embedding·judge TEI 서버가 공유하는 서킷 정책
+      circuit-breaker:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+    index:
+      host: ${KACHI_STORY_QDRANT_HOST:localhost}
+      grpc-port: ${KACHI_STORY_QDRANT_GRPC_PORT:6334}
+      tls: false
+      timeout: 5s
+      # 컬렉션 이름 = <collection-prefix>-<임베딩 모델 code>
+      collection-prefix: story-articles
+    assembly:
+      theta-high: 0.70
+      theta-low: 0.60
+      # TEI rerank sigmoid 공간(0~1)의 값
+      theta-judge: 0.30
+      # 후보 검색 top-k
+      candidate-limit: 10
+      # 후보 story마다 비교하는 최근 기사 수
+      recent-articles: 5
+      # 후보 검색 창(색인 보관 창과 동일)
+      candidate-window: 72h
+      # 병합 대상 story의 기사 수 상한
+      max-articles: 500
+      # story 갱신 경합에서 검색부터 다시 하는 횟수
+      max-cas-retries: 3
+    jobs:
+      close:
+        enabled: true
+        interval: 10m
+        initial-delay: 1m
+        # 마지막 기사 발행 시각부터 닫기까지의 시간
+        close-after: 48h
+        # tick 한 번에 닫는 story 수 상한
+        batch-limit: 100
+      merge:
+        enabled: true
+        interval: 10m
+        initial-delay: 2m
+        # 연 시각부터 병합 스캔 대상에서 빠지기까지의 시간
+        scan-window: 24h
+        # tick 한 번에 스캔하는 story 수 상한
+        scan-limit: 200
+      cleanup:
+        enabled: true
+        interval: 1h
+        initial-delay: 5m
+    consumer:
+      group-id: story-service
+      auto-offset-reset: earliest
+      concurrency: 1
+      # poll 한 번의 레코드 수(처리 시간 + max-backoff < max.poll.interval.ms 5분)
+      max-poll-records: 10
+      topics:
+        news-collected: collector.news.collected
+      dlt:
+        # 기사 결함(payload·schemaVersion·TEI INPUT 거부) 전용
+        topic: story.assembly.dlt
+      # 서버·구성·경합 실패의 같은 offset 재처리 간격(횟수 상한 없음)
+      retry:
+        initial-backoff: 1s
+        max-backoff: 30s
+        multiplier: 2.0
+    events:
+      enabled: true
+      topics:
+        article-attached: story.article.attached
+        merged: story.merged
+      # delete 정책의 보존 기간
+      retention: 30d

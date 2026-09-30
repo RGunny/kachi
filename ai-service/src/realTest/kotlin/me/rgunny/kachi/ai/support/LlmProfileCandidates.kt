@@ -24,7 +24,7 @@ import tools.jackson.module.kotlin.KotlinModule
 import java.time.Clock
 
 /**
- * 프로파일 하나의 LLM 설정을 Spring 컨텍스트 없이 바인딩하고, 운영과 같은 조립으로 후보 모델을 만든다.
+ * 프로파일 하나의 LLM 설정을 Spring 컨텍스트 없이 바인딩하고, 운영과 같은 조립으로 후보 모델을 만드는 헬퍼.
  *
  * 설정은 `application.yaml` 위에 `application-<profile>.yaml`을 덮은 것이고(`default`는 기본 yaml만), `${ENV}` 자리표시는
  * 환경변수와 env 파일([TestSecretEnvironment])로 푼다. [LlmProperties]의 검증을 그대로 지나므로 secret이 없으면 여기서 실패한다.

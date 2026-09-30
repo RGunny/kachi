@@ -6,7 +6,7 @@ import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockSco
 import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockTarget
 
 /**
- * 실행 단위가 선언한 범위에 맞는 lock 구현으로 넘긴다.
+ * 실행 단위가 선언한 범위에 맞는 lock 구현으로 넘기는 라우터.
  *
  * 호출자는 자기 작업의 범위를 알지만 그 범위를 무엇이 구현하는지는 모른다.
  * 범위마다 저장소가 달라져도 바뀌는 것은 이 연결뿐이고, executor와 진입점은 그대로다.

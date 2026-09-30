@@ -15,7 +15,7 @@ abstract class AiException(
     companion object {
 
         /**
-         * 오류 코드와 선택적 상세를 외부 노출 메시지 포맷으로 조립한다.
+         * 에러 코드와 선택적 상세를 외부 노출 메시지 포맷으로 조립한다.
          *
          * 상세는 status나 응답 body처럼 호출 시점에만 알 수 있는 값이라 코드에 담을 수 없다.
          */

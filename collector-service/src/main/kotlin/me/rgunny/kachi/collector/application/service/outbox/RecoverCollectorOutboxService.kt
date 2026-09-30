@@ -1,21 +1,21 @@
 package me.rgunny.kachi.collector.application.service.outbox
 
+import java.time.Clock
+import java.time.Instant
 import me.rgunny.kachi.collector.application.exception.CollectorOutboxNotFoundException
 import me.rgunny.kachi.collector.application.exception.CollectorOutboxNotRecoverableException
 import me.rgunny.kachi.collector.application.port.inbound.outbox.RecoverCollectorOutboxUseCase
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.CollectorOutboxSummary
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.RecoverCollectorOutboxCommand
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.RecoverCollectorOutboxResult
-import me.rgunny.kachi.collector.application.port.outbound.persistence.CollectorOutboxPersistencePort
+import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxStatus
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.time.Clock
-import java.time.Instant
 
 /**
- * DEAD로 남은 행을 다시 발행 대상으로 되돌린다.
+ * DEAD로 남은 행을 다시 발행 대상으로 되돌리는 유스케이스.
  *
  * 상태 전이만 하고 발행은 하지 않는다. 되돌린 행은 relay가 다음 tick에 가져간다.
  * 저장은 조건부 쓰기라, 조회와 저장 사이에 다른 복구가 끝났으면 이 요청은 실패로 끝난다.

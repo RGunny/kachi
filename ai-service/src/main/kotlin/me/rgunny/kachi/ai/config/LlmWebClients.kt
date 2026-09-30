@@ -8,7 +8,7 @@ import reactor.netty.http.client.HttpClient
 import java.time.Duration
 
 /**
- * LLM 호출용 WebClient를 두 층으로 만든다.
+ * LLM 호출용 WebClient를 두 층으로 만드는 팩토리.
  *
  * 제공자 WebClient에는 제공자의 값(주소·연결 timeout·인증 헤더·응답 크기 상한)이 있고,
  * 모델 WebClient는 그것을 복제해 모델의 값(응답 timeout)만 덧붙인 것이다.

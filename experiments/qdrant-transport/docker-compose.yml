@@ -1,0 +1,19 @@
+name: kachi-experiment
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    container_name: kachi-experiment-qdrant-transport
+    ports:
+      - "${QDRANT_TRANSPORT_EXPERIMENT_PORT:-6343}:6333"
+      - "${QDRANT_TRANSPORT_EXPERIMENT_GRPC_PORT:-6344}:6334"
+    volumes:
+      - qdrant-transport-data:/qdrant/storage
+    networks:
+      - experiment-network
+
+volumes:
+  qdrant-transport-data:
+
+networks:
+  experiment-network:
