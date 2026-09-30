@@ -1,15 +1,18 @@
-package me.rgunny.kachi.collector.adapter.outbound.client.finnhub
+package me.rgunny.kachi.collector.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
-@ConfigurationProperties(prefix = "kachi.collector.providers.finnhub")
-data class FinnhubNewsProperties(
+@ConfigurationProperties(prefix = "kachi.collector.providers.naver")
+data class NaverNewsProperties(
     val enabled: Boolean,
     val baseUrl: String,
-    val companyNewsPath: String,
-    val apiKey: String,
-    val lookbackDays: Long,
+    val newsSearchPath: String,
+    val clientId: String,
+    val clientSecret: String,
+    val display: Int,
+    val start: Int,
+    val sort: String,
     val connectTimeout: Duration,
     val responseTimeout: Duration,
     val readTimeout: Duration,

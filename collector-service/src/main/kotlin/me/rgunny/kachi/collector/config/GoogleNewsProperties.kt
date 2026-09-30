@@ -1,18 +1,15 @@
-package me.rgunny.kachi.collector.adapter.outbound.client.naver
+package me.rgunny.kachi.collector.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 
-@ConfigurationProperties(prefix = "kachi.collector.providers.naver")
-data class NaverNewsProperties(
+@ConfigurationProperties(prefix = "kachi.collector.providers.google")
+data class GoogleNewsProperties(
     val enabled: Boolean,
     val baseUrl: String,
-    val newsSearchPath: String,
-    val clientId: String,
-    val clientSecret: String,
-    val display: Int,
-    val start: Int,
-    val sort: String,
+    val rssSearchPath: String,
+    val languageCode: String,
+    val countryCode: String,
     val connectTimeout: Duration,
     val responseTimeout: Duration,
     val readTimeout: Duration,

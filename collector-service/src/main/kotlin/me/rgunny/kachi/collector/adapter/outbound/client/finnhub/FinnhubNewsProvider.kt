@@ -5,6 +5,7 @@ import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedA
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.config.FinnhubNewsProperties
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Clock
 import java.time.Instant

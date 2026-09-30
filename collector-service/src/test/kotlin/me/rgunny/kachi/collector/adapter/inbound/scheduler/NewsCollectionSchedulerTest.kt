@@ -10,6 +10,7 @@ import me.rgunny.kachi.collector.domain.CollectionRunId
 import me.rgunny.kachi.collector.domain.CollectionRunStatus
 import me.rgunny.kachi.collector.domain.CollectionTargetType
 import me.rgunny.kachi.collector.fixture.CollectorTestFixture
+import me.rgunny.kachi.collector.config.NewsCollectionSchedulerProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration

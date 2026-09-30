@@ -4,8 +4,8 @@ import jakarta.annotation.PostConstruct
 import me.rgunny.kachi.collector.adapter.inbound.collection.NewsCollectionExecutionResult
 import me.rgunny.kachi.collector.adapter.inbound.collection.NewsCollectionExecutor
 import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectNewsCommand
+import me.rgunny.kachi.collector.config.NewsCollectionSchedulerProperties
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component
  * 실제 중복 실행 방지와 유스케이스 호출은 NewsCollectionExecutor에 위임한다.
  */
 @Component
-@EnableConfigurationProperties(NewsCollectionSchedulerProperties::class)
 class NewsCollectionScheduler(
     private val executor: NewsCollectionExecutor,
     private val properties: NewsCollectionSchedulerProperties

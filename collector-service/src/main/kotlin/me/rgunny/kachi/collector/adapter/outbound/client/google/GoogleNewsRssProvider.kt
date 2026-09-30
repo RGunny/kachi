@@ -6,6 +6,7 @@ import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedA
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.config.GoogleNewsProperties
 import org.springframework.web.reactive.function.client.WebClient
 import org.w3c.dom.Element
 import java.io.ByteArrayInputStream

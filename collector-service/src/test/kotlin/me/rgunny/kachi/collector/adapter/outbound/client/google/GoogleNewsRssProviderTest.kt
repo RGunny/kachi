@@ -3,6 +3,7 @@ package me.rgunny.kachi.collector.adapter.outbound.client.google
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.config.GoogleNewsProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

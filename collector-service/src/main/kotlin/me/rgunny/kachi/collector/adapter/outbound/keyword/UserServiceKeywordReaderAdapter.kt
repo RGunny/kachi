@@ -5,6 +5,7 @@ import me.rgunny.kachi.collector.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.collector.application.exception.KeywordReaderException
 import me.rgunny.kachi.collector.application.port.outbound.keyword.KeywordReaderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
+import me.rgunny.kachi.collector.config.UserServiceKeywordProperties
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.web.reactive.function.client.WebClient
 

@@ -1,4 +1,4 @@
-package me.rgunny.kachi.collector.adapter.outbound.keyword
+package me.rgunny.kachi.collector.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration

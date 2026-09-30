@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.collector.application.exception.KeywordReaderException
 import me.rgunny.kachi.collector.domain.CollectedKeyword
+import me.rgunny.kachi.collector.config.UserServiceKeywordProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

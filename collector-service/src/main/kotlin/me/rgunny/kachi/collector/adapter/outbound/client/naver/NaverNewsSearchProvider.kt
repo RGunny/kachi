@@ -7,6 +7,7 @@ import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
 import org.springframework.web.reactive.function.client.WebClient
 import me.rgunny.kachi.collector.adapter.outbound.client.HtmlText
+import me.rgunny.kachi.collector.config.NaverNewsProperties
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
