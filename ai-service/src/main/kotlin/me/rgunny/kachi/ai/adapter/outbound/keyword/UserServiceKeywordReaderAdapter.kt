@@ -5,6 +5,7 @@ import me.rgunny.kachi.ai.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.ai.application.exception.KeywordReaderException
 import me.rgunny.kachi.ai.application.port.outbound.keyword.KeywordReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.config.UserServiceKeywordProperties
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component

@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.adapter.inbound.scheduler
+package me.rgunny.kachi.ai.config
 
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
 import org.springframework.boot.context.properties.ConfigurationProperties

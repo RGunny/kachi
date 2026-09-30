@@ -8,6 +8,7 @@ import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryExecutor
 import me.rgunny.kachi.ai.application.port.inbound.story.model.SummarizeDueStoriesCommand
 import me.rgunny.kachi.ai.fake.RecordingSummarizeDueStoriesUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
+import me.rgunny.kachi.ai.config.AiStorySummarySchedulerProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 

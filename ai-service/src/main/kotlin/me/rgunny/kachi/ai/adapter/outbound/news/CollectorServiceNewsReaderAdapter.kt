@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.application.exception.NewsReaderException
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.NewsReaderPort
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
+import me.rgunny.kachi.ai.config.CollectorServiceNewsProperties
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Component

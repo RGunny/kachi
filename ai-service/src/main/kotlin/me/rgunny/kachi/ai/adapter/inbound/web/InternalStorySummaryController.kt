@@ -1,7 +1,7 @@
 package me.rgunny.kachi.ai.adapter.inbound.web
 
 import java.util.UUID
-import me.rgunny.kachi.ai.adapter.inbound.scheduler.AiStorySummarySchedulerProperties
+import me.rgunny.kachi.ai.config.AiStorySummarySchedulerProperties
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryLockUnavailable

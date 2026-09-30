@@ -5,6 +5,7 @@ import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryAlreadyRunning
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryStarted
+import me.rgunny.kachi.ai.config.AiStorySummarySchedulerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

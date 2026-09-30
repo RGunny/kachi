@@ -129,7 +129,6 @@ class ArchitectureTest {
             .should().resideInAPackage("..adapter.outbound.persistence..")
             .allowEmptyShould(true)
 
-        @ArchIgnore(reason = "adapter 패키지에 @ConfigurationProperties(UserServiceKeywordProperties, Ai*SchedulerProperties 등)가 남아 있다. config/로 옮긴 뒤 활성화한다")
         @ArchTest
         @JvmField
         val configuration_properties_only_in_config: ArchRule = classes()

@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryExecutor
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.news.AiNewsSummaryStarted
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
+import me.rgunny.kachi.ai.config.AiNewsSummarySchedulerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

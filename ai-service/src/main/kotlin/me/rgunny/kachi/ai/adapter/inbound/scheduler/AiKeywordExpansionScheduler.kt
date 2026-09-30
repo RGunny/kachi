@@ -6,6 +6,7 @@ import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionExecutor
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionLockUnavailable
 import me.rgunny.kachi.ai.adapter.inbound.keyword.AiKeywordExpansionStarted
 import me.rgunny.kachi.ai.application.port.inbound.keyword.model.ExpandKeywordsCommand
+import me.rgunny.kachi.ai.config.AiKeywordExpansionSchedulerProperties
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

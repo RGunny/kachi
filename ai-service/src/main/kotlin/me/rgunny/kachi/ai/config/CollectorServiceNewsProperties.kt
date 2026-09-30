@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.adapter.outbound.news
+package me.rgunny.kachi.ai.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration

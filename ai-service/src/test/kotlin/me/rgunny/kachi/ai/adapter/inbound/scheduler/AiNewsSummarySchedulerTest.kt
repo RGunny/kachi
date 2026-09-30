@@ -8,6 +8,7 @@ import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWi
 import me.rgunny.kachi.ai.fake.FailingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fake.RecordingSummarizeNewsUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
+import me.rgunny.kachi.ai.config.AiNewsSummarySchedulerProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration

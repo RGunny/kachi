@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.adapter.inbound.scheduler
+package me.rgunny.kachi.ai.config
 
 import me.rgunny.kachi.ai.application.port.inbound.news.model.SummarizeNewsCommand
 import me.rgunny.kachi.ai.application.port.inbound.news.model.WatermarkSummaryWindowRequest

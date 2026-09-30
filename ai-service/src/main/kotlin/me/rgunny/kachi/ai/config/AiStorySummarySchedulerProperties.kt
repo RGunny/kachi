@@ -1,4 +1,4 @@
-package me.rgunny.kachi.ai.adapter.inbound.scheduler
+package me.rgunny.kachi.ai.config
 
 import java.time.Duration
 import me.rgunny.kachi.ai.application.port.inbound.story.model.SummarizeDueStoriesCommand
