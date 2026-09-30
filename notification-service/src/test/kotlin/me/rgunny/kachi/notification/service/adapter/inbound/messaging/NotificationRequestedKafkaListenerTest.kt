@@ -6,8 +6,8 @@ import me.rgunny.kachi.notification.application.port.inbound.request.model.Reque
 import me.rgunny.kachi.notification.application.port.inbound.request.RequestNotificationUseCase
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract
-import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetrics
+import me.rgunny.kachi.notification.service.adapter.monitoring.NotificationServiceMetricContract
+import me.rgunny.kachi.notification.service.adapter.monitoring.NotificationServiceMetrics
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.json.JsonMapper

@@ -29,7 +29,6 @@ class ArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAPackage("me.rgunny.kachi.notification.application.service..")
 
-        @ArchIgnore(reason = "inbound 리스너가 adapter.outbound.monitoring의 메트릭 기록기를 직접 주입받는다(17건). 기록기를 공통 계측 패키지로 옮기거나 포트로 감싼 뒤 활성화한다")
         @ArchTest
         @JvmField
         val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()
@@ -37,7 +36,6 @@ class ArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAPackage("..worker.adapter.outbound..")
 
-        @ArchIgnore(reason = "monitoring이 recipient의 RecipientResolveSource를 참조한다(3건). RecipientResolveSource를 포트 모델로 올린 뒤 활성화한다")
         @ArchTest
         @JvmField
         val outbound_adapters_do_not_depend_on_each_other: ArchRule = slices()

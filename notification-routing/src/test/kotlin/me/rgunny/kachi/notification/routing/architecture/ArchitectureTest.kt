@@ -56,7 +56,6 @@ class ArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAnyPackage("..routing.application.service..", "..routing.adapter..")
 
-        @ArchIgnore(reason = "inbound 리스너가 adapter.outbound.monitoring의 메트릭 기록기를 직접 주입받는다(14건). 기록기를 공통 계측 패키지로 옮기거나 포트로 감싼 뒤 활성화한다")
         @ArchTest
         @JvmField
         val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()

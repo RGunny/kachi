@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.contract.AiKeywordQuarantinedEvent
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.RouteQuarantineNotificationUseCase
 import me.rgunny.kachi.notification.routing.domain.RoutingJobKind
-import me.rgunny.kachi.notification.routing.adapter.outbound.monitoring.NotificationRoutingMetrics
+import me.rgunny.kachi.notification.routing.adapter.monitoring.NotificationRoutingMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.messaging.handler.annotation.Payload

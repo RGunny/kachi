@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.worker.adapter.outbound.monitoring
+package me.rgunny.kachi.notification.worker.adapter.monitoring
 
 import io.micrometer.core.instrument.MeterRegistry
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.DispatchFailureClassification
@@ -11,7 +11,7 @@ import me.rgunny.kachi.notification.application.port.outbound.recipient.model.Un
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientResolveSource
+import me.rgunny.kachi.notification.worker.adapter.monitoring.RecipientResolveSource
 import org.springframework.stereotype.Component
 import java.time.Duration
 

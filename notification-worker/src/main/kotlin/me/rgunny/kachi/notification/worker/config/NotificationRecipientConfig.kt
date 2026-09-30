@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.worker.config
 
 import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.CachedRecipientResolver
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientAddressCache
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RedisRecipientAddressCache

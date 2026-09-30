@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.routing.adapter.outbound.monitoring
+package me.rgunny.kachi.notification.routing.adapter.monitoring
 
 /**
  * notification-routing이 발행하는 metric의 안정적인 운영 계약.

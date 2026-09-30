@@ -6,8 +6,8 @@ import me.rgunny.kachi.notification.routing.application.port.inbound.routing.mod
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationOutcome
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationResult
 import me.rgunny.kachi.notification.routing.domain.RoutingJobId
-import me.rgunny.kachi.notification.routing.adapter.outbound.monitoring.NotificationRoutingMetricContract
-import me.rgunny.kachi.notification.routing.adapter.outbound.monitoring.NotificationRoutingMetrics
+import me.rgunny.kachi.notification.routing.adapter.monitoring.NotificationRoutingMetricContract
+import me.rgunny.kachi.notification.routing.adapter.monitoring.NotificationRoutingMetrics
 import me.rgunny.kachi.notification.routing.support.RoutingTestFixture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test

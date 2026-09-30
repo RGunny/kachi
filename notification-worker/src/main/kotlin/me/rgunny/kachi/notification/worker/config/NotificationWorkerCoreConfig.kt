@@ -17,7 +17,7 @@ import me.rgunny.kachi.notification.application.service.NotificationSenderRouter
 import me.rgunny.kachi.notification.application.service.PersistNotificationDltMessageService
 import me.rgunny.kachi.notification.application.service.RecoverStaleProcessingDispatchService
 import me.rgunny.kachi.notification.domain.retry.RetryPolicy
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.adapter.outbound.sender.MeteredNotificationSender
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean

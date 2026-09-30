@@ -1,10 +1,10 @@
-package me.rgunny.kachi.notification.service.adapter.outbound.monitoring
+package me.rgunny.kachi.notification.service.adapter.monitoring
 
 import io.micrometer.core.instrument.MeterRegistry
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.PublishNotificationDispatchResult
 import me.rgunny.kachi.notification.application.port.inbound.request.model.RequestNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
-import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract.RequestSource
+import me.rgunny.kachi.notification.service.adapter.monitoring.NotificationServiceMetricContract.RequestSource
 import org.springframework.stereotype.Component
 import java.time.Duration
 

@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.scheduler
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.RecoverStaleProcessingDispatchUseCase
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled

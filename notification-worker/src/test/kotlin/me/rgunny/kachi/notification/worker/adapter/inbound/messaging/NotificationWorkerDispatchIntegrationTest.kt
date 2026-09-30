@@ -3,7 +3,7 @@ package me.rgunny.kachi.notification.worker.adapter.inbound.messaging
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetricContract
 import me.rgunny.kachi.notification.worker.fake.FakeAcknowledgment
 import me.rgunny.kachi.notification.worker.fixture.NotificationWorkerDispatchFixture
 import me.rgunny.kachi.notification.worker.support.TestVendorResponse

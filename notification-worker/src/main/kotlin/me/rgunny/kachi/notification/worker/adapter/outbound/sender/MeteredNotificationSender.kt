@@ -5,7 +5,7 @@ import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendN
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.domain.NotificationChannel
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import java.time.Duration
 
 /**

@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.routing.adapter.outbound.monitoring
+package me.rgunny.kachi.notification.routing.adapter.monitoring
 
 import io.micrometer.core.instrument.MeterRegistry
 import me.rgunny.kachi.notification.routing.application.port.inbound.routing.model.RouteNotificationOutcome

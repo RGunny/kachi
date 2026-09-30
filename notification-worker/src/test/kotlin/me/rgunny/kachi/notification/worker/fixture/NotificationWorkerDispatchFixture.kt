@@ -9,7 +9,7 @@ import me.rgunny.kachi.notification.domain.Notification
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.NotificationDispatchKafkaListener
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.config.DiscordNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.MockNotificationSenderConfig
 import me.rgunny.kachi.notification.worker.config.NotificationDispatchProperties

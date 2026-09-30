@@ -4,8 +4,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.CancellationException
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.model.RecoverStaleProcessingDispatchResult
 import me.rgunny.kachi.notification.application.port.inbound.dispatch.RecoverStaleProcessingDispatchUseCase
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetricContract
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetricContract
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Instant

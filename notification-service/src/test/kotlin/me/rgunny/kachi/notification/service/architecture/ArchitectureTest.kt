@@ -2,7 +2,6 @@ package me.rgunny.kachi.notification.service.architecture
 
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.junit.AnalyzeClasses
-import com.tngtech.archunit.junit.ArchIgnore
 import com.tngtech.archunit.junit.ArchTest
 import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
@@ -29,7 +28,6 @@ class ArchitectureTest {
             .should().dependOnClassesThat()
             .resideInAPackage("me.rgunny.kachi.notification.application.service..")
 
-        @ArchIgnore(reason = "inbound 리스너와 컨트롤러가 adapter.outbound.monitoring의 메트릭 기록기를 직접 주입받는다(22건). 기록기를 공통 계측 패키지로 옮기거나 포트로 감싼 뒤 활성화한다")
         @ArchTest
         @JvmField
         val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()

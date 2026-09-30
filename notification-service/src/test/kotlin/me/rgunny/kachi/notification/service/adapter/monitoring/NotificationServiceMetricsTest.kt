@@ -1,4 +1,4 @@
-package me.rgunny.kachi.notification.service.adapter.outbound.monitoring
+package me.rgunny.kachi.notification.service.adapter.monitoring
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -8,7 +8,7 @@ import me.rgunny.kachi.notification.application.port.inbound.request.model.Reque
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
-import me.rgunny.kachi.notification.service.adapter.outbound.monitoring.NotificationServiceMetricContract.RequestSource
+import me.rgunny.kachi.notification.service.adapter.monitoring.NotificationServiceMetricContract.RequestSource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
