@@ -2,6 +2,8 @@ package me.rgunny.kachi.ai.adapter.outbound.llm
 
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetadata
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
@@ -25,7 +27,8 @@ import kotlin.time.measureTimedValue
  * 프로파일의 후보 모델을 실제 제공자에 불러 확인하는 테스트 본문.
  *
  * 모델마다 제공자의 모델 목록에 code가 있는지(토큰 0), 후보로 오른 용도마다 생성 1회가 계약대로 돌아오는지 본다.
- * Ollama는 tag가 이동 alias라 digest도 남긴다. 서버나 secret이 없으면 skip하지 않고 실패한다.
+ * Ollama 모델은 digest도 남긴다(tag는 이동 alias).
+ * 서버나 secret이 없으면 skip하지 않고 실패한다.
  * 프로파일은 시스템 프로퍼티 `kachi.llm.profile`이고 없으면 local이다.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -80,6 +83,7 @@ abstract class LlmVerification(
             runBlocking {
                 when (use) {
                     LlmUse.NEWS_SUMMARY -> summarize(guarded)
+                    LlmUse.STORY_SUMMARY -> summarizeStory(guarded)
                     LlmUse.KEYWORD_EXPANSION -> expand(guarded)
                 }
             }
@@ -106,6 +110,19 @@ abstract class LlmVerification(
         )
     }
 
+    private suspend fun summarizeStory(guarded: GuardedLlmModel): Generated {
+        val result = guarded.summarizeStory(
+            keywords = listOf(AiTestFixture.keyword()),
+            previousSummary = PREVIOUS_STORY_SUMMARY,
+            articles = STORY_ARTICLES
+        )
+
+        return Generated(
+            metadata = result.metadata,
+            outcome = "developmentKind=${result.developmentKind} sentiment=${result.sentiment} title=\"${result.title}\""
+        )
+    }
+
     private suspend fun expand(guarded: GuardedLlmModel): Generated {
         val result = guarded.expandKeyword(keyword = AiTestFixture.keyword(), maxExpansions = MAX_EXPANSIONS)
 
@@ -116,7 +133,9 @@ abstract class LlmVerification(
     }
 
     /**
-     * OpenAI 규격 목록에는 digest가 없어 Ollama 고유 API로 묻는다. 규격 경로(`/v1`)를 뗀 주소다.
+     * Ollama 고유 tags API로 모델의 digest를 묻는다(OpenAI 규격 목록에는 digest 없음).
+     *
+     * 주소는 base-url에서 규격 경로(`/v1`)를 뗀 것이다.
      */
     private fun ollamaDigest(model: LlmModel): String {
         val baseUrl = candidates.properties.providerOf(model).baseUrl.removeSuffix("/").removeSuffix(OPENAI_PATH_PREFIX)
@@ -144,7 +163,9 @@ abstract class LlmVerification(
     }
 
     /**
-     * 생성 1회의 결과. [outcome]은 보고에만 쓴다.
+     * 생성 1회의 결과.
+     *
+     * [outcome]은 보고 줄에 붙는 결과 요약 문자열이다.
      */
     private data class Generated(
         val metadata: LlmGenerationMetadata,
@@ -159,7 +180,21 @@ abstract class LlmVerification(
         const val OLLAMA_TAGS_PATH = "/api/tags"
         const val MAX_EXPANSIONS = 3
 
-        /** 요약 입력. 어느 모델이든 답할 수 있는 흔한 키워드의 헤드라인 세 개다. */
+        /** 직전 요약이 있는 사건에 후속 기사 하나가 붙은 story 요약 입력의 직전 요약. */
+        val PREVIOUS_STORY_SUMMARY = PreviousStorySummary(
+            title = "NVIDIA, 데이터센터 매출 신기록",
+            content = "NVIDIA가 AI 수요 확대로 데이터센터 부문에서 기록적인 매출을 보고했다."
+        )
+        val STORY_ARTICLES = listOf(
+            StorySummaryArticle(
+                source = "GOOGLE",
+                title = "NVIDIA raises full-year guidance after record quarter",
+                excerpt = "Following record data center revenue, NVIDIA raised its full-year revenue guidance above analyst expectations.",
+                publishedAt = AiTestFixture.NOW
+            )
+        )
+
+        /** 흔한 키워드의 헤드라인 세 개로 이루어진 뉴스 요약 입력. */
         val ARTICLES = listOf(
             AiTestFixture.newsArticle(
                 id = UUID.fromString("018f0000-0000-7000-8000-000000000101"),

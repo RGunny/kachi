@@ -12,7 +12,7 @@ import me.rgunny.kachi.ai.domain.keyword.AiKeyword
  * [plan]은 [order]의 첫 후보에서 나온다.
  * 선조회 키는 promptVersion만 쓰므로 failover로 다른 모델이 요약해도 키는 그대로다.
  */
-internal class RoutingPreparedNewsSummary(
+class RoutingPreparedNewsSummary(
     override val plan: LlmNewsSummaryPlan,
     private val router: RoutingLlmProvider,
     private val order: List<LlmProviderCandidate>

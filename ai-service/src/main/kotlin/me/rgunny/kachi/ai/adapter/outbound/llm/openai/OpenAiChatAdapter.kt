@@ -9,7 +9,12 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetad
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryPlan
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmStorySummaryPlan
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmStorySummaryResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
@@ -19,6 +24,7 @@ import me.rgunny.kachi.ai.domain.llm.LlmFailureCode
 import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmPrompt
 import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
+import me.rgunny.kachi.ai.domain.llm.StorySummaryPrompt
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import org.springframework.http.HttpHeaders
 import org.springframework.web.reactive.function.client.ClientResponse
@@ -32,18 +38,10 @@ import tools.jackson.databind.json.JsonMapper
 /**
  * OpenAI chat completions 규격으로 모델 하나를 부르는 adapter.
  *
- * [LlmProviderPort]를 전략 패턴으로 구현한 것 중 [me.rgunny.kachi.ai.domain.llm.LlmApi.OPENAI_CHAT_COMPLETIONS] 규격 담당이다.
- * 프롬프트를 이 규격의 메시지로 옮기고, 옵션을 이 규격의 철자로 싣고, 응답에서 content와 모델 이름을 꺼내고,
- * HTTP status를 실패 코드로 옮기는 것까지가 이 전략의 책임이다.
- * 다른 규격은 다른 adapter가 같은 포트로 구현하므로 가드와 라우터는 어느 쪽이든 같은 방식으로 다룬다.
- *
- * 이 규격을 내는 제공자는 여럿이지만 요청·응답의 모양은 하나라 adapter도 하나다.
- * 어느 제공자의 어느 모델을 부르는지는 [model]이 정하고, 주소·인증·timeout은 [webClient]에 이미 들어 있다.
- *
- * JSON 모드(`response_format`)는 항상 켠다. 두 용도의 응답이 모두 JSON이고, 켜 두면 code fence나 설명 문장이 덧붙는 일이 준다.
- *
- * 호출 실패는 모두 HTTP status를 실패 코드로 옮긴 [LlmProviderException]으로 변환해 application 계층에 전달한다.
- * 여기서 재시도하지 않는다. 재시도 구동은 scheduler tick이 맡는다(ADR 021).
+ * 프롬프트를 system·user 메시지로 옮기고, 응답에서 content와 모델 이름을 꺼내고, HTTP status를 [LlmFailureCode]로 옮긴다.
+ * 어느 제공자의 어느 모델을 부르는지는 [model]이, 주소·인증·timeout은 [webClient]가 정한다.
+ * JSON 모드(`response_format`)는 항상 켠다.
+ * 호출 실패는 전부 [LlmProviderException]이며 재시도는 하지 않는다.
  */
 class OpenAiChatAdapter(
     private val webClient: WebClient,
@@ -56,6 +54,16 @@ class OpenAiChatAdapter(
             plan = LlmNewsSummaryPlan(
                 provider = model.provider,
                 promptVersion = NewsSummaryPrompt.version
+            ),
+            adapter = this
+        )
+    }
+
+    override fun prepareStorySummary(): PreparedLlmStorySummary {
+        return OpenAiPreparedStorySummary(
+            plan = LlmStorySummaryPlan(
+                provider = model.provider,
+                promptVersion = StorySummaryPrompt.version
             ),
             adapter = this
         )
@@ -104,9 +112,38 @@ class OpenAiChatAdapter(
         )
     }
 
+    override suspend fun summarizeStory(
+        keywords: List<AiKeyword>,
+        previousSummary: PreviousStorySummary?,
+        articles: List<StorySummaryArticle>
+    ): LlmStorySummaryResult {
+        require(keywords.isNotEmpty()) { "story summary keywords are required" }
+        require(articles.isNotEmpty()) { "story summary articles are required" }
+
+        val response = requestChatCompletion(
+            prompt = StorySummaryPrompt,
+            input = StorySummaryPrompt.input(
+                keywords = keywords,
+                previousSummary = previousSummary?.let {
+                    StorySummaryPrompt.PreviousSummary(title = it.title, content = it.content)
+                },
+                articles = articles.map(::promptStoryArticle)
+            )
+        )
+        val parsed = parseStorySummary(response.firstContent())
+
+        return LlmStorySummaryResult(
+            title = parsed.title.trim(),
+            content = parsed.content.trim(),
+            sentiment = parsed.sentiment(),
+            developmentKind = parsed.developmentKind()
+                ?: throw invalidResponse("LLM story summary developmentKind is missing or unknown"),
+            metadata = metadata(response, StorySummaryPrompt)
+        )
+    }
+
     /**
-     * [input]은 프롬프트가 만든 입력 객체다. JSON으로 직렬화해 user 메시지로 싣는다.
-     * 자연어 템플릿에 값을 끼워 넣지 않으므로 기사 제목 속 줄바꿈·따옴표·지시문이 메시지 구조를 바꾸지 못한다.
+     * 프롬프트의 system 메시지와 JSON으로 직렬화한 [input]을 user 메시지로 보낸다.
      */
     private suspend fun requestChatCompletion(
         prompt: LlmPrompt,
@@ -131,7 +168,7 @@ class OpenAiChatAdapter(
                         thinking = options.thinking
                     )
                 )
-                // status와 Retry-After를 함께 봐야 rate limit을 분류할 수 있어 retrieve() 대신 exchangeToMono를 쓴다.
+                // status와 Retry-After 헤더를 함께 읽는 exchange(retrieve()는 헤더 접근 불가)
                 .exchangeToMono { response ->
                     if (response.statusCode().isError) {
                         errorResponse(response)
@@ -141,7 +178,7 @@ class OpenAiChatAdapter(
                 }
                 .awaitSingle()
         } catch (exception: CancellationException) {
-            // coroutine 취소는 provider 장애가 아니므로 실패로 변환하지 않는다.
+            // coroutine 취소(provider 장애 아님)
             throw exception
         } catch (exception: LlmProviderException) {
             throw exception
@@ -195,13 +232,13 @@ class OpenAiChatAdapter(
     /**
      * 응답을 받지 못했거나 읽지 못한 실패를 분류한다.
      *
-     * timeout은 예외 체인 안쪽에 숨어 있어 타입만 보고는 판별할 수 없다.
+     * timeout은 예외 체인 전체에서 찾는다(최상위 타입만으로는 판별 불가).
      */
     private fun transportException(exception: Exception): LlmProviderException {
         val code = when {
             LlmHttpExceptionClassifier.isTimeout(exception) -> LlmFailureCode.LLM_TIMEOUT
             exception is WebClientRequestException -> LlmFailureCode.LLM_NETWORK_ERROR
-            // 응답 body를 읽지 못한 것은 provider가 계약을 어긴 것이므로 재시도 대상으로 보지 않는다.
+            // body 해석 실패(provider 계약 위반, 재시도 없음)
             else -> LlmFailureCode.LLM_INVALID_RESPONSE
         }
 
@@ -271,6 +308,34 @@ class OpenAiChatAdapter(
         )
     }
 
+    private fun promptStoryArticle(article: StorySummaryArticle): StorySummaryPrompt.Article {
+        return StorySummaryPrompt.Article(
+            source = article.source,
+            title = article.title,
+            excerpt = article.excerpt,
+            publishedAt = article.publishedAt
+        )
+    }
+
+    private fun parseStorySummary(content: String): ParsedStorySummary {
+        val jsonObject = extractJsonObject(content, "LLM story summary response must contain a JSON object")
+        val parsed = runCatching {
+            jsonMapper
+                .readerFor(ParsedStorySummary::class.java)
+                .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .readValue<ParsedStorySummary>(jsonObject)
+        }.getOrElse { throw invalidResponse("LLM story summary response is not a valid JSON object") }
+
+        if (parsed.title.isBlank()) {
+            throw invalidResponse("LLM story summary title is empty")
+        }
+        if (parsed.content.isBlank()) {
+            throw invalidResponse("LLM story summary content is empty")
+        }
+
+        return parsed
+    }
+
     private fun parseNewsSummary(content: String): ParsedNewsSummary {
         val jsonObject = extractJsonObject(content, "LLM news summary response must contain a JSON object")
         val parsed = runCatching {
@@ -291,8 +356,10 @@ class OpenAiChatAdapter(
     }
 
     /**
+     * content에서 첫 `{`부터 마지막 `}`까지를 JSON 객체로 잘라 낸다.
+     *
      * 일부 provider는 JSON 모드에서도 markdown code fence나 설명 문장을 덧붙인다.
-     * 파싱 안정성을 위해 전체 content에서 첫 `{`부터 마지막 `}`까지만 JSON 객체로 사용한다.
+     * 없으면 [missingMessage]로 [LlmProviderException]을 던진다.
      */
     private fun extractJsonObject(
         content: String,
@@ -315,7 +382,7 @@ class OpenAiChatAdapter(
         return LlmGenerationMetadata(
             provider = model.provider,
             requestedModel = model.code,
-            // 응답이 보고한 모델을 우선한다. 요청한 code와 다를 수 있고, 그 사실이 기록에 남아야 한다.
+            // 응답이 보고한 모델 우선(요청 code와 다를 수 있음)
             model = response.model?.takeIf { it.isNotBlank() } ?: model.code,
             promptVersion = prompt.version,
             tokenUsage = TokenUsage(
@@ -326,7 +393,7 @@ class OpenAiChatAdapter(
     }
 
     companion object {
-        /** 이 규격의 생성 endpoint. 제공자마다 다르지 않으므로 설정이 아니라 상수다. */
+        /** chat completions 생성 endpoint 경로. */
         const val CHAT_COMPLETIONS_PATH = "/chat/completions"
 
         private const val HTTP_BAD_REQUEST = 400

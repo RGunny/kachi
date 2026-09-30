@@ -3,6 +3,8 @@ package me.rgunny.kachi.ai.adapter.outbound.llm.openai
 import io.netty.handler.timeout.ReadTimeoutException
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.ai.application.exception.LlmProviderException
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmFailureAttribution
@@ -11,7 +13,9 @@ import me.rgunny.kachi.ai.domain.llm.LlmModel
 import me.rgunny.kachi.ai.domain.llm.LlmProvider
 import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
 import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
+import me.rgunny.kachi.ai.domain.llm.StorySummaryPrompt
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.domain.summary.StoryDevelopmentKind
 import me.rgunny.kachi.ai.fixture.AiTestFixture
 import me.rgunny.kachi.ai.support.CapturingExchangeFunction
 import org.junit.jupiter.api.DisplayName
@@ -194,9 +198,6 @@ class OpenAiChatAdapterTest {
         assertEquals(NewsSummaryPrompt.maxTokens, exchange.sentBody.path("max_tokens").asInt())
     }
 
-    /**
-     * 기사 제목은 외부 입력이다. 줄바꿈·따옴표·지시문이 들어 있어도 JSON 문자열 값으로 갇혀 메시지 구조를 바꾸지 못한다.
-     */
     @Test
     @DisplayName("기사 제목의 줄바꿈·따옴표·지시문은 user 메시지의 JSON 문자열 값으로만 들어간다")
     fun keepInjectedArticleTextInsideJsonValue() = runBlocking {
@@ -306,7 +307,7 @@ class OpenAiChatAdapterTest {
         }
 
         assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, exception.failure.code)
-        // 모델이 살아 있다는 응답이므로 이 키워드의 입력 탓이고 일시 실패가 아니다.
+        // 입력 탓·비일시 실패 분류(모델이 살아 있다는 응답)
         assertEquals(LlmFailureAttribution.INPUT, exception.failure.attribution)
         assertFalse(exception.failure.transient)
         assertEquals(LlmProvider.GROQ, exception.failure.provider)
@@ -449,6 +450,68 @@ class OpenAiChatAdapterTest {
         assertEquals(LlmProvider.GROQ, adapter.prepareNewsSummary().plan.provider)
     }
 
+    @Test
+    @DisplayName("story 요약 요청에 직전 요약과 발췌문을 싣고 developmentKind 응답을 변환한다")
+    fun summarizeStory() = runBlocking {
+        val exchange = CapturingExchangeFunction(storySummaryResponse(developmentKind = "NO_CHANGE"))
+        val adapter = adapterOf(exchange)
+
+        val result = adapter.summarizeStory(
+            keywords = listOf(AiKeyword.of("NVIDIA"), AiKeyword.of("GPU")),
+            previousSummary = PreviousStorySummary(title = "이전 제목", content = "이전 본문"),
+            articles = listOf(storySummaryArticle())
+        )
+
+        assertEquals("story 요약", result.title)
+        assertEquals(NewsSummarySentiment.NEUTRAL, result.sentiment)
+        assertEquals(StoryDevelopmentKind.NO_CHANGE, result.developmentKind)
+        assertEquals(StorySummaryPrompt.version, result.metadata.promptVersion)
+
+        assertEquals(StorySummaryPrompt.system, exchange.sentBody.path("messages").get(0).path("content").asText())
+        val userInput = JSON.readTree(exchange.sentBody.path("messages").get(1).path("content").asText())
+        val storyKeywords = userInput.path("storyKeywords")
+        assertEquals(listOf("NVIDIA", "GPU"), (0 until storyKeywords.size()).map { storyKeywords.get(it).asText() })
+        assertEquals("이전 제목", userInput.path("previousSummary").path("title").asText())
+        assertEquals("기사 발췌문", userInput.path("articles").get(0).path("excerpt").asText())
+    }
+
+    @Test
+    @DisplayName("첫 요약이면 previousSummary를 null로 싣는다")
+    fun summarizeStoryWithoutPreviousSummary() = runBlocking {
+        val exchange = CapturingExchangeFunction(storySummaryResponse())
+
+        adapterOf(exchange).summarizeStory(
+            keywords = listOf(AiKeyword.of("NVIDIA")),
+            previousSummary = null,
+            articles = listOf(storySummaryArticle())
+        )
+
+        val userInput = JSON.readTree(exchange.sentBody.path("messages").get(1).path("content").asText())
+        assertTrue(userInput.path("previousSummary").isNull)
+    }
+
+    @Test
+    @DisplayName("developmentKind가 없거나 모르는 값이면 응답 계약 위반이다")
+    fun rejectMissingDevelopmentKind() = runBlocking {
+        val missing = assertFailsWith<LlmProviderException> {
+            adapterOf(CapturingExchangeFunction(summaryResponse())).summarizeStory(
+                keywords = listOf(AiKeyword.of("NVIDIA")),
+                previousSummary = null,
+                articles = listOf(storySummaryArticle())
+            )
+        }
+        val unknown = assertFailsWith<LlmProviderException> {
+            adapterOf(CapturingExchangeFunction(storySummaryResponse(developmentKind = "MAYBE"))).summarizeStory(
+                keywords = listOf(AiKeyword.of("NVIDIA")),
+                previousSummary = null,
+                articles = listOf(storySummaryArticle())
+            )
+        }
+
+        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, missing.failure.code)
+        assertEquals(LlmFailureCode.LLM_INVALID_RESPONSE, unknown.failure.code)
+    }
+
     private fun adapterOf(
         exchangeFunction: ExchangeFunction,
         model: LlmModel = MODEL
@@ -467,6 +530,18 @@ class OpenAiChatAdapterTest {
         """{"model":"test-model","choices":[{"message":{"content":"{\"title\":\"요약\",\"content\":\"본문\",\"sentiment\":\"NEUTRAL\"}"}}]}"""
 
     private fun keywordResponse(): String = """{"model":"test-model","choices":[{"message":{"content":"{\"keywords\":[\"GPU\"]}"}}]}"""
+
+    private fun storySummaryResponse(developmentKind: String = "DEVELOPMENT"): String =
+        """{"model":"test-model","choices":[{"message":{"content":"{\"title\":\"story 요약\",\"content\":\"본문\",\"sentiment\":\"NEUTRAL\",\"developmentKind\":\"$developmentKind\"}"}}]}"""
+
+    private fun storySummaryArticle(): StorySummaryArticle {
+        return StorySummaryArticle(
+            source = "GOOGLE",
+            title = "기사 제목",
+            excerpt = "기사 발췌문",
+            publishedAt = AiTestFixture.NOW
+        )
+    }
 
     private fun newsArticle(): NewsArticle {
         return AiTestFixture.newsArticle(title = "NVIDIA AI GPU demand rises")

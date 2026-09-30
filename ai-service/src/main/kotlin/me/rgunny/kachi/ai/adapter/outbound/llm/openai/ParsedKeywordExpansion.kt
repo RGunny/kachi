@@ -5,6 +5,6 @@ package me.rgunny.kachi.ai.adapter.outbound.llm.openai
  *
  * provider가 필드를 빠뜨려도 파싱 자체는 실패하지 않도록 기본값을 두고, 비어 있는지는 [OpenAiChatAdapter]가 본다.
  */
-internal data class ParsedKeywordExpansion(
+data class ParsedKeywordExpansion(
     val keywords: List<String> = emptyList()
 )

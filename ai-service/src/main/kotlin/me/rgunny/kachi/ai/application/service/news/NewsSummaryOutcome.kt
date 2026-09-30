@@ -11,7 +11,7 @@ import me.rgunny.kachi.ai.domain.run.AiSkipReason
  * `AiRun`은 실패 원인과 skip 사유, 생성 metadata를 각각 하나만 보관하므로
  * 여러 건 중 무엇을 대표로 남길지 정하는 규칙이 여기 있다.
  */
-internal class NewsSummaryOutcome private constructor(
+class NewsSummaryOutcome private constructor(
     val succeededCount: Int,
     val failureCount: Int,
     val skippedCount: Int,

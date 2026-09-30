@@ -8,6 +8,10 @@ spring:
       auto-index-creation: true
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      properties:
+        # 로컬 Ollama의 요약 한 건이 분 단위라 한 poll의 처리 시간이 길다
+        max.poll.interval.ms: 600000
 
 kachi:
   ai:
@@ -16,6 +20,11 @@ kachi:
         enabled: true
       keyword-expansion:
         enabled: true
+      story-summary:
+        enabled: true
+    consumer:
+      # arm64 CPU 추론에서 즉시 트리거의 LLM 호출이 poll 하나를 오래 잡는다
+      max-poll-records: 1
     outbox:
       relay:
         enabled: true
@@ -29,6 +38,8 @@ kachi:
     llm:
       uses:
         NEWS_SUMMARY:
+          candidates: [OLLAMA_QWEN3_27B]
+        STORY_SUMMARY:
           candidates: [OLLAMA_QWEN3_27B]
         KEYWORD_EXPANSION:
           candidates: [OLLAMA_QWEN3_27B]

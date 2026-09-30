@@ -8,7 +8,7 @@ import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
  * provider가 필드를 빠뜨리거나 정의에 없는 sentiment를 보내도 파싱 자체는 실패하지 않도록
  * 기본값을 두고, 값 검증은 [OpenAiChatAdapter]가 맡는다.
  */
-internal data class ParsedNewsSummary(
+data class ParsedNewsSummary(
     val title: String = "",
     val content: String = "",
     val sentiment: String = NewsSummarySentiment.UNKNOWN.name

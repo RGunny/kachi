@@ -35,6 +35,7 @@ import me.rgunny.kachi.ai.domain.llm.LlmUse
 import me.rgunny.kachi.ai.domain.llm.KeywordExpansionPrompt
 import me.rgunny.kachi.ai.domain.llm.NewsSummaryPrompt
 import me.rgunny.kachi.ai.domain.llm.PromptVersion
+import me.rgunny.kachi.ai.domain.llm.StorySummaryPrompt
 import me.rgunny.kachi.ai.domain.llm.TokenUsage
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
 import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
@@ -42,9 +43,19 @@ import me.rgunny.kachi.ai.domain.outbox.AiOutboxRetryPolicy
 import me.rgunny.kachi.ai.domain.run.AiFailureReason
 import me.rgunny.kachi.ai.domain.run.AiRun
 import me.rgunny.kachi.ai.domain.run.AiRunTargetType
+import me.rgunny.kachi.ai.domain.story.AiStory
+import me.rgunny.kachi.ai.domain.story.AiStoryArticle
+import me.rgunny.kachi.ai.domain.story.StoryId
 import me.rgunny.kachi.ai.domain.summary.NewsSummary
 import me.rgunny.kachi.ai.domain.summary.NewsSummarySentiment
+import me.rgunny.kachi.ai.domain.summary.StoryDevelopmentKind
+import me.rgunny.kachi.ai.domain.summary.StorySummary
+import me.rgunny.kachi.ai.domain.quarantine.StoryQuarantine
 import me.rgunny.kachi.ai.domain.watermark.SummaryWatermark
+import me.rgunny.kachi.ai.application.port.inbound.story.model.CreatedStorySummaryResult
+import me.rgunny.kachi.ai.application.service.story.StorySummaryPolicy
+import me.rgunny.kachi.ai.config.StorySummaryProperties
+import me.rgunny.kachi.ai.domain.summary.StorySummaryId
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -53,35 +64,34 @@ import java.util.UUID
 
 /**
  * ai-service 테스트가 공유하는 고정값과 도메인 픽스처.
- *
- * 여러 테스트가 같은 provider/model/prompt version을 기대하므로 한곳에서 관리한다.
  */
 object AiTestFixture {
     val NOW: Instant = Instant.parse("2026-06-03T00:00:00Z")
     val CLOCK: Clock = Clock.fixed(NOW, ZoneOffset.UTC)
 
     /**
-     * 이 인스턴스 안에서만 유효한 실행 lock.
-     *
-     * 테스트마다 새로 만들어 앞선 테스트가 쥔 lock이 다음 테스트에 남지 않게 한다.
+     * 이 인스턴스 안에서만 유효한 실행 lock을 만든다.
      */
     fun executionLock(): ExecutionLockPort = InMemoryExecutionLockAdapter(CLOCK)
 
-    /** 후보로 쓰는 모델 상수. 가드·라우터 테스트가 식별자로 쓴다. */
+    /** 후보로 쓰는 모델 상수. */
     val LLM_MODEL: LlmModel = LlmModel.GROQ_QWEN3_27B
     val DEFAULT_HOLD_REPROBE_AFTER: Duration = Duration.ofHours(1)
     val PROVIDER: LlmProvider = LLM_MODEL.provider
 
-    /** 응답이 보고한 모델 이름. 요청한 code와 같지 않아도 된다는 것을 드러내려고 다른 값을 쓴다. */
+    /** 응답이 보고한 모델 이름([REQUESTED_MODEL]과 달라도 되는 값). */
     const val MODEL: String = "test-model"
 
     /** 요청에 실은 모델 code. */
     val REQUESTED_MODEL: String = LLM_MODEL.code
     val NEWS_SUMMARY_PROMPT_VERSION: PromptVersion = NewsSummaryPrompt.version
+    val STORY_SUMMARY_PROMPT_VERSION: PromptVersion = StorySummaryPrompt.version
     val KEYWORD_EXPANSION_PROMPT_VERSION: PromptVersion = KeywordExpansionPrompt.version
     val TOKEN_USAGE: TokenUsage = TokenUsage(inputTokens = 10, outputTokens = 20)
 
     val NEWS_ID: UUID = UUID.fromString("018f0000-0000-7000-8000-000000000001")
+    val STORY_ID: StoryId = StoryId.of(UUID.fromString("018f0000-0000-7000-8000-0000000000aa"))
+    val OTHER_STORY_ID: StoryId = StoryId.of(UUID.fromString("018f0000-0000-7000-8000-0000000000bb"))
 
     const val OUTBOX_EVENT_KEY: String = "018f0000-0000-7000-8000-000000000009"
     const val OUTBOX_PAYLOAD: String = """{"schemaVersion":1,"keyword":"NVIDIA"}"""
@@ -125,8 +135,8 @@ object AiTestFixture {
     /**
      * 저장소에 있던 것처럼 상태·재시도 횟수·소유권을 지정해 복원한 outbox.
      *
-     * [outbox]는 생성 직후만 만들 수 있으므로 발행 중이거나 실패가 쌓인 행은 여기서 만든다.
      * 기본값은 [outbox]와 같은 PENDING 행이다.
+     * 발행 중이거나 실패가 쌓인 행([outbox]로는 만들 수 없는 상태)도 만든다.
      */
     fun restoredOutbox(
         id: AiOutboxId = AiOutboxId.newId(),
@@ -161,7 +171,9 @@ object AiTestFixture {
     }
 
     /**
-     * 재시도 정책. 분산값은 기본으로 끈다. 켜 두면 다음 차례 시각을 단언할 수 없다.
+     * 재시도 정책을 만든다.
+     *
+     * [jitterRatio] 기본값은 0이다(분산이 있으면 다음 차례 시각을 단언할 수 없음).
      */
     fun retryPolicy(
         maxAttempts: Int = 5,
@@ -215,17 +227,25 @@ object AiTestFixture {
 
     const val EVENT_TOPIC_SUMMARY_CREATED: String = "ai.summary.created"
     const val EVENT_TOPIC_KEYWORD_QUARANTINED: String = "ai.keyword.quarantined"
+    const val EVENT_TOPIC_STORY_SPLIT_REQUESTED: String = "ai.story.split-requested"
+    const val EVENT_TOPIC_STORY_QUARANTINED: String = "ai.story.quarantined"
+    const val EVENT_TOPIC_STORY_ARTICLE_ATTACHED: String = "story.article.attached"
+    const val EVENT_TOPIC_STORY_MERGED: String = "story.merged"
 
     fun eventsProperties(
         enabled: Boolean = true,
         summaryCreatedTopic: String = EVENT_TOPIC_SUMMARY_CREATED,
-        keywordQuarantinedTopic: String = EVENT_TOPIC_KEYWORD_QUARANTINED
+        keywordQuarantinedTopic: String = EVENT_TOPIC_KEYWORD_QUARANTINED,
+        storySplitRequestedTopic: String = EVENT_TOPIC_STORY_SPLIT_REQUESTED,
+        storyQuarantinedTopic: String = EVENT_TOPIC_STORY_QUARANTINED
     ): AiEventsProperties {
         return AiEventsProperties(
             enabled = enabled,
             topics = AiEventsProperties.Topics(
                 summaryCreated = summaryCreatedTopic,
-                keywordQuarantined = keywordQuarantinedTopic
+                keywordQuarantined = keywordQuarantinedTopic,
+                storySplitRequested = storySplitRequestedTopic,
+                storyQuarantined = storyQuarantinedTopic
             )
         )
     }
@@ -249,7 +269,9 @@ object AiTestFixture {
     }
 
     /**
-     * 격리 상태 기록에서 만든 격리 이벤트. 기본값은 임계치에 막 도달한 기록이다.
+     * 격리 상태 기록에서 만든 격리 이벤트.
+     *
+     * 기본값은 임계치에 막 도달한 기록이다.
      */
     fun keywordQuarantinedEvent(
         quarantine: KeywordQuarantine = quarantine(consecutiveFailures = DEFAULT_QUARANTINE_FAILURE_THRESHOLD)
@@ -311,6 +333,16 @@ object AiTestFixture {
         )
     }
 
+    fun storySummaryMetadata(): LlmGenerationMetadata {
+        return LlmGenerationMetadata(
+            provider = PROVIDER,
+            requestedModel = REQUESTED_MODEL,
+            model = MODEL,
+            promptVersion = STORY_SUMMARY_PROMPT_VERSION,
+            tokenUsage = TOKEN_USAGE
+        )
+    }
+
     fun keywordExpansionMetadata(): LlmGenerationMetadata {
         return LlmGenerationMetadata(
             provider = PROVIDER,
@@ -365,6 +397,7 @@ object AiTestFixture {
 
     /**
      * 연속 실패가 [consecutiveFailures]회 누적된 격리 기록을 만든다.
+     *
      * [failureThreshold]에 도달하면 격리 상태가 된다.
      */
     fun quarantine(
@@ -386,7 +419,7 @@ object AiTestFixture {
     }
 
     /**
-     * 분류된 LLM 실패를 만든다. 격리 카운트와 조기 중단 판단이 코드에 따라 갈리므로 테스트가 직접 지정한다.
+     * 분류된 LLM 실패를 만든다.
      */
     fun llmFailure(
         code: LlmFailureCode,
@@ -407,7 +440,9 @@ object AiTestFixture {
     }
 
     /**
-     * 후보 여럿을 거친 뒤의 실패. 대표 실패는 마지막 시도이고 [codes]가 실제 호출 순서다. 격리 카운트가 전 후보 합의를 보는지 확인하는 데 쓴다.
+     * 후보 여럿을 거친 뒤의 실패를 만든다.
+     *
+     * 대표 실패는 마지막 시도이고 [codes]가 호출 순서다.
      */
     fun llmProviderException(vararg codes: LlmFailureCode): LlmProviderException {
         require(codes.isNotEmpty())
@@ -456,7 +491,11 @@ object AiTestFixture {
         )
     }
 
-    /** 429 응답. [retryAfterMillis]가 null이면 Retry-After 헤더가 없는 응답이다. */
+    /**
+     * 429 응답 실패를 만든다.
+     *
+     * [retryAfterMillis]가 null이면 Retry-After 헤더가 없는 응답이다.
+     */
     fun rateLimitedException(retryAfterMillis: Long?): LlmProviderException {
         return LlmProviderException(
             llmFailure(
@@ -510,7 +549,7 @@ object AiTestFixture {
     }
 
     /**
-     * 클라우드 둘을 후보로 두고 Ollama는 정의만 있는 설정. 참조되지 않은 항목이 걸러지는지 보는 데 쓴다.
+     * 클라우드 둘을 후보로 두고 Ollama는 정의만 있는 설정을 만든다.
      */
     fun llmProperties(
         providers: Map<LlmProvider, LlmProperties.ProviderProperties> = mapOf(
@@ -525,6 +564,7 @@ object AiTestFixture {
         ),
         uses: Map<LlmUse, LlmProperties.UseProperties> = mapOf(
             LlmUse.NEWS_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B, LlmModel.MISTRAL_SMALL_2603)),
+            LlmUse.STORY_SUMMARY to LlmProperties.UseProperties(listOf(LlmModel.GROQ_QWEN3_27B, LlmModel.MISTRAL_SMALL_2603)),
             LlmUse.KEYWORD_EXPANSION to LlmProperties.UseProperties(listOf(LlmModel.MISTRAL_SMALL_2603))
         )
     ): LlmProperties {
@@ -541,4 +581,130 @@ object AiTestFixture {
     }
 
     const val DEFAULT_QUARANTINE_FAILURE_THRESHOLD = 3
+
+    fun storySummaryPolicy(
+        minNewArticles: Int = 3,
+        maxWait: Duration = Duration.ofMinutes(60),
+        maxArticlesPerVersion: Int = 50
+    ): StorySummaryPolicy {
+        return StorySummaryPolicy(
+            minNewArticles = minNewArticles,
+            maxWait = maxWait,
+            maxArticlesPerVersion = maxArticlesPerVersion
+        )
+    }
+
+    fun storySummaryProperties(
+        minNewArticles: Int = 3,
+        maxWait: Duration = Duration.ofMinutes(60),
+        maxArticlesPerVersion: Int = 50,
+        eventsEnabled: Boolean = true
+    ): StorySummaryProperties {
+        return StorySummaryProperties(
+            minNewArticles = minNewArticles,
+            maxWait = maxWait,
+            maxArticlesPerVersion = maxArticlesPerVersion,
+            eventsEnabled = eventsEnabled
+        )
+    }
+
+    fun aiStory(
+        storyId: StoryId = STORY_ID,
+        keywords: List<String> = listOf("NVIDIA"),
+        articleCount: Int = 1,
+        attachedAt: Instant = NOW,
+        now: Instant = NOW
+    ): AiStory {
+        return AiStory.open(
+            storyId = storyId,
+            keywords = keywords.map(AiKeyword::of),
+            articleCount = articleCount,
+            attachedAt = attachedAt,
+            now = now
+        )
+    }
+
+    fun storyArticle(
+        newsId: UUID = NEWS_ID,
+        storyId: StoryId = STORY_ID,
+        title: String = "NVIDIA news",
+        attachedAt: Instant = NOW
+    ): AiStoryArticle {
+        return AiStoryArticle.create(
+            newsId = newsId,
+            storyId = storyId,
+            source = "GOOGLE",
+            title = title,
+            excerpt = "$title excerpt",
+            url = "https://news.example.com/nvidia",
+            publishedAt = attachedAt.minusSeconds(600),
+            attachedAt = attachedAt
+        )
+    }
+
+    fun storySummary(
+        storyId: StoryId = STORY_ID,
+        version: Long = 1,
+        keywords: List<String> = listOf("NVIDIA"),
+        newNewsIds: List<UUID> = listOf(NEWS_ID),
+        sourceNewsCount: Int = newNewsIds.size,
+        developmentKind: StoryDevelopmentKind = StoryDevelopmentKind.DEVELOPMENT,
+        createdAt: Instant = NOW
+    ): StorySummary {
+        return StorySummary.create(
+            storyId = storyId,
+            version = version,
+            keywords = keywords.map(AiKeyword::of),
+            newNewsIds = newNewsIds,
+            sourceNewsCount = sourceNewsCount,
+            title = "story 요약 v$version",
+            content = "story 요약 본문",
+            sentiment = NewsSummarySentiment.NEUTRAL,
+            developmentKind = developmentKind,
+            provider = PROVIDER,
+            model = MODEL,
+            requestedModel = REQUESTED_MODEL,
+            promptVersion = STORY_SUMMARY_PROMPT_VERSION,
+            tokenUsage = TOKEN_USAGE,
+            createdAt = createdAt
+        )
+    }
+
+    fun createdResult(
+        storyId: StoryId = STORY_ID,
+        version: Long = 1,
+        developmentKind: StoryDevelopmentKind = StoryDevelopmentKind.DEVELOPMENT,
+        published: Boolean = true
+    ): CreatedStorySummaryResult {
+        return CreatedStorySummaryResult(
+            summaryId = StorySummaryId.newId(),
+            storyId = storyId,
+            version = version,
+            developmentKind = developmentKind,
+            newArticleCount = 1,
+            published = published
+        )
+    }
+
+    /**
+     * 연속 실패가 [consecutiveFailures]회 누적된 story 격리 기록을 만든다.
+     *
+     * [failureThreshold]에 도달하면 격리 상태가 된다.
+     */
+    fun storyQuarantine(
+        storyId: StoryId = STORY_ID,
+        consecutiveFailures: Int,
+        failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD,
+        updatedAt: Instant = NOW
+    ): StoryQuarantine {
+        return (1..consecutiveFailures).fold(
+            StoryQuarantine.track(storyId = storyId, updatedAt = updatedAt)
+        ) { quarantine, _ ->
+            quarantine.recordFailure(
+                reason = AiFailureReason.UNKNOWN,
+                failureThreshold = failureThreshold,
+                updatedAt = updatedAt
+            )
+        }
+    }
 }

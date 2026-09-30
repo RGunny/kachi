@@ -8,7 +8,11 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmKeywordExpansionResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmNewsSummaryResult
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmStorySummaryResult
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmNewsSummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
+import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.config.LlmCooldownProperties
 import me.rgunny.kachi.ai.config.LlmHoldProperties
@@ -24,23 +28,13 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * 모델 하나의 호출 가능 여부를 관리하는 데코레이터.
+ * 모델 하나의 차단 상태를 두고 [LlmProviderPort] 위임 호출을 거르는 데코레이터.
  *
- * [LlmProviderPort] 구현을 같은 포트로 감싸는 데코레이터 패턴이다. 위임 대상은 자기가 차단될 수 있다는 사실을 모르고,
- * 라우터는 후보가 감싸였는지 모른다. 차단 장치를 더하거나 상태 저장소를 바꿔도 이 클래스 안에서 끝난다.
- *
- * 차단 장치는 넷이다. 일시 실패의 비율로 열리는 서킷 브레이커, rate limit 응답이 지시한 cooldown,
- * 모델이 없다는 응답(404)에 거는 모델 hold, 계정 문제(401·402·403)에 거는 제공자 hold다.
- * 제공자 hold는 같은 제공자의 가드들이 [providerHolds]로 공유한다. 한 모델에서 받은 계정 문제는 다른 모델에서도 같기 때문이다.
- * 하나라도 걸리면 위임 대상을 호출하지 않고 [LlmFailureCode.LLM_NOT_PERMITTED]로 실패한다.
- *
- * hold는 서킷과 다른 상태다. 서킷은 표본으로 열리고 대기 뒤 탐색하지만 hold는 한 건으로 확정이다.
- * 대기 시각이 지나면 호출이 한 번 통과하고, 같은 실패면 다시 걸린다. 그래서 별도의 탐색 상태가 없다.
- *
- * 실패 분류는 위임 대상이 끝냈으므로 여기서 다시 하지 않고 [LlmFailure]를 그대로 소비한다.
- * 재시도도 하지 않는다. 재시도 구동은 다음 tick의 몫이다(ADR 021).
- *
- * [billing]은 차단과 무관하지만 상태 스냅샷에 실린다. 운영자가 차단을 해제하거나 실제 호출을 확인할 때 비용을 알아야 한다.
+ * 차단 장치는 서킷 브레이커, rate limit cooldown, 모델 hold(404), 제공자 hold(401·402·403) 넷이다.
+ * 제공자 hold는 같은 제공자의 가드들이 [providerHolds]로 공유한다.
+ * 하나라도 걸려 있으면 위임 대상을 호출하지 않고 [LlmFailureCode.LLM_NOT_PERMITTED]로 실패한다.
+ * hold는 한 건으로 걸리고 대기 시각이 지나면 호출 한 번이 통과한다.
+ * 재시도는 하지 않는다.
  */
 class GuardedLlmModel(
     private val delegate: LlmProviderPort,
@@ -53,12 +47,16 @@ class GuardedLlmModel(
     private val clock: Clock
 ) : LlmProviderCandidate {
 
-    /** scheduler와 internal API가 동시에 들어올 수 있어 갱신을 원자적으로 처리한다. */
+    /**
+     * rate limit cooldown 종료 시각.
+     *
+     * 걸려 있지 않으면 null이다.
+     */
     private val cooldownUntil = AtomicReference<Instant?>(null)
     private val modelHold = AtomicReference<LlmHold?>(null)
 
     init {
-        // 상태 전이를 남기지 않으면 특정 모델이 한동안 호출되지 않은 이유를 운영자가 알 수 없다.
+        // 서킷 상태 전이 로그(OPEN은 warn)
         circuitBreaker.eventPublisher.onStateTransition { event ->
             val transition = "${event.stateTransition.fromState} -> ${event.stateTransition.toState}"
 
@@ -71,10 +69,14 @@ class GuardedLlmModel(
     }
 
     /**
-     * 위임 대상의 실행 단위를 그대로 넘기면 그 객체의 호출이 차단을 우회하므로 감싼 것으로 바꿔 돌려준다.
+     * 위임 대상의 plan을 들고 호출은 이 가드를 거치는 실행 단위를 돌려준다.
      */
     override fun prepareNewsSummary(): PreparedLlmNewsSummary {
         return GuardedPreparedNewsSummary(plan = delegate.prepareNewsSummary().plan, model = this)
+    }
+
+    override fun prepareStorySummary(): PreparedLlmStorySummary {
+        return GuardedPreparedStorySummary(plan = delegate.prepareStorySummary().plan, model = this)
     }
 
     override suspend fun expandKeyword(
@@ -91,13 +93,25 @@ class GuardedLlmModel(
         return guarded { delegate.summarizeNews(keyword, articles) }
     }
 
-    /** 실제 차단은 호출 시점의 permission이 결정하므로 이 값이 틀려도 호출이 잘못 나가지 않는다. */
+    override suspend fun summarizeStory(
+        keywords: List<AiKeyword>,
+        previousSummary: PreviousStorySummary?,
+        articles: List<StorySummaryArticle>
+    ): LlmStorySummaryResult {
+        return guarded { delegate.summarizeStory(keywords, previousSummary, articles) }
+    }
+
+    /**
+     * [exclusionReason]으로 본 호출 가능 여부.
+     *
+     * 호출 시점의 permission 판정과 다를 수 있다.
+     */
     override fun isLikelyAvailable(now: Instant): Boolean = exclusionReason(now) == null
 
     /**
      * 지금 이 모델이 어떤 상태인지의 스냅샷.
      *
-     * cooldown 종료 시각과 hold는 걸려 있을 때만 담는다. 지나간 시각은 호출을 막는 이유가 아니다.
+     * cooldown 종료 시각과 hold는 걸려 있을 때만 담고, 아니면 null이다.
      */
     fun status(now: Instant): LlmModelStatus {
         val metrics = circuitBreaker.metrics
@@ -118,11 +132,9 @@ class GuardedLlmModel(
     }
 
     /**
-     * 운영자가 원인 해소를 확인한 뒤 차단 장치를 전부 푼다.
-     * 제공자 hold도 함께 푼다. reset은 운영자가 원인 해소를 확인했다는 뜻이기 때문이다.
+     * 서킷·cooldown·모델 hold·제공자 hold를 전부 푼다.
      *
-     * 이미 닫혀 있는 회로에 전이를 요청하면 라이브러리가 거부하므로 상태를 보고 건너뛴다.
-     * cooldown과 hold는 회로와 별개라 그때도 지운다.
+     * 이미 닫힌 회로는 전이하지 않는다(Resilience4j는 CLOSED → CLOSED 전이 요청을 거부함).
      */
     fun reset() {
         if (circuitBreaker.state != CircuitBreaker.State.CLOSED) {
@@ -133,7 +145,11 @@ class GuardedLlmModel(
         providerHolds.release(model.provider)
     }
 
-    /** 후보에서 빠질 이유. 빠질 이유가 없으면 null이다. */
+    /**
+     * 후보에서 빠질 이유.
+     *
+     * 빠질 이유가 없으면 null이다.
+     */
     fun exclusionReason(now: Instant): String? {
         providerHolds.holdOf(model.provider, now)?.let { return providerHoldReason(it) }
         activeModelHold(now)?.let { return modelHoldReason(it) }
@@ -147,17 +163,16 @@ class GuardedLlmModel(
     }
 
     /**
-     * 호출되지 못한 이유. 상태만으로 특정할 수 없으면 permission 거부로 본다.
+     * 호출되지 못한 이유.
      *
-     * half-open에서 probe 허용 수를 넘긴 호출이 상태로 특정되지 않는 경우다.
+     * 상태로 특정되지 않으면(half-open의 probe 초과) [NOT_PERMITTED]다.
      */
     override fun blockedReason(now: Instant): String = exclusionReason(now) ?: NOT_PERMITTED
 
     /**
      * 호출을 hold·cooldown 판정과 서킷 브레이커 집계로 감싼다.
      *
-     * 취소는 성공도 실패도 아니라서 permission을 돌려주고 집계에서 뺀다. 라이브러리 wrapper는 취소를
-     * 성공으로 세고 그 동작에 끼어들 지점이 없어, 상태 전이 API를 직접 호출한다.
+     * 취소는 집계에서 빼고 permission을 돌려준다(Resilience4j wrapper는 취소를 성공으로 셈).
      */
     private suspend fun <T : Any> guarded(call: suspend () -> T): T {
         val now = Instant.now(clock)
@@ -167,7 +182,7 @@ class GuardedLlmModel(
         activeModelHold(now)?.let { throw notPermitted(modelHoldReason(it)) }
         coolingDownUntil(now)?.let { throw notPermitted(cooldownReason(it)) }
 
-        // 2. permission 획득이 곧 OPEN에서 HALF_OPEN으로 넘어가는 계기다. 상태만 읽어서는 전이가 없다.
+        // 2. permission을 얻는다(OPEN → HALF_OPEN 전이 계기).
         if (!circuitBreaker.tryAcquirePermission()) {
             throw notPermitted(blockedReason(Instant.now(clock)))
         }
@@ -209,8 +224,8 @@ class GuardedLlmModel(
     /**
      * rate limit 응답을 받으면 제공자가 지시한 시간만큼 쉰다.
      *
-     * 헤더가 없어도 기본값만큼은 쉰다. 0으로 두면 같은 실행에서 같은 모델을 다시 골라 같은 응답을 받는다.
-     * 이미 쉬는 중이면 더 늦은 시각만 반영한다. 짧은 지시로 대기를 앞당기면 앞선 지시를 어기는 것이 된다.
+     * 헤더가 없으면 [cooldown]의 기본값, 있으면 최대치까지 지시한 시간이다.
+     * 이미 쉬는 중이면 더 늦은 시각만 반영한다.
      */
     private fun holdIfRateLimited(failure: LlmFailure) {
         if (failure.code != LlmFailureCode.LLM_RATE_LIMITED) {

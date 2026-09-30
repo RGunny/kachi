@@ -67,7 +67,7 @@ class GuardedLlmModelTest {
         repeat(2) { delegate.failures += AiTestFixture.llmProviderException(code) }
 
         assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
-        // rate limit은 cooldown까지 거는 실패다. 쉬는 동안에는 회로에 닿는 호출이 없다.
+        // cooldown 경과(rate limit은 쉬는 동안 회로에 닿지 않음)
         clock.advance(DEFAULT_COOLDOWN)
         assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) }
 
@@ -160,7 +160,7 @@ class GuardedLlmModelTest {
     @DisplayName("계정 실패는 같은 제공자의 다른 모델까지 재탐색 시각까지 막고 다른 제공자는 막지 않는다")
     fun holdProviderOnAccountFailure(code: LlmFailureCode) = runBlocking {
         val provider = guarded(circuitBreaker = wideCircuitBreaker())
-        // 같은 제공자의 다른 가드. 상수가 제공자마다 하나라 같은 모델 상수에 위임 대상과 회로만 따로 둔다.
+        // 같은 제공자의 다른 가드(같은 모델 상수, 위임 대상과 회로만 별도)
         val siblingDelegate = NamedLlmProviderPort("${MODEL.qualifiedCode}#sibling", MODEL.provider)
         val sibling = guarded(delegate = siblingDelegate, circuitBreaker = wideCircuitBreaker())
         val otherDelegate = NamedLlmProviderPort(OTHER_PROVIDER_MODEL.qualifiedCode, OTHER_PROVIDER_MODEL.provider)
@@ -772,7 +772,7 @@ class GuardedLlmModelTest {
     fun resetClearsCircuitAndCooldown() = runBlocking {
         val circuitBreaker = circuitBreaker()
         val provider = guarded(circuitBreaker = circuitBreaker)
-        // 마지막 실패를 rate limit으로 두면 회로가 열리는 시점에 cooldown도 함께 걸린다.
+        // 회로 open과 cooldown이 동시에 걸리는 실패 순서(마지막이 rate limit)
         delegate.failures += AiTestFixture.llmProviderException(LlmFailureCode.LLM_TIMEOUT)
         delegate.failures += AiTestFixture.rateLimitedException(retryAfterMillis = 30_000)
         repeat(2) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
@@ -809,7 +809,7 @@ class GuardedLlmModelTest {
         repeat(2) { assertFailsWith<LlmProviderException> { provider.summarizeNews(KEYWORD, ARTICLES) } }
     }
 
-    /** 실패율로는 열리지 않는 회로. cooldown과 hold만 검증하는 테스트가 회로 상태에 흔들리지 않게 한다. */
+    /** 실패율로는 열리지 않는 회로를 만든다. */
     private fun wideCircuitBreaker(model: LlmModel = MODEL): CircuitBreaker =
         circuitBreaker(slidingWindowSize = 8, minimumNumberOfCalls = 8, model = model)
 
@@ -838,7 +838,7 @@ class GuardedLlmModelTest {
     }
 
     /**
-     * 실제 운영 설정 변환기를 그대로 쓰되 창을 좁혀 두 번의 실패로 열리게 한다.
+     * `LlmCircuitBreakerConfig`로 서킷 브레이커를 만들되 창을 좁혀 두 번의 실패로 열리게 한다.
      * open 대기는 길게 잡아 시간이 아니라 명시적 전이로만 half-open이 되게 한다.
      */
     private fun circuitBreaker(

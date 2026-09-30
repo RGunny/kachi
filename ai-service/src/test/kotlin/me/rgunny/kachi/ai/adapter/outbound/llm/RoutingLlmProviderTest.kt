@@ -65,7 +65,11 @@ class RoutingLlmProviderTest {
         }
         assertFailsWith<IllegalArgumentException> {
             RoutingLlmProvider(
-                candidates = mapOf(LlmUse.NEWS_SUMMARY to listOf(first), LlmUse.KEYWORD_EXPANSION to emptyList()),
+                candidates = mapOf(
+                    LlmUse.NEWS_SUMMARY to listOf(first),
+                    LlmUse.STORY_SUMMARY to listOf(first),
+                    LlmUse.KEYWORD_EXPANSION to emptyList()
+                ),
                 clock = clock
             )
         }
@@ -339,10 +343,15 @@ class RoutingLlmProviderTest {
 
     private fun router(
         summary: List<FakeLlmProviderCandidate>,
-        expansion: List<FakeLlmProviderCandidate>
+        expansion: List<FakeLlmProviderCandidate>,
+        story: List<FakeLlmProviderCandidate> = summary
     ): RoutingLlmProvider {
         return RoutingLlmProvider(
-            candidates = mapOf(LlmUse.NEWS_SUMMARY to summary, LlmUse.KEYWORD_EXPANSION to expansion),
+            candidates = mapOf(
+                LlmUse.NEWS_SUMMARY to summary,
+                LlmUse.STORY_SUMMARY to story,
+                LlmUse.KEYWORD_EXPANSION to expansion
+            ),
             clock = clock
         )
     }
