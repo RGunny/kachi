@@ -16,7 +16,6 @@ import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationStatus
 import me.rgunny.kachi.notification.domain.retry.RetryFailure
 import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
-import me.rgunny.kachi.notification.worker.adapter.monitoring.RecipientResolveSource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import java.time.Duration
