@@ -101,12 +101,8 @@ class UserServiceKeywordReaderAdapterTest {
             webClient = WebClient.builder()
                 .exchangeFunction(exchangeFunction(responseBody, status))
                 .build(),
-            properties = UserServiceKeywordProperties(
-                baseUrl = "http://user-service",
-                activeKeywordsPath = "/api/v1/internal/keywords/active",
-                timeout = Duration.ofSeconds(1),
-                maxInMemorySize = 256 * 1024,
-            )
+            activeKeywordsPath = "/api/v1/internal/keywords/active",
+            timeout = Duration.ofSeconds(1)
         )
     }
 

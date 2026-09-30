@@ -24,7 +24,7 @@ class NewsCollectionSchedulerTest {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
-            properties = schedulerProperties(enabled = false)
+            settings = schedulerSettings(enabled = false)
         )
 
         scheduler.collectNews()
@@ -38,7 +38,7 @@ class NewsCollectionSchedulerTest {
         val useCase = CountingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
-            properties = schedulerProperties(enabled = true)
+            settings = schedulerSettings(enabled = true)
         )
 
         scheduler.collectNews()
@@ -54,7 +54,7 @@ class NewsCollectionSchedulerTest {
         val useCase = FailingCollectNewsUseCase()
         val scheduler = NewsCollectionScheduler(
             executor = NewsCollectionExecutor(useCase, CollectorTestFixture.executionLock()),
-            properties = schedulerProperties(enabled = true)
+            settings = schedulerSettings(enabled = true)
         )
 
         scheduler.collectNews()
@@ -84,8 +84,8 @@ class NewsCollectionSchedulerTest {
     }
 
     private companion object {
-        fun schedulerProperties(enabled: Boolean): NewsCollectionSchedulerProperties {
-            return NewsCollectionSchedulerProperties(
+        fun schedulerSettings(enabled: Boolean): NewsCollectionSchedulerSettings {
+            return NewsCollectionSchedulerSettings(
                 enabled = enabled,
                 fixedDelay = Duration.ofMinutes(10),
                 initialDelay = Duration.ofSeconds(30),

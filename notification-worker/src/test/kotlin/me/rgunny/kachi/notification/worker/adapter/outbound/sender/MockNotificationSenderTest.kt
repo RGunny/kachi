@@ -5,7 +5,7 @@ import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendN
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.domain.NotificationId
-import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

@@ -24,11 +24,6 @@ data class AiOutboxRelayProperties(
 ) {
     companion object {
         const val PREFIX = "kachi.ai.outbox.relay"
-
-        // @Scheduled는 애노테이션이라 주입된 properties 값을 참조할 수 없고 placeholder만 받는다.
-        // 같은 설정 키를 두 곳에 문자열로 흩어두지 않도록 여기서 한 번만 선언한다.
-        const val FIXED_DELAY_EXPRESSION = "\${$PREFIX.fixed-delay}"
-        const val INITIAL_DELAY_EXPRESSION = "\${$PREFIX.initial-delay}"
     }
 
     init {

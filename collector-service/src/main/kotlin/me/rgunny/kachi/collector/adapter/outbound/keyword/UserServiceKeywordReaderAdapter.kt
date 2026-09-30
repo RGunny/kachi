@@ -7,17 +7,19 @@ import me.rgunny.kachi.collector.application.port.outbound.keyword.KeywordReader
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.web.reactive.function.client.WebClient
+import java.time.Duration
 
 class UserServiceKeywordReaderAdapter(
     private val webClient: WebClient,
-    private val properties: UserServiceKeywordProperties
+    private val activeKeywordsPath: String,
+    private val timeout: Duration
 ) : KeywordReaderPort {
 
     override suspend fun findActiveKeywords(): List<CollectedKeyword> {
 
         // 1. user-service 에서 사용자들이 등록한 활성 키워드 목록을 조회한다.
         val response = webClient.get()
-            .uri(properties.activeKeywordsPath)
+            .uri(activeKeywordsPath)
             .retrieve()
             .onStatus({ it.isError }) { response ->
                 response.bodyToMono(String::class.java)
@@ -30,7 +32,7 @@ class UserServiceKeywordReaderAdapter(
                     }
             }
             .bodyToMono(ACTIVE_KEYWORDS_RESPONSE_TYPE)
-            .timeout(properties.timeout)
+            .timeout(timeout)
             .awaitSingle()
 
         // 2. API envelope이 실패이거나 data가 없으면 수집 대상 키워드를 확정할 수 없으므로 실패시킨다.

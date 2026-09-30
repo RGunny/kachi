@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.application.service
 
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.domain.retry.RetryPolicy
 import java.time.Duration
 
 /**

@@ -9,7 +9,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.notification.domain.NotificationId
 import me.rgunny.kachi.notification.domain.NotificationOutbox
 import me.rgunny.kachi.notification.domain.NotificationOutboxStatus
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.domain.retry.RetryPolicy
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.PersistenceAdapterIntegrationTest
 import me.rgunny.kachi.notification.service.adapter.outbound.persistence.outbox.NotificationOutboxDocument
 import org.junit.jupiter.api.BeforeEach

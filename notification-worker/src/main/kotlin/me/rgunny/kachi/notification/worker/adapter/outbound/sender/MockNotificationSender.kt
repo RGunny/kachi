@@ -4,8 +4,8 @@ import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendN
 import me.rgunny.kachi.notification.application.port.outbound.sender.model.SendNotificationResult
 import me.rgunny.kachi.notification.application.port.outbound.sender.NotificationSender
 import me.rgunny.kachi.notification.domain.NotificationChannel
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryFailureCode
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 import org.slf4j.LoggerFactory
 
 /**

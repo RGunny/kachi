@@ -8,7 +8,7 @@ import me.rgunny.kachi.notification.application.port.inbound.dispatch.DispatchNo
 import me.rgunny.kachi.notification.contract.NotificationDispatchEvent
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.InvalidDispatchMessageException
 import me.rgunny.kachi.notification.worker.adapter.inbound.messaging.exception.RetryableDispatchMessageException
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.exception.dispatch.DispatchNotReadyException
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener

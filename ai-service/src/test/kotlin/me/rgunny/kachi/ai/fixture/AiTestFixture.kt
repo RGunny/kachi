@@ -7,17 +7,17 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmGenerationMetad
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.KeywordQuarantinedEvent
 import me.rgunny.kachi.ai.application.port.outbound.outbox.model.SummaryCreatedEvent
+import me.rgunny.kachi.ai.application.service.news.KeywordQuarantinePolicy
 import me.rgunny.kachi.ai.application.service.outbox.AiOutboxRelayPolicy
 import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.config.AiOutboxRelayProperties
 import me.rgunny.kachi.ai.config.AiOutboxRetryProperties
-import me.rgunny.kachi.ai.config.KeywordQuarantineProperties
 import me.rgunny.kachi.ai.config.LlmCircuitBreakerProperties
-import me.rgunny.kachi.ai.config.LlmCooldownProperties
+import me.rgunny.kachi.ai.adapter.outbound.llm.LlmCooldownSettings
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmModelStatus
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmHold
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.LlmProbeResult
-import me.rgunny.kachi.ai.config.LlmHoldProperties
+import me.rgunny.kachi.ai.adapter.outbound.llm.LlmHoldSettings
 import me.rgunny.kachi.ai.config.LlmProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.keyword.ExpandedKeyword
@@ -451,8 +451,8 @@ object AiTestFixture {
         return LlmProviderException(failure = attempts.last(), attempts = attempts)
     }
 
-    fun holdProperties(reprobeAfter: Duration = DEFAULT_HOLD_REPROBE_AFTER): LlmHoldProperties {
-        return LlmHoldProperties(reprobeAfter = reprobeAfter)
+    fun holdSettings(reprobeAfter: Duration = DEFAULT_HOLD_REPROBE_AFTER): LlmHoldSettings {
+        return LlmHoldSettings(reprobeAfter = reprobeAfter)
     }
 
     fun llmModelStatus(
@@ -506,10 +506,10 @@ object AiTestFixture {
         )
     }
 
-    fun quarantineProperties(
+    fun quarantinePolicy(
         failureThreshold: Int = DEFAULT_QUARANTINE_FAILURE_THRESHOLD
-    ): KeywordQuarantineProperties {
-        return KeywordQuarantineProperties(failureThreshold = failureThreshold)
+    ): KeywordQuarantinePolicy {
+        return KeywordQuarantinePolicy(failureThreshold = failureThreshold)
     }
 
     fun circuitBreakerProperties(
@@ -574,8 +574,8 @@ object AiTestFixture {
             uses = uses,
             guard = LlmProperties.GuardProperties(
                 circuitBreaker = circuitBreakerProperties(),
-                cooldown = LlmCooldownProperties(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
-                hold = holdProperties()
+                cooldown = LlmCooldownSettings(default = Duration.ofSeconds(60), max = Duration.ofMinutes(10)),
+                hold = holdSettings()
             )
         )
     }
@@ -585,12 +585,14 @@ object AiTestFixture {
     fun storySummaryPolicy(
         minNewArticles: Int = 3,
         maxWait: Duration = Duration.ofMinutes(60),
-        maxArticlesPerVersion: Int = 50
+        maxArticlesPerVersion: Int = 50,
+        eventsEnabled: Boolean = true
     ): StorySummaryPolicy {
         return StorySummaryPolicy(
             minNewArticles = minNewArticles,
             maxWait = maxWait,
-            maxArticlesPerVersion = maxArticlesPerVersion
+            maxArticlesPerVersion = maxArticlesPerVersion,
+            eventsEnabled = eventsEnabled
         )
     }
 

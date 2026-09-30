@@ -22,7 +22,10 @@ class KafkaAiOutboxPublisherTest {
 
     private val kafkaTemplate = FakeKafkaTemplate()
     private val properties = AiTestFixture.eventsProperties()
-    private val publisher = KafkaAiOutboxPublisher(kafkaTemplate = kafkaTemplate, properties = properties)
+    private val publisher = KafkaAiOutboxPublisher(
+        kafkaTemplate = kafkaTemplate,
+        topics = AiOutboxEventType.entries.associateWith(properties::topicOf)
+    )
 
     @ParameterizedTest
     @EnumSource(AiOutboxEventType::class)

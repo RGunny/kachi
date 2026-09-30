@@ -1,6 +1,5 @@
 package me.rgunny.kachi.collector.config
 
-import me.rgunny.kachi.collector.adapter.outbound.keyword.UserServiceKeywordProperties
 import me.rgunny.kachi.collector.adapter.outbound.keyword.UserServiceKeywordReaderAdapter
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -36,7 +35,8 @@ class UserServiceClientConfig {
     ): UserServiceKeywordReaderAdapter {
         return UserServiceKeywordReaderAdapter(
             webClient = userServiceWebClient,
-            properties = properties
+            activeKeywordsPath = properties.activeKeywordsPath,
+            timeout = properties.timeout
         )
     }
 }

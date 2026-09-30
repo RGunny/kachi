@@ -3,6 +3,8 @@ package me.rgunny.kachi.collector.adapter.outbound.client.google
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.config.GoogleNewsConfig
+import me.rgunny.kachi.collector.config.GoogleNewsProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -139,8 +141,8 @@ class GoogleNewsRssProviderTest {
     }
 
     private fun providerOf(xml: String): GoogleNewsRssProvider {
-        return GoogleNewsRssProvider(
-            webClient = webClientReturning(xml),
+        return GoogleNewsConfig().googleNewsRssProvider(
+            googleNewsWebClient = webClientReturning(xml),
             properties = properties
         )
     }

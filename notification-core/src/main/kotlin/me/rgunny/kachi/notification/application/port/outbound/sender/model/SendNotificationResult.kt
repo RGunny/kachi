@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.application.port.outbound.sender.model
 
-import me.rgunny.kachi.notification.retry.RetryFailure
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
 
 /**
  * 외부 채널 발송 결과.

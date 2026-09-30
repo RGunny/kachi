@@ -1,6 +1,6 @@
 package me.rgunny.kachi.notification.domain
 
-import me.rgunny.kachi.notification.retry.RetryPolicy
+import me.rgunny.kachi.notification.domain.retry.RetryPolicy
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.DISPATCH_TOPIC
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.NOW
 import me.rgunny.kachi.notification.fixture.NotificationTestFixture.RECIPIENT_ID

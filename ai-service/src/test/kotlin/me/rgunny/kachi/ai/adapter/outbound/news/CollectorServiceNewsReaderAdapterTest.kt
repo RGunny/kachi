@@ -108,12 +108,8 @@ class CollectorServiceNewsReaderAdapterTest {
             webClient = WebClient.builder()
                 .exchangeFunction(jsonExchangeFunction(responseBody, status))
                 .build(),
-            properties = CollectorServiceNewsProperties(
-                baseUrl = "http://collector-service",
-                newsPath = "/api/v1/internal/news",
-                timeout = Duration.ofSeconds(1),
-                maxInMemorySize = 256 * 1024,
-            )
+            newsPath = "/api/v1/internal/news",
+            timeout = Duration.ofSeconds(1)
         )
     }
 }

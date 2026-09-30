@@ -14,8 +14,6 @@ import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreparedLlmStorySu
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.PreviousStorySummary
 import me.rgunny.kachi.ai.application.port.outbound.llm.model.StorySummaryArticle
 import me.rgunny.kachi.ai.application.port.outbound.news.model.NewsArticle
-import me.rgunny.kachi.ai.config.LlmCooldownProperties
-import me.rgunny.kachi.ai.config.LlmHoldProperties
 import me.rgunny.kachi.ai.domain.keyword.AiKeyword
 import me.rgunny.kachi.ai.domain.llm.LlmBilling
 import me.rgunny.kachi.ai.domain.llm.LlmFailure
@@ -41,8 +39,8 @@ class GuardedLlmModel(
     override val model: LlmModel,
     val billing: LlmBilling,
     private val circuitBreaker: CircuitBreaker,
-    private val cooldown: LlmCooldownProperties,
-    private val hold: LlmHoldProperties,
+    private val cooldown: LlmCooldownSettings,
+    private val hold: LlmHoldSettings,
     private val providerHolds: ProviderHoldRegistry,
     private val clock: Clock
 ) : LlmProviderCandidate {

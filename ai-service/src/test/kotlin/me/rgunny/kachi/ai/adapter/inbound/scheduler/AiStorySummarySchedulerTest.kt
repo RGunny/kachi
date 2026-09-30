@@ -8,6 +8,8 @@ import me.rgunny.kachi.ai.adapter.inbound.story.AiStorySummaryExecutor
 import me.rgunny.kachi.ai.application.port.inbound.story.model.SummarizeDueStoriesCommand
 import me.rgunny.kachi.ai.fake.RecordingSummarizeDueStoriesUseCase
 import me.rgunny.kachi.ai.fixture.AiTestFixture
+import me.rgunny.kachi.ai.config.AiSchedulerConfig
+import me.rgunny.kachi.ai.config.AiStorySummarySchedulerProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
@@ -19,7 +21,7 @@ class AiStorySummarySchedulerTest {
     private fun scheduler(properties: AiStorySummarySchedulerProperties = properties()): AiStorySummaryScheduler {
         return AiStorySummaryScheduler(
             executor = AiStorySummaryExecutor(useCase, AiTestFixture.executionLock()),
-            properties = properties
+            settings = AiSchedulerConfig().aiStorySummarySchedulerSettings(properties)
         )
     }
 

@@ -1,6 +1,7 @@
 package me.rgunny.kachi.collector.config
 
 import java.time.Clock
+import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelaySettings
 import me.rgunny.kachi.collector.application.port.inbound.outbox.RelayCollectorOutboxUseCase
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPersistencePort
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPublisherPort
@@ -30,6 +31,17 @@ class CollectorOutboxRelayConfig {
     @Bean
     fun aiOutboxRelayPolicy(properties: CollectorOutboxRelayProperties): CollectorOutboxRelayPolicy {
         return properties.toPolicy()
+    }
+
+    @Bean
+    fun collectorOutboxRelaySettings(properties: CollectorOutboxRelayProperties): CollectorOutboxRelaySettings {
+        return CollectorOutboxRelaySettings(
+            publisherId = properties.publisherId,
+            fixedDelay = properties.fixedDelay,
+            initialDelay = properties.initialDelay,
+            batchSize = properties.batchSize,
+            publishingVisibilityTimeout = properties.publishingVisibilityTimeout
+        )
     }
 
     @Bean

@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 
 class NaverNewsSearchProvider(
     private val webClient: WebClient,
-    private val properties: NaverNewsProperties
+    private val settings: NaverNewsSettings
 ) : NewsProviderPort {
 
     override val source: NewsSource = NewsSource.NAVER
@@ -23,15 +23,15 @@ class NaverNewsSearchProvider(
         val response = webClient.get()
             .uri { uriBuilder ->
                 uriBuilder
-                    .path(properties.newsSearchPath)
+                    .path(settings.newsSearchPath)
                     .queryParam("query", keyword.value)
-                    .queryParam("display", properties.display)
-                    .queryParam("start", properties.start)
-                    .queryParam("sort", properties.sort)
+                    .queryParam("display", settings.display)
+                    .queryParam("start", settings.start)
+                    .queryParam("sort", settings.sort)
                     .build()
             }
-            .header(NAVER_CLIENT_ID_HEADER, properties.clientId)
-            .header(NAVER_CLIENT_SECRET_HEADER, properties.clientSecret)
+            .header(NAVER_CLIENT_ID_HEADER, settings.clientId)
+            .header(NAVER_CLIENT_SECRET_HEADER, settings.clientSecret)
             .retrieve()
             .bodyToMono(NaverNewsSearchResponse::class.java)
             .awaitSingle()

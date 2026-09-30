@@ -2,8 +2,8 @@ package me.rgunny.kachi.notification.exception.recipient
 
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.exception.NotificationErrorCode
-import me.rgunny.kachi.notification.retry.RetryFailure
-import me.rgunny.kachi.notification.retry.RetryableException
+import me.rgunny.kachi.notification.domain.retry.RetryFailure
+import me.rgunny.kachi.notification.exception.RetryableException
 
 /**
  * 수신 주소 조회가 실패했을 때의 예외. 원천 장애·응답 지연·캐시 장애가 여기 해당하며

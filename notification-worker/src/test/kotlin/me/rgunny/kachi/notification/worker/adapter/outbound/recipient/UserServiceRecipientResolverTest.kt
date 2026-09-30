@@ -6,8 +6,7 @@ import me.rgunny.kachi.notification.application.port.outbound.recipient.model.Re
 import me.rgunny.kachi.notification.application.port.outbound.recipient.model.UnavailableRecipient
 import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.exception.recipient.RecipientResolveException
-import me.rgunny.kachi.notification.retry.RetryFailureCode
-import me.rgunny.kachi.notification.worker.config.NotificationRecipientProperties
+import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
 import me.rgunny.kachi.notification.worker.support.CapturingJsonExchangeFunction
 import me.rgunny.kachi.notification.worker.support.jsonExchangeFunction
 import org.junit.jupiter.api.DisplayName
@@ -202,12 +201,8 @@ class UserServiceRecipientResolverTest {
                 .baseUrl("http://user-service.test")
                 .exchangeFunction(exchangeFunction)
                 .build(),
-            properties = NotificationRecipientProperties.UserService(
-                baseUrl = "http://user-service.test",
-                channelBindingPath = "/api/v1/internal/users/{userId}/channel-bindings/{channel}",
-                timeout = timeout,
-                maxInMemorySize = 256 * 1024,
-            ),
+            channelBindingPath = "/api/v1/internal/users/{userId}/channel-bindings/{channel}",
+            timeout = timeout,
         )
     }
 

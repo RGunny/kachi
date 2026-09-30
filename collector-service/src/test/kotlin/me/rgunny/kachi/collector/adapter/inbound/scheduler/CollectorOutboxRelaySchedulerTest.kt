@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelayExecutor
 import me.rgunny.kachi.collector.application.port.inbound.outbox.RelayCollectorOutboxUseCase
 import me.rgunny.kachi.collector.application.port.inbound.outbox.model.RelayCollectorOutboxResult
+import me.rgunny.kachi.collector.config.CollectorOutboxRelayConfig
 import me.rgunny.kachi.collector.fake.BlockingRelayCollectorOutboxUseCase
 import me.rgunny.kachi.collector.fake.FailingRelayCollectorOutboxUseCase
 import me.rgunny.kachi.collector.fake.RecordingRelayCollectorOutboxUseCase
@@ -78,7 +79,7 @@ class CollectorOutboxRelaySchedulerTest {
     private fun schedulerOf(useCase: RelayCollectorOutboxUseCase): CollectorOutboxRelayScheduler {
         return CollectorOutboxRelayScheduler(
             executor = CollectorOutboxRelayExecutor(useCase, CollectorTestFixture.executionLock()),
-            properties = CollectorTestFixture.relayProperties()
+            settings = CollectorOutboxRelayConfig().collectorOutboxRelaySettings(CollectorTestFixture.relayProperties())
         )
     }
 

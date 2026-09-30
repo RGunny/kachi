@@ -5,7 +5,6 @@ import me.rgunny.kachi.collector.adapter.inbound.collection.NewsCollectionExecut
 import me.rgunny.kachi.collector.adapter.inbound.collection.NewsCollectionExecutor
 import me.rgunny.kachi.collector.application.port.inbound.collection.model.CollectNewsCommand
 import org.slf4j.LoggerFactory
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 
@@ -15,18 +14,17 @@ import org.springframework.stereotype.Component
  * 실제 중복 실행 방지와 유스케이스 호출은 NewsCollectionExecutor에 위임한다.
  */
 @Component
-@EnableConfigurationProperties(NewsCollectionSchedulerProperties::class)
 class NewsCollectionScheduler(
     private val executor: NewsCollectionExecutor,
-    private val properties: NewsCollectionSchedulerProperties
+    private val settings: NewsCollectionSchedulerSettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "News collection scheduler configured: enabled={}, initialDelay={}, fixedDelay={}",
-            properties.enabled,
-            properties.initialDelay,
-            properties.fixedDelay
+            settings.enabled,
+            settings.initialDelay,
+            settings.fixedDelay
         )
     }
 
@@ -36,7 +34,7 @@ class NewsCollectionScheduler(
     )
     suspend fun collectNews() {
         // 1. local/test처럼 자동 외부 호출을 피해야 하는 환경에서는 scheduler 실행을 건너뛴다.
-        if (!properties.enabled) {
+        if (!settings.enabled) {
             return
         }
 

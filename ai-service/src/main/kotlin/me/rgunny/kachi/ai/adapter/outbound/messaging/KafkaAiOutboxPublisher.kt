@@ -5,8 +5,8 @@ import kotlinx.coroutines.future.await
 import me.rgunny.kachi.ai.application.exception.AiOutboxErrorCode
 import me.rgunny.kachi.ai.application.exception.AiOutboxPublishException
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
-import me.rgunny.kachi.ai.config.AiEventsProperties
 import me.rgunny.kachi.ai.domain.outbox.AiOutbox
+import me.rgunny.kachi.ai.domain.outbox.AiOutboxEventType
 import org.springframework.kafka.core.KafkaTemplate
 
 /**
@@ -19,11 +19,11 @@ import org.springframework.kafka.core.KafkaTemplate
  */
 class KafkaAiOutboxPublisher(
     private val kafkaTemplate: KafkaTemplate<String, String>,
-    private val properties: AiEventsProperties
+    private val topics: Map<AiOutboxEventType, String>
 ) : AiOutboxPublisherPort {
 
     override suspend fun publish(outbox: AiOutbox) {
-        val topic = properties.topicOf(outbox.eventType)
+        val topic = topics.getValue(outbox.eventType)
 
         try {
             kafkaTemplate.send(topic, outbox.partitionKey, outbox.payload).await()

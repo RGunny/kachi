@@ -42,9 +42,18 @@ provider bean에는 `@Qualifier`로 주입 대상을 명시한다.
 @Bean
 fun googleNewsRssProvider(
     @Qualifier("googleNewsWebClient") googleNewsWebClient: WebClient,
-    properties: GoogleNewsProperties
-): GoogleNewsRssProvider
+    properties: GoogleNewsProperties,
+): GoogleNewsRssProvider = GoogleNewsRssProvider(
+    webClient = googleNewsWebClient,
+    settings = GoogleNewsSettings(
+        rssSearchPath = properties.rssSearchPath,
+        languageCode = properties.languageCode,
+        countryCode = properties.countryCode
+    )
+)
 ```
+
+provider는 `GoogleNewsProperties`를 받지 않는다. config가 Properties를 풀어 어댑터 옆의 `GoogleNewsSettings`로 넘긴다.
 
 파라미터 이름 기반 자동 매칭도 가능하지만, 여러 외부 client가 있는 서비스에서는 `@Qualifier`를 명시하는 편이 안전하다.
 

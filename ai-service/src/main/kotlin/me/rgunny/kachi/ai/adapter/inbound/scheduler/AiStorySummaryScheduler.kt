@@ -17,31 +17,31 @@ import org.springframework.stereotype.Component
 @Component
 class AiStorySummaryScheduler(
     private val executor: AiStorySummaryExecutor,
-    private val properties: AiStorySummarySchedulerProperties
+    private val settings: AiStorySummarySchedulerSettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "AI story summary scheduler configured: enabled={}, initialDelay={}, fixedDelay={}, maxStoriesPerTick={}",
-            properties.enabled,
-            properties.initialDelay,
-            properties.fixedDelay,
-            properties.maxStoriesPerTick
+            settings.enabled,
+            settings.initialDelay,
+            settings.fixedDelay,
+            settings.maxStoriesPerTick
         )
     }
 
     @Scheduled(
-        fixedDelayString = AiStorySummarySchedulerProperties.FIXED_DELAY_EXPRESSION,
-        initialDelayString = AiStorySummarySchedulerProperties.INITIAL_DELAY_EXPRESSION
+        fixedDelayString = AiStorySummarySchedulerSettings.FIXED_DELAY_EXPRESSION,
+        initialDelayString = AiStorySummarySchedulerSettings.INITIAL_DELAY_EXPRESSION
     )
     suspend fun summarizeDueStories() {
         // 1. 비활성 설정이면 tick을 건너뛴다.
-        if (!properties.enabled) {
+        if (!settings.enabled) {
             return
         }
 
         runCatching {
-            executor.execute(properties.toCommand())
+            executor.execute(settings.toCommand())
         }.onSuccess { result ->
             // 2. 결과를 종류별로 로그로 남긴다(이미 실행 중은 info, lock 확인 실패는 원인과 함께 warn).
             when (result) {

@@ -2,6 +2,7 @@ package me.rgunny.kachi.collector.config
 
 import me.rgunny.kachi.collector.adapter.outbound.messaging.KafkaCollectorOutboxPublisher
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPublisherPort
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxEventType
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.common.config.TopicConfig
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -34,7 +35,7 @@ class CollectorEventsConfig {
     ): CollectorOutboxPublisherPort {
         return KafkaCollectorOutboxPublisher(
             kafkaTemplate = kafkaTemplate,
-            properties = properties
+            topics = CollectorOutboxEventType.entries.associateWith(properties::topicOf)
         )
     }
 

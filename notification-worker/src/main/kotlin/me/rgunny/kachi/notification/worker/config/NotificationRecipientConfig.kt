@@ -1,7 +1,7 @@
 package me.rgunny.kachi.notification.worker.config
 
 import me.rgunny.kachi.notification.application.port.outbound.recipient.RecipientResolverPort
-import me.rgunny.kachi.notification.worker.adapter.outbound.monitoring.NotificationWorkerMetrics
+import me.rgunny.kachi.notification.worker.adapter.monitoring.NotificationWorkerMetrics
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.CachedRecipientResolver
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RecipientAddressCache
 import me.rgunny.kachi.notification.worker.adapter.outbound.recipient.RedisRecipientAddressCache
@@ -55,7 +55,8 @@ class NotificationRecipientConfig {
         return CachedRecipientResolver(
             delegate = UserServiceRecipientResolver(
                 webClient = webClient,
-                properties = properties.userService,
+                channelBindingPath = properties.userService.channelBindingPath,
+                timeout = properties.userService.timeout,
             ),
             cache = recipientAddressCache,
             ttl = properties.cacheTtl,

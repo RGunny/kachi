@@ -1,6 +1,7 @@
 package me.rgunny.kachi.ai.config
 
 import java.time.Clock
+import me.rgunny.kachi.ai.adapter.inbound.outbox.AiOutboxRelaySettings
 import me.rgunny.kachi.ai.application.port.inbound.outbox.RelayAiOutboxUseCase
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPersistencePort
 import me.rgunny.kachi.ai.application.port.outbound.outbox.AiOutboxPublisherPort
@@ -30,6 +31,17 @@ class AiOutboxRelayConfig {
     @Bean
     fun aiOutboxRelayPolicy(properties: AiOutboxRelayProperties): AiOutboxRelayPolicy {
         return properties.toPolicy()
+    }
+
+    @Bean
+    fun aiOutboxRelaySettings(properties: AiOutboxRelayProperties): AiOutboxRelaySettings {
+        return AiOutboxRelaySettings(
+            publisherId = properties.publisherId,
+            fixedDelay = properties.fixedDelay,
+            initialDelay = properties.initialDelay,
+            batchSize = properties.batchSize,
+            publishingVisibilityTimeout = properties.publishingVisibilityTimeout
+        )
     }
 
     @Bean
