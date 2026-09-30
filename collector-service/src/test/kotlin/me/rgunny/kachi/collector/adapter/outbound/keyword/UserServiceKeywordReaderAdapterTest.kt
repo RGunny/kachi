@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.application.exception.KeywordReaderErrorCode
 import me.rgunny.kachi.collector.application.exception.KeywordReaderException
 import me.rgunny.kachi.collector.domain.CollectedKeyword
-import me.rgunny.kachi.collector.config.UserServiceKeywordProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -102,12 +101,8 @@ class UserServiceKeywordReaderAdapterTest {
             webClient = WebClient.builder()
                 .exchangeFunction(exchangeFunction(responseBody, status))
                 .build(),
-            properties = UserServiceKeywordProperties(
-                baseUrl = "http://user-service",
-                activeKeywordsPath = "/api/v1/internal/keywords/active",
-                timeout = Duration.ofSeconds(1),
-                maxInMemorySize = 256 * 1024,
-            )
+            activeKeywordsPath = "/api/v1/internal/keywords/active",
+            timeout = Duration.ofSeconds(1)
         )
     }
 

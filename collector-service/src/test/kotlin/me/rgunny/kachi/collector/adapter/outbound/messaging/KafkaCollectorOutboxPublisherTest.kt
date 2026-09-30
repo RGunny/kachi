@@ -22,7 +22,10 @@ class KafkaCollectorOutboxPublisherTest {
 
     private val kafkaTemplate = FakeKafkaTemplate()
     private val properties = CollectorTestFixture.eventsProperties()
-    private val publisher = KafkaCollectorOutboxPublisher(kafkaTemplate = kafkaTemplate, properties = properties)
+    private val publisher = KafkaCollectorOutboxPublisher(
+        kafkaTemplate = kafkaTemplate,
+        topics = CollectorOutboxEventType.entries.associateWith(properties::topicOf)
+    )
 
     @ParameterizedTest
     @EnumSource(CollectorOutboxEventType::class)

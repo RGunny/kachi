@@ -35,7 +35,8 @@ class UserServiceClientConfig {
     ): UserServiceKeywordReaderAdapter {
         return UserServiceKeywordReaderAdapter(
             webClient = userServiceWebClient,
-            properties = properties
+            activeKeywordsPath = properties.activeKeywordsPath,
+            timeout = properties.timeout
         )
     }
 }

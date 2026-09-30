@@ -3,6 +3,7 @@ package me.rgunny.kachi.collector.adapter.outbound.client.naver
 import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
+import me.rgunny.kachi.collector.config.NaverNewsConfig
 import me.rgunny.kachi.collector.config.NaverNewsProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -165,8 +166,8 @@ class NaverNewsSearchProviderTest {
     }
 
     private fun providerOf(exchangeFunction: ExchangeFunction): NaverNewsSearchProvider {
-        return NaverNewsSearchProvider(
-            webClient = WebClient.builder()
+        return NaverNewsConfig().naverNewsSearchProvider(
+            naverNewsWebClient = WebClient.builder()
                 .baseUrl(properties.baseUrl)
                 .exchangeFunction(exchangeFunction)
                 .build(),

@@ -6,7 +6,6 @@ import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedA
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
-import me.rgunny.kachi.collector.config.GoogleNewsProperties
 import org.springframework.web.reactive.function.client.WebClient
 import org.w3c.dom.Element
 import java.io.ByteArrayInputStream
@@ -17,7 +16,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class GoogleNewsRssProvider(
     private val webClient: WebClient,
-    private val properties: GoogleNewsProperties
+    private val settings: GoogleNewsSettings
 ) : NewsProviderPort {
 
     override val source: NewsSource = NewsSource.GOOGLE
@@ -27,11 +26,11 @@ class GoogleNewsRssProvider(
         val xml = webClient.get()
             .uri { uriBuilder ->
                 uriBuilder
-                    .path(properties.rssSearchPath)
+                    .path(settings.rssSearchPath)
                     .queryParam("q", keyword.value)
-                    .queryParam("hl", properties.languageCode)
-                    .queryParam("gl", properties.countryCode)
-                    .queryParam("ceid", "${properties.countryCode}:${properties.languageCode}")
+                    .queryParam("hl", settings.languageCode)
+                    .queryParam("gl", settings.countryCode)
+                    .queryParam("ceid", "${settings.countryCode}:${settings.languageCode}")
                     .build()
             }
             .retrieve()
@@ -110,7 +109,7 @@ class GoogleNewsRssProvider(
             title = title,
             excerpt = excerpt,
             url = url,
-            language = properties.languageCode,
+            language = settings.languageCode,
             publishedAt = publishedAt
         )
     }

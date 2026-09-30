@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import me.rgunny.kachi.collector.adapter.outbound.client.naver.NaverNewsSearchProvider
+import me.rgunny.kachi.collector.adapter.outbound.client.naver.NaverNewsSettings
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -57,7 +58,14 @@ class NaverNewsConfig {
     ): NaverNewsSearchProvider {
         return NaverNewsSearchProvider(
             webClient = naverNewsWebClient,
-            properties = properties
+            settings = NaverNewsSettings(
+                newsSearchPath = properties.newsSearchPath,
+                clientId = properties.clientId,
+                clientSecret = properties.clientSecret,
+                display = properties.display,
+                start = properties.start,
+                sort = properties.sort
+            )
         )
     }
 

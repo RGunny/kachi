@@ -5,8 +5,8 @@ import kotlinx.coroutines.future.await
 import me.rgunny.kachi.collector.application.exception.CollectorOutboxErrorCode
 import me.rgunny.kachi.collector.application.exception.CollectorOutboxPublishException
 import me.rgunny.kachi.collector.application.port.outbound.outbox.CollectorOutboxPublisherPort
-import me.rgunny.kachi.collector.config.CollectorEventsProperties
 import me.rgunny.kachi.collector.domain.outbox.CollectorOutbox
+import me.rgunny.kachi.collector.domain.outbox.CollectorOutboxEventType
 import org.springframework.kafka.core.KafkaTemplate
 
 /**
@@ -19,11 +19,11 @@ import org.springframework.kafka.core.KafkaTemplate
  */
 class KafkaCollectorOutboxPublisher(
     private val kafkaTemplate: KafkaTemplate<String, String>,
-    private val properties: CollectorEventsProperties
+    private val topics: Map<CollectorOutboxEventType, String>
 ) : CollectorOutboxPublisherPort {
 
     override suspend fun publish(outbox: CollectorOutbox) {
-        val topic = properties.topicOf(outbox.eventType)
+        val topic = topics.getValue(outbox.eventType)
 
         try {
             kafkaTemplate.send(topic, outbox.partitionKey, outbox.payload).await()

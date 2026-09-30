@@ -5,7 +5,6 @@ import me.rgunny.kachi.collector.application.port.outbound.news.model.CollectedA
 import me.rgunny.kachi.collector.application.port.outbound.news.NewsProviderPort
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
-import me.rgunny.kachi.collector.config.FinnhubNewsProperties
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Clock
 import java.time.Instant
@@ -13,7 +12,7 @@ import java.time.LocalDate
 
 class FinnhubNewsProvider(
     private val webClient: WebClient,
-    private val properties: FinnhubNewsProperties,
+    private val settings: FinnhubNewsSettings,
     private val clock: Clock
 ) : NewsProviderPort {
 
@@ -21,20 +20,20 @@ class FinnhubNewsProvider(
 
     override suspend fun collect(keyword: CollectedKeyword): List<CollectedArticle> {
         val to = LocalDate.now(clock)
-        val from = to.minusDays(properties.lookbackDays)
+        val from = to.minusDays(settings.lookbackDays)
         val symbol = keyword.value.trim().uppercase()
 
         // 1. Finnhub company-news endpoint를 JSON으로 호출한다.
         val response = webClient.get()
             .uri { uriBuilder ->
                 uriBuilder
-                    .path(properties.companyNewsPath)
+                    .path(settings.companyNewsPath)
                     .queryParam("symbol", symbol)
                     .queryParam("from", from)
                     .queryParam("to", to)
                     .build()
             }
-            .header(FINNHUB_TOKEN_HEADER, properties.apiKey)
+            .header(FINNHUB_TOKEN_HEADER, settings.apiKey)
             .retrieve()
             .bodyToMono(Array<FinnhubNewsItem>::class.java)
             .awaitSingle()

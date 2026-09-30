@@ -4,7 +4,6 @@ import me.rgunny.kachi.collector.application.port.inbound.outbox.RelayCollectorO
 import me.rgunny.kachi.collector.application.port.outbound.lock.CollectorExecutionLock
 import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockOutcome
 import me.rgunny.kachi.collector.application.port.outbound.lock.ExecutionLockPort
-import me.rgunny.kachi.collector.config.CollectorOutboxRelayProperties
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 @ConditionalOnProperty(
-    prefix = CollectorOutboxRelayProperties.PREFIX,
+    prefix = CollectorOutboxRelaySettings.PREFIX,
     name = ["enabled"],
     havingValue = "true"
 )

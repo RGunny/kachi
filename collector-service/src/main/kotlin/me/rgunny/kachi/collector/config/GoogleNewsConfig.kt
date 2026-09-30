@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
 import me.rgunny.kachi.collector.adapter.outbound.client.google.GoogleNewsRssProvider
+import me.rgunny.kachi.collector.adapter.outbound.client.google.GoogleNewsSettings
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -57,7 +58,11 @@ class GoogleNewsConfig {
     ): GoogleNewsRssProvider {
         return GoogleNewsRssProvider(
             webClient = googleNewsWebClient,
-            properties = properties
+            settings = GoogleNewsSettings(
+                rssSearchPath = properties.rssSearchPath,
+                languageCode = properties.languageCode,
+                countryCode = properties.countryCode
+            )
         )
     }
 

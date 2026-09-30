@@ -5,7 +5,7 @@ import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelayAlre
 import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelayExecutor
 import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelayFinished
 import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelayLockUnavailable
-import me.rgunny.kachi.collector.config.CollectorOutboxRelayProperties
+import me.rgunny.kachi.collector.adapter.inbound.outbox.CollectorOutboxRelaySettings
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
@@ -18,29 +18,29 @@ import org.springframework.stereotype.Component
  */
 @Component
 @ConditionalOnProperty(
-    prefix = CollectorOutboxRelayProperties.PREFIX,
+    prefix = CollectorOutboxRelaySettings.PREFIX,
     name = ["enabled"],
     havingValue = "true"
 )
 class CollectorOutboxRelayScheduler(
     private val executor: CollectorOutboxRelayExecutor,
-    private val properties: CollectorOutboxRelayProperties
+    private val settings: CollectorOutboxRelaySettings
 ) {
     @PostConstruct
     fun logSchedulerProperties() {
         log.info(
             "AI outbox relay scheduler configured: publisherId={}, initialDelay={}, fixedDelay={}, batchSize={}, visibilityTimeout={}",
-            properties.publisherId,
-            properties.initialDelay,
-            properties.fixedDelay,
-            properties.batchSize,
-            properties.publishingVisibilityTimeout
+            settings.publisherId,
+            settings.initialDelay,
+            settings.fixedDelay,
+            settings.batchSize,
+            settings.publishingVisibilityTimeout
         )
     }
 
     @Scheduled(
-        fixedDelayString = CollectorOutboxRelayProperties.FIXED_DELAY_EXPRESSION,
-        initialDelayString = CollectorOutboxRelayProperties.INITIAL_DELAY_EXPRESSION
+        fixedDelayString = CollectorOutboxRelaySettings.FIXED_DELAY_EXPRESSION,
+        initialDelayString = CollectorOutboxRelaySettings.INITIAL_DELAY_EXPRESSION
     )
     suspend fun relay() {
         runCatching {

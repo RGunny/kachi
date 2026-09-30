@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.rgunny.kachi.collector.domain.CollectedKeyword
 import me.rgunny.kachi.collector.domain.NewsSource
 import me.rgunny.kachi.collector.fixture.CollectorTestFixture
+import me.rgunny.kachi.collector.config.FinnhubNewsConfig
 import me.rgunny.kachi.collector.config.FinnhubNewsProperties
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -162,8 +163,8 @@ class FinnhubNewsProviderTest {
     }
 
     private fun providerOf(exchangeFunction: ExchangeFunction): FinnhubNewsProvider {
-        return FinnhubNewsProvider(
-            webClient = WebClient.builder()
+        return FinnhubNewsConfig().finnhubNewsProvider(
+            finnhubNewsWebClient = WebClient.builder()
                 .baseUrl(properties.baseUrl)
                 .exchangeFunction(exchangeFunction)
                 .build(),
