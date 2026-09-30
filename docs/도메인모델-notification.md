@@ -260,8 +260,9 @@ _Value Object_
 
 ## 재시도 모델
 
-`me.rgunny.kachi.notification.retry` 패키지에 있다. domain 패키지 밖의 독립 패키지지만
-기술에 의존하지 않는 순수 모델로, 실패 분류와 재시도 결정이라는 도메인 규칙을 담는다 (ADR 014).
+`domain/retry/` 패키지에 있다. 기술에 의존하지 않는 순수 모델로, 실패 분류와 재시도 결정이라는
+도메인 규칙을 담는다 (ADR 014). 재시도 예외(`RetryException`, `RetryableException`,
+`NonRetryableException`)는 `exception/`에 있다.
 ai의 `LlmFailure` 계열과 어휘를 정렬하되 코드는 공유하지 않는다 (ADR 021).
 
 ### 재시도 실패(RetryFailure)
