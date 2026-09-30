@@ -11,12 +11,12 @@ import me.rgunny.kachi.notification.domain.NotificationChannel
 import me.rgunny.kachi.notification.exception.recipient.RecipientResolveException
 import me.rgunny.kachi.notification.domain.retry.RetryFailure
 import me.rgunny.kachi.notification.domain.retry.RetryFailureCode
-import me.rgunny.kachi.notification.worker.config.NotificationRecipientProperties
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.client.ClientResponse
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Mono
+import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeoutException
 
@@ -28,7 +28,8 @@ import java.util.concurrent.TimeoutException
  */
 class UserServiceRecipientResolver(
     private val webClient: WebClient,
-    private val properties: NotificationRecipientProperties.UserService,
+    private val channelBindingPath: String,
+    private val timeout: Duration,
 ) : RecipientResolverPort {
 
     override suspend fun resolve(recipientId: String, channel: NotificationChannel): ResolvedRecipient {
@@ -50,9 +51,9 @@ class UserServiceRecipientResolver(
 
         val lookup = try {
             webClient.get()
-                .uri(properties.channelBindingPath, mapOf("userId" to userId.toString(), "channel" to channel.name))
+                .uri(channelBindingPath, mapOf("userId" to userId.toString(), "channel" to channel.name))
                 .exchangeToMono { clientResponse -> readEnvelope(clientResponse, userId, channel) }
-                .timeout(properties.timeout)
+                .timeout(timeout)
                 .awaitSingle()
         } catch (exception: CancellationException) {
             throw exception
@@ -61,7 +62,7 @@ class UserServiceRecipientResolver(
         } catch (exception: TimeoutException) {
             throw resolveException(
                 code = RetryFailureCode.RECIPIENT_RESOLVE_TIMEOUT,
-                detail = "$detail, timeout=${properties.timeout}",
+                detail = "$detail, timeout=$timeout",
                 userId = userId,
                 channel = channel,
                 cause = exception,

@@ -55,7 +55,8 @@ class NotificationRecipientConfig {
         return CachedRecipientResolver(
             delegate = UserServiceRecipientResolver(
                 webClient = webClient,
-                properties = properties.userService,
+                channelBindingPath = properties.userService.channelBindingPath,
+                timeout = properties.userService.timeout,
             ),
             cache = recipientAddressCache,
             ttl = properties.cacheTtl,

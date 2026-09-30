@@ -5,7 +5,6 @@ import kotlinx.coroutines.reactor.awaitSingle
 import me.rgunny.kachi.notification.contract.NotificationChannel
 import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.RecipientReaderPort
 import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.model.Recipient
-import me.rgunny.kachi.notification.routing.config.NotificationRoutingProperties
 import me.rgunny.kachi.notification.routing.exception.routing.RecipientReaderException
 import me.rgunny.kachi.notification.routing.exception.routing.RoutingErrorCode
 import org.springframework.core.ParameterizedTypeReference
@@ -19,12 +18,12 @@ import org.springframework.web.util.UriBuilder
  */
 class UserServiceRecipientReaderAdapter(
     private val webClient: WebClient,
-    private val properties: NotificationRoutingProperties.UserService,
+    private val settings: UserServiceRecipientReaderSettings,
 ) : RecipientReaderPort {
 
     override suspend fun findSubscribers(keyword: String): List<Recipient> {
         val subscribers = fetch(SUBSCRIBERS_RESPONSE_TYPE, "keyword=$keyword") { builder ->
-            builder.path(properties.subscriptionsPath).queryParam("keyword", keyword)
+            builder.path(settings.subscriptionsPath).queryParam("keyword", keyword)
         }
 
         return subscribers.map { Recipient(recipientId = it.userId, channel = toChannel(it.channel)) }
@@ -32,7 +31,7 @@ class UserServiceRecipientReaderAdapter(
 
     override suspend fun findAdmins(): List<Recipient> {
         val users = fetch(USER_CHANNELS_RESPONSE_TYPE, "role=$ADMIN_ROLE") { builder ->
-            builder.path(properties.usersPath).queryParam("role", ADMIN_ROLE)
+            builder.path(settings.usersPath).queryParam("role", ADMIN_ROLE)
         }
 
         return users.flatMap { user ->
@@ -60,7 +59,7 @@ class UserServiceRecipientReaderAdapter(
                         }
                 }
                 .bodyToMono(responseType)
-                .timeout(properties.timeout)
+                .timeout(settings.timeout)
                 .awaitSingle()
         } catch (exception: CancellationException) {
             throw exception

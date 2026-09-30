@@ -3,6 +3,7 @@ package me.rgunny.kachi.notification.routing.config
 import java.time.Clock
 import me.rgunny.kachi.notification.routing.adapter.outbound.messaging.KafkaNotificationRequestPublisher
 import me.rgunny.kachi.notification.routing.adapter.outbound.recipient.UserServiceRecipientReaderAdapter
+import me.rgunny.kachi.notification.routing.adapter.outbound.recipient.UserServiceRecipientReaderSettings
 import me.rgunny.kachi.notification.routing.application.port.outbound.job.RoutingJobPersistencePort
 import me.rgunny.kachi.notification.routing.application.port.outbound.messaging.NotificationRequestPublisherPort
 import me.rgunny.kachi.notification.routing.application.port.outbound.recipient.RecipientReaderPort
@@ -45,7 +46,11 @@ class NotificationRoutingConfig {
     ): RecipientReaderPort {
         return UserServiceRecipientReaderAdapter(
             webClient = userServiceWebClient,
-            properties = properties.userService,
+            settings = UserServiceRecipientReaderSettings(
+                subscriptionsPath = properties.userService.subscriptionsPath,
+                usersPath = properties.userService.usersPath,
+                timeout = properties.userService.timeout,
+            ),
         )
     }
 

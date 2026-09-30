@@ -201,7 +201,11 @@ class UserServiceRecipientReaderAdapterTest {
         val properties = RoutingTestFixture.properties(timeout = timeout).userService
         return UserServiceRecipientReaderAdapter(
             webClient = WebClient.builder().baseUrl(properties.baseUrl).exchangeFunction(exchange).build(),
-            properties = properties,
+            settings = UserServiceRecipientReaderSettings(
+                subscriptionsPath = properties.subscriptionsPath,
+                usersPath = properties.usersPath,
+                timeout = properties.timeout,
+            ),
         )
     }
 }

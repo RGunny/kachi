@@ -30,6 +30,14 @@ class ArchitectureTest {
 
         @ArchTest
         @JvmField
+        val application_does_not_depend_on_config: ArchRule = noClasses()
+            .that().resideInAPackage("..application..")
+            .should().dependOnClassesThat()
+            .resideInAPackage("..config..")
+            .allowEmptyShould(true)
+
+        @ArchTest
+        @JvmField
         val inbound_adapter_does_not_depend_on_outbound_adapter: ArchRule = noClasses()
             .that().resideInAPackage("..service.adapter.inbound..")
             .should().dependOnClassesThat()
